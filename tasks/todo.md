@@ -126,16 +126,16 @@ then reports the new and fixed ids. Only new error-severity violations fail
 the run.
 
 **Acceptance criteria:**
-- [ ] In a temp git repo fixture, a branch that adds one top-level function
+- [x] In a temp git repo fixture, a branch that adds one top-level function
       and removes another reports 1 new and 1 fixed. It exits `1`, or `0` if
       it only fixed violations.
-- [ ] Uncommitted working-tree changes count as head.
-- [ ] A ref that can't be reached, or a directory that isn't a git repo,
+- [x] Uncommitted working-tree changes count as head.
+- [x] A ref that can't be reached, or a directory that isn't a git repo,
       exits `70` with a clear message.
 
 **Verification:**
-- [ ] The standard checks pass.
-- [ ] Integration tests create real temp repos with `git init`, `commit` and
+- [x] The standard checks pass.
+- [x] Integration tests create real temp repos with `git init`, `commit` and
       `checkout`.
 
 **Dependencies:** Tasks 2 and 3

@@ -4,9 +4,12 @@ import 'package:args/args.dart';
 import 'package:io/io.dart';
 import 'package:theseus_cli/src/config/config.dart';
 import 'package:theseus_cli/src/config/config_loader.dart';
+import 'package:theseus_cli/src/engine/diff_result.dart';
 import 'package:theseus_cli/src/engine/engine.dart';
 import 'package:theseus_cli/src/engine/violation.dart';
+import 'package:theseus_cli/src/git/git_runner.dart';
 import 'package:theseus_cli/src/report/text_reporter.dart';
+import 'package:theseus_cli/src/source/git_source_tree.dart';
 import 'package:theseus_cli/src/source/source_tree.dart';
 import 'package:theseus_cli/src/version.dart';
 
@@ -104,12 +107,46 @@ class TheseusCommand {
       return ExitCode.config.code;
     }
 
+    final ref = results.option('git-diff');
+    if (ref == null) return await _full(tree, config);
+    try {
+      return await _diff(tree, config, ref);
+    } on GitException catch (error) {
+      _stderr.writeln(error);
+      return ExitCode.software.code;
+    }
+  }
+
+  Future<int> _full(SourceTree tree, Config config) async {
     final violations = await Engine(tree: tree, config: config).run();
     TextReporter(_stdout).report(violations);
-    return violations.any((v) => v.severity == Severity.error)
-        ? 1
-        : ExitCode.success.code;
+    return _exitCode(violations);
   }
+
+  /// Compares the working tree with the merge-base of [ref] and `HEAD`,
+  /// checking both with the working tree's [config].
+  Future<int> _diff(SourceTree head, Config config, String ref) async {
+    final git = GitRunner(_root.path);
+    final base = GitSourceTree(git: git, commit: await git.mergeBase(ref));
+    final List<Violation> baseViolations;
+    try {
+      baseViolations = await Engine(tree: base, config: config).run();
+    } finally {
+      await base.close();
+    }
+    final diff = DiffResult.compare(
+      base: baseViolations,
+      head: await Engine(tree: head, config: config).run(),
+    );
+    TextReporter(_stdout).reportDiff(diff);
+    return _exitCode(diff.added);
+  }
+
+  /// Returns 1 if any of [violations] is an error, and 0 otherwise.
+  int _exitCode(List<Violation> violations) =>
+      violations.any((v) => v.severity == Severity.error)
+      ? 1
+      : ExitCode.success.code;
 
   /// Returns a description of the first argument in [results] that is
   /// parsed but not implemented yet, or `null` if there is none.
@@ -118,7 +155,7 @@ class TheseusCommand {
     if (results.option('format') != 'text') {
       return '--format=${results.option('format')}';
     }
-    for (final option in ['git-diff', 'baseline', 'write-baseline']) {
+    for (final option in ['baseline', 'write-baseline']) {
       if (results.wasParsed(option)) return '--$option';
     }
     return null;

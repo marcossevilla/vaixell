@@ -8,6 +8,8 @@ import 'package:test_descriptor/test_descriptor.dart' as d;
 import 'package:test_process/test_process.dart';
 import 'package:theseus_cli/theseus_cli.dart';
 
+import 'helpers/git_repo.dart';
+
 final String _script = p.absolute('bin', 'theseus.dart');
 
 Future<TestProcess> _theseus(
@@ -95,5 +97,36 @@ void main() {
       startsWith('analysis_options.yaml:3:5: Unknown rule `nope`.'),
     );
     await process.shouldExit(ExitCode.config.code);
+  });
+
+  test('--git-diff reports new and fixed ids', () async {
+    await d.dir('pkg', [
+      d.dir('lib', [d.file('a.dart', 'void old() {}\n')]),
+    ]).create();
+    final pkg = d.path('pkg');
+    await gitInit(pkg);
+    await gitCommitAll(pkg);
+    await d.dir('pkg/lib', [d.file('a.dart', 'void added() {}\n')]).create();
+
+    final process = await _theseus(['--git-diff=main'], workingDirectory: pkg);
+    expect(
+      await process.stdout.next,
+      endsWith('[top-level-function:lib/a.dart:added]'),
+    );
+    expect(
+      await process.stdout.next,
+      equals('Fixed: top-level-function:lib/a.dart:old'),
+    );
+    expect(await process.stdout.next, equals('1 new violation, 1 fixed.'));
+    await process.shouldExit(1);
+  });
+
+  test('--git-diff exits 70 outside a git repository', () async {
+    await d.dir('pkg', [d.dir('lib')]).create();
+    final process = await _theseus([
+      '--git-diff=main',
+    ], workingDirectory: d.path('pkg'));
+    expect(await process.stderr.next, endsWith('is not in a git repository.'));
+    await process.shouldExit(ExitCode.software.code);
   });
 }

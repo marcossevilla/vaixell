@@ -114,7 +114,6 @@ void main() {
     for (final arguments in [
       ['lib'],
       ['--format=json'],
-      ['--git-diff=main'],
       ['--baseline=b.json'],
       ['--write-baseline=b.json'],
     ]) {

@@ -46,5 +46,27 @@ void main() {
       TextReporter(out).report([_violation('x')]);
       expect(out.toString(), endsWith('\n1 violation found.\n'));
     });
+
+    test('reports new and fixed violations in a diff', () {
+      TextReporter(out).reportDiff(
+        DiffResult(
+          added: [_violation('top-level-function:lib/a.dart:foo')],
+          fixed: [_violation('top-level-function:lib/a.dart:bar')],
+        ),
+      );
+      expect(
+        out.toString(),
+        equals(
+          'lib/a.dart:3:6: error: Message. [top-level-function:lib/a.dart:foo]\n'
+          'Fixed: top-level-function:lib/a.dart:bar\n'
+          '1 new violation, 1 fixed.\n',
+        ),
+      );
+    });
+
+    test('uses the plural in diff summaries', () {
+      TextReporter(out).reportDiff(const DiffResult(added: [], fixed: []));
+      expect(out.toString(), equals('0 new violations, 0 fixed.\n'));
+    });
   });
 }
