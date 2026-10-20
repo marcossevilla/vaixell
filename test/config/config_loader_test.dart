@@ -3,9 +3,13 @@ import 'package:theseus_cli/theseus_cli.dart';
 
 import '../helpers/memory_source_tree.dart';
 
-const Map<String, Severity> _recommended = {
-  'parse-error': Severity.error,
-  'top-level-function': Severity.error,
+final Map<String, Severity> _recommended = Config.recommended().severities;
+
+/// Returns [_recommended] with [overrides] applied, where `null` turns a rule
+/// off.
+Map<String, Severity> _recommendedWith(Map<String, Severity?> overrides) => {
+  for (final MapEntry(:key, :value) in {..._recommended, ...overrides}.entries)
+    key: ?value,
 };
 
 Future<Config> _load(String? yaml) =>
@@ -35,25 +39,19 @@ void main() {
         ),
         'a rule turned off': (
           'theseus:\n  rules:\n    top-level-function: off\n',
-          {'parse-error': Severity.error},
+          _recommendedWith({'top-level-function': null}),
         ),
         'a rule set to warning': (
           'theseus:\n  rules:\n    top-level-function: warning\n',
-          {
-            'parse-error': Severity.error,
-            'top-level-function': Severity.warning,
-          },
+          _recommendedWith({'top-level-function': Severity.warning}),
         ),
         'parse-error set to warning': (
           'theseus:\n  rules:\n    parse-error: warning\n',
-          {
-            'parse-error': Severity.warning,
-            'top-level-function': Severity.error,
-          },
+          _recommendedWith({'parse-error': Severity.warning}),
         ),
         'a rule turned back on after an empty include': (
           'theseus:\n  include: []\n  rules:\n    top-level-function: error\n',
-          _recommended,
+          {'parse-error': Severity.error, 'top-level-function': Severity.error},
         ),
         'empty rules and exclude': (
           'theseus:\n  rules:\n  exclude:\n',
@@ -62,7 +60,7 @@ void main() {
         'the analyzer include is ignored': (
           'include: package:very_good_analysis/analysis_options.yaml\n'
               'theseus:\n  rules:\n    top-level-function: off\n',
-          {'parse-error': Severity.error},
+          _recommendedWith({'top-level-function': null}),
         ),
       };
       for (final MapEntry(key: name, value: (yaml, severities))
@@ -139,7 +137,8 @@ void main() {
         'an unknown rule': (
           'theseus:\n  rules:\n    no-globals: error\n',
           'analysis_options.yaml:3:5: Unknown rule `no-globals`. '
-              'Available rules: parse-error, top-level-function.',
+              'Available rules: parse-error, top-level-function, '
+              'top-level-variable, extension-declaration, static-method.',
         ),
         'an unknown severity': (
           'theseus:\n  rules:\n    top-level-function: info\n',

@@ -5,7 +5,16 @@ import 'package:theseus_cli/src/rules/registry.dart';
 void main() {
   test('RuleRegistry lists every rule with a unique id', () {
     final ids = const RuleRegistry().all.map((r) => r.id).toList();
-    expect(ids, equals(['parse-error', 'top-level-function']));
+    expect(
+      ids,
+      equals([
+        'parse-error',
+        'top-level-function',
+        'top-level-variable',
+        'extension-declaration',
+        'static-method',
+      ]),
+    );
   });
 
   test('every rule defaults to error', () {

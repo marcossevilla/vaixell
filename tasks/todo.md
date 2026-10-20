@@ -189,7 +189,7 @@ registers in the rule registry and the `recommended` preset, and builds its
 id from the symbol path. None of them has exemptions.
 
 **Acceptance criteria:**
-- [ ] Each rule flags its positive fixtures and ignores its negative ones:
+- [x] Each rule flags its positive fixtures and ignores its negative ones:
   - `top-level-variable`: covers `final`, `var`, `const` and `late`.
   - `extension-declaration`: covers named and unnamed extensions, and
     extension types.
@@ -197,11 +197,11 @@ id from the symbol path. None of them has exemptions.
     getters and setters, in classes, mixins, enums, extensions and extension
     types. Static fields and factory constructors aren't methods, so they
     aren't flagged.
-- [ ] Ids are `<rule>:<path>:<Container>.<member>`, or `<unnamed>` for
+- [x] Ids are `<rule>:<path>:<Container>.<member>`, or `<unnamed>` for
       unnamed extensions, with `#n` added for duplicates.
 
 **Verification:**
-- [ ] The standard checks pass.
+- [x] The standard checks pass.
 
 **Dependencies:** Task 3
 

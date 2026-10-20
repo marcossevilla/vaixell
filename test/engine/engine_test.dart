@@ -50,6 +50,24 @@ void main() {
       ]);
     });
 
+    test('builds container ids for the v1 rules', () async {
+      final violations = await _run({
+        'lib/a.dart': '''
+const limit = 1;
+extension on int { static void a() {} }
+extension on String {}
+class Foo { static void bar() {} }
+''',
+      });
+      expect(violations.map((v) => v.id), [
+        'top-level-variable:lib/a.dart:limit',
+        'extension-declaration:lib/a.dart:<unnamed>',
+        'static-method:lib/a.dart:<unnamed>.a',
+        'extension-declaration:lib/a.dart:<unnamed>#2',
+        'static-method:lib/a.dart:Foo.bar',
+      ]);
+    });
+
     test('scans only non-generated Dart files under lib/', () async {
       final violations = await _run({
         'bin/main.dart': 'void foo() {}\n',
