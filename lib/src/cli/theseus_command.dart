@@ -1,5 +1,11 @@
+import 'dart:io';
+
 import 'package:args/args.dart';
 import 'package:io/io.dart';
+import 'package:theseus_cli/src/engine/engine.dart';
+import 'package:theseus_cli/src/engine/violation.dart';
+import 'package:theseus_cli/src/report/text_reporter.dart';
+import 'package:theseus_cli/src/source/source_tree.dart';
 import 'package:theseus_cli/src/version.dart';
 
 /// The `theseus` command line interface.
@@ -7,12 +13,18 @@ import 'package:theseus_cli/src/version.dart';
 /// Parses arguments and returns a process exit code that follows
 /// `package:io`'s [ExitCode].
 class TheseusCommand {
-  /// Creates a command that writes normal output to `stdout` and diagnostics
-  /// to `stderr`.
-  TheseusCommand({required this._stdout, required this._stderr});
+  /// Creates a command that checks the package in `root` (the current
+  /// directory by default), writes the report to `stdout` and writes
+  /// diagnostics to `stderr`.
+  TheseusCommand({
+    required this._stdout,
+    required this._stderr,
+    Directory? root,
+  }) : _root = root ?? Directory.current;
 
   final StringSink _stdout;
   final StringSink _stderr;
+  final Directory _root;
 
   final ArgParser _parser = ArgParser(usageLineLength: 80)
     ..addFlag(
@@ -75,6 +87,32 @@ class TheseusCommand {
       _stdout.writeln(TheseusVersion.current);
       return ExitCode.success.code;
     }
-    return ExitCode.success.code;
+    final unsupported = _unsupported(results);
+    if (unsupported != null) {
+      _stderr
+        ..writeln('$unsupported is not supported yet.')
+        ..writeln()
+        ..writeln(usage);
+      return ExitCode.usage.code;
+    }
+
+    final violations = await Engine(tree: FileSystemSourceTree(_root)).run();
+    TextReporter(_stdout).report(violations);
+    return violations.any((v) => v.severity == Severity.error)
+        ? 1
+        : ExitCode.success.code;
+  }
+
+  /// Returns a description of the first argument in [results] that is
+  /// parsed but not implemented yet, or `null` if there is none.
+  String? _unsupported(ArgResults results) {
+    if (results.rest.isNotEmpty) return 'Passing paths';
+    if (results.option('format') != 'text') {
+      return '--format=${results.option('format')}';
+    }
+    for (final option in ['git-diff', 'baseline', 'write-baseline']) {
+      if (results.wasParsed(option)) return '--$option';
+    }
+    return null;
   }
 }

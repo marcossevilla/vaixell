@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:io/io.dart';
 import 'package:test/test.dart';
+import 'package:test_descriptor/test_descriptor.dart' as d;
 import 'package:theseus_cli/theseus_cli.dart';
 
 void main() {
@@ -11,7 +14,11 @@ void main() {
     setUp(() {
       out = StringBuffer();
       err = StringBuffer();
-      command = TheseusCommand(stdout: out, stderr: err);
+      command = TheseusCommand(
+        stdout: out,
+        stderr: err,
+        root: Directory(d.sandbox),
+      );
     });
 
     test('--help prints usage to stdout and exits 0', () async {
@@ -56,8 +63,43 @@ void main() {
       expect(await command.run(['--format=xml']), equals(ExitCode.usage.code));
     });
 
-    test('no arguments exits 0', () async {
+    test('reports violations and exits 1', () async {
+      await d.dir('lib', [d.file('a.dart', 'void foo() {}\n')]).create();
+      expect(await command.run([]), equals(1));
+      expect(
+        out.toString(),
+        equals(
+          'lib/a.dart:1:6: error: Top-level function `foo` is not allowed. '
+          'Move it into a class. [top-level-function:lib/a.dart:foo]\n'
+          '1 violation found.\n',
+        ),
+      );
+      expect(err.toString(), isEmpty);
+    });
+
+    test('exits 0 for a clean package', () async {
+      await d.dir('lib', [d.file('main.dart', 'void main() {}\n')]).create();
+      expect(await command.run([]), equals(ExitCode.success.code));
+      expect(out.toString(), equals('No violations found.\n'));
+    });
+
+    test('defaults to the current directory', () async {
+      final command = TheseusCommand(stdout: out, stderr: err);
       expect(await command.run([]), equals(ExitCode.success.code));
     });
+
+    for (final arguments in [
+      ['lib'],
+      ['--format=json'],
+      ['--git-diff=main'],
+      ['--baseline=b.json'],
+      ['--write-baseline=b.json'],
+    ]) {
+      test('rejects unsupported $arguments with exit 64', () async {
+        expect(await command.run(arguments), equals(ExitCode.usage.code));
+        expect(err.toString(), contains('is not supported yet.'));
+        expect(out.toString(), isEmpty);
+      });
+    }
   });
 }

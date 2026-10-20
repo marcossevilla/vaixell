@@ -50,19 +50,19 @@ files), `parseString` parses them, and two rules (`parse-error` and
 prints them, and the exit code reflects the result.
 
 **Acceptance criteria:**
-- [ ] A fixture package with one top-level function and one broken file
+- [x] A fixture package with one top-level function and one broken file
       reports exactly 2 violations, with the ids
       `top-level-function:lib/a.dart:foo` and `parse-error:lib/b.dart`.
-- [ ] Moving `foo` to a different line, or adding code above it, doesn't
+- [x] Moving `foo` to a different line, or adding code above it, doesn't
       change its id.
-- [ ] Exit code: `1` when there are violations and `0` when the package is
+- [x] Exit code: `1` when there are violations and `0` when the package is
       clean. Only `lib/` is scanned, and a top-level `main` in `lib/` (for
       example `lib/main.dart`) isn't flagged. Top-level getters and setters
       are flagged.
 
 **Verification:**
-- [ ] The standard checks pass.
-- [ ] Unit tests cover the rules and the id builder, and an end-to-end
+- [x] The standard checks pass.
+- [x] Unit tests cover the rules and the id builder, and an end-to-end
       `test_process` test runs on a `test_descriptor` fixture.
 
 **Dependencies:** Task 1
@@ -77,8 +77,8 @@ prints them, and the exit code reflects the result.
 ---
 
 ## Checkpoint A
-- [ ] All tests pass and coverage is 100%.
-- [ ] `dart run bin/theseus.dart` on a scratch Flutter app gives readable
+- [x] All tests pass and coverage is 100%.
+- [x] `dart run bin/theseus.dart` on a scratch Flutter app gives readable
       output.
 - [ ] Review the id format with a human before building diff and baseline
       on top of it.

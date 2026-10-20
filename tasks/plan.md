@@ -128,7 +128,7 @@ Tasks are tracked in `tasks/todo.md`, which has the full acceptance criteria.
 
 ### Phase 1: Tracer bullet
 - [x] Task 1: Scaffold the package, lints, CI and CLI shell
-- [ ] Task 2: End-to-end full run with `parse-error` and `top-level-function`
+- [x] Task 2: End-to-end full run with `parse-error` and `top-level-function`
 
 ### Checkpoint A: one rule works end to end on a single package
 
