@@ -4,8 +4,9 @@ See `tasks/plan.md` for the design decisions. The standard verification for
 every task is:
 
 - `dart format --set-exit-if-changed .`
-- `dart analyze --fatal-infos`
-- `dart test --coverage=coverage`, with 100% line coverage on `lib/`
+- `dart analyze --fatal-infos --fatal-warnings bin lib test`
+- `very_good dart test --coverage --min-coverage 100 --report-on lib`, the
+  same check `very_good_workflows` runs in CI
 
 ---
 
@@ -80,7 +81,7 @@ prints them, and the exit code reflects the result.
 - [x] All tests pass and coverage is 100%.
 - [x] `dart run bin/theseus.dart` on a scratch Flutter app gives readable
       output.
-- [ ] Review the id format with a human before building diff and baseline
+- [x] Review the id format with a human before building diff and baseline
       on top of it.
 
 ---
