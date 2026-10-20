@@ -6,7 +6,7 @@ import 'package:theseus_cli/src/rules/rule.dart';
 /// files still fail the run.
 final class ParseErrorRule extends Rule {
   /// Creates the rule.
-  const ParseErrorRule();
+  const new();
 
   @override
   String get id => 'parse-error';

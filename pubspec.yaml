@@ -9,7 +9,7 @@ topics:
   - cli
 
 environment:
-  sdk: ^3.12.0
+  sdk: ^3.13.0
 
 executables:
   theseus_cli: theseus
@@ -22,9 +22,8 @@ dependencies:
   path: ^1.9.1
 
 dev_dependencies:
-  coverage: ^1.16.0
   test: ^1.33.0
   test_descriptor: ^2.0.2
   test_process: ^2.1.1
-  very_good_analysis: ^10.3.0
+  very_good_analysis: ^11.0.0
   yaml: ^3.1.4

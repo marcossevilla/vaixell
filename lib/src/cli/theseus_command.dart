@@ -16,11 +16,8 @@ class TheseusCommand {
   /// Creates a command that checks the package in `root` (the current
   /// directory by default), writes the report to `stdout` and writes
   /// diagnostics to `stderr`.
-  TheseusCommand({
-    required this._stdout,
-    required this._stderr,
-    Directory? root,
-  }) : _root = root ?? Directory.current;
+  new({required this._stdout, required this._stderr, Directory? root})
+    : _root = root ?? Directory.current;
 
   final StringSink _stdout;
   final StringSink _stderr;

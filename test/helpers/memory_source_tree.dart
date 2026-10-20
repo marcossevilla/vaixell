@@ -2,7 +2,7 @@ import 'package:theseus_cli/theseus_cli.dart';
 
 /// A [SourceTree] backed by a map of path to contents.
 class MemorySourceTree implements SourceTree {
-  MemorySourceTree(this.files);
+  new(this.files);
 
   final Map<String, String> files;
 

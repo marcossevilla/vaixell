@@ -20,7 +20,7 @@ abstract interface class SourceTree {
 /// A [SourceTree] backed by a directory on the local file system.
 class FileSystemSourceTree implements SourceTree {
   /// Creates a tree rooted at [root].
-  FileSystemSourceTree(this.root);
+  new(this.root);
 
   /// The root directory of the tree.
   final Directory root;

@@ -10,7 +10,7 @@ import 'package:theseus_cli/src/source/source_tree.dart';
 class Engine {
   /// Creates an engine that reads files from [tree] and checks them with
   /// [rules], which defaults to every registered rule.
-  Engine({required this.tree, List<Rule>? rules})
+  new({required this.tree, List<Rule>? rules})
     : rules = rules ?? const RuleRegistry().all;
 
   /// The files to check.

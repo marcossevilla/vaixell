@@ -9,7 +9,7 @@ import 'package:theseus_cli/src/engine/violation.dart';
 /// ```
 class TextReporter {
   /// Creates a reporter that writes to [out].
-  const TextReporter(this.out);
+  const new(this.out);
 
   /// Where the report is written.
   final StringSink out;

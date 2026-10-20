@@ -7,7 +7,7 @@ import 'package:theseus_cli/src/rules/rule.dart';
 /// in `lib/main.dart`.
 final class TopLevelFunctionRule extends Rule {
   /// Creates the rule.
-  const TopLevelFunctionRule();
+  const new();
 
   @override
   String get id => 'top-level-function';

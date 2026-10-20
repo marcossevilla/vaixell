@@ -10,7 +10,7 @@ enum Severity {
 /// A rule violation found in a source file.
 class Violation {
   /// Creates a violation.
-  const Violation({
+  const new({
     required this.id,
     required this.rule,
     required this.severity,
