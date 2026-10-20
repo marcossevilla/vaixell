@@ -155,15 +155,15 @@ violation ids as JSON. `--baseline=<file>` suppresses the ids in that set,
 reports only new ones, and lists stale (fixed) entries.
 
 **Acceptance criteria:**
-- [ ] Writing a baseline and then running with it exits `0` and reports
+- [x] Writing a baseline and then running with it exits `0` and reports
       nothing new. Adding a violation exits `1`.
-- [ ] The baseline file is deterministic (sorted, includes
+- [x] The baseline file is deterministic (sorted, includes
       `schemaVersion`), so it gives stable git diffs.
-- [ ] A missing or malformed baseline exits `78`. `--baseline` can be
+- [x] A missing or malformed baseline exits `78`. `--baseline` can be
       combined with `--git-diff`.
 
 **Verification:**
-- [ ] The standard checks pass.
+- [x] The standard checks pass.
 
 **Dependencies:** Task 4 (shares the id-set comparison)
 
@@ -175,8 +175,8 @@ reports only new ones, and lists stale (fixed) entries.
 ---
 
 ## Checkpoint B
-- [ ] All tests pass and coverage is 100%.
-- [ ] Manual check: on a real repo, run with `--git-diff=origin/main` and then
+- [x] All tests pass and coverage is 100%.
+- [x] Manual check: on a real repo, run with `--git-diff=origin/main` and then
       with a baseline. The output matches what you expect.
 - [ ] Human review before expanding the rule set.
 

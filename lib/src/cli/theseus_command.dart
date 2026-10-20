@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:args/args.dart';
 import 'package:io/io.dart';
+import 'package:path/path.dart' as p;
+import 'package:theseus_cli/src/baseline/baseline.dart';
 import 'package:theseus_cli/src/config/config.dart';
 import 'package:theseus_cli/src/config/config_loader.dart';
 import 'package:theseus_cli/src/engine/diff_result.dart';
@@ -91,55 +93,96 @@ class TheseusCommand {
     }
     final unsupported = _unsupported(results);
     if (unsupported != null) {
-      _stderr
-        ..writeln('$unsupported is not supported yet.')
-        ..writeln()
-        ..writeln(usage);
-      return ExitCode.usage.code;
+      return _usageError('$unsupported is not supported yet.');
+    }
+    final ref = results.option('git-diff');
+    final baselinePath = results.option('baseline');
+    final writeBaselinePath = results.option('write-baseline');
+    if (writeBaselinePath != null && (ref != null || baselinePath != null)) {
+      return _usageError(
+        '--write-baseline can not be combined with --git-diff or --baseline.',
+      );
     }
 
     final tree = FileSystemSourceTree(_root);
-    final Config config;
     try {
-      config = await ConfigLoader(tree).load();
+      final config = await ConfigLoader(tree).load();
+      if (writeBaselinePath != null) {
+        return await _writeBaseline(tree, config, writeBaselinePath);
+      }
+      final baseline = baselinePath == null
+          ? null
+          : await BaselineFile(p.join(_root.path, baselinePath)).read();
+      final violations = await Engine(tree: tree, config: config).run();
+
+      final DiffResult diff;
+      if (ref != null) {
+        diff = (await _gitDiff(
+          violations,
+          config,
+          ref,
+        )).suppress(baseline?.ids ?? const {});
+      } else if (baseline != null) {
+        diff = DiffResult.compare(base: baseline.ids, head: violations);
+      } else {
+        TextReporter(_stdout).report(violations);
+        return _exitCode(violations);
+      }
+      TextReporter(_stdout).reportDiff(diff);
+      return _exitCode(diff.added);
     } on ConfigException catch (error) {
       _stderr.writeln(error);
       return ExitCode.config.code;
-    }
-
-    final ref = results.option('git-diff');
-    if (ref == null) return await _full(tree, config);
-    try {
-      return await _diff(tree, config, ref);
+    } on BaselineException catch (error) {
+      _stderr.writeln(error);
+      return ExitCode.config.code;
     } on GitException catch (error) {
       _stderr.writeln(error);
       return ExitCode.software.code;
     }
   }
 
-  Future<int> _full(SourceTree tree, Config config) async {
-    final violations = await Engine(tree: tree, config: config).run();
-    TextReporter(_stdout).report(violations);
-    return _exitCode(violations);
+  int _usageError(String message) {
+    _stderr
+      ..writeln(message)
+      ..writeln()
+      ..writeln(usage);
+    return ExitCode.usage.code;
   }
 
-  /// Compares the working tree with the merge-base of [ref] and `HEAD`,
-  /// checking both with the working tree's [config].
-  Future<int> _diff(SourceTree head, Config config, String ref) async {
+  Future<int> _writeBaseline(
+    SourceTree tree,
+    Config config,
+    String path,
+  ) async {
+    final violations = await Engine(tree: tree, config: config).run();
+    final baseline = Baseline(violations.map((v) => v.id));
+    await BaselineFile(p.join(_root.path, path)).write(baseline);
+    final count = baseline.ids.length;
+    _stdout.writeln(
+      'Wrote $count violation id${count == 1 ? '' : 's'} to $path.',
+    );
+    return ExitCode.success.code;
+  }
+
+  /// Compares the [head] violations of the working tree with the merge-base
+  /// of [ref] and `HEAD`, checked with the working tree's [config].
+  Future<DiffResult> _gitDiff(
+    List<Violation> head,
+    Config config,
+    String ref,
+  ) async {
     final git = GitRunner(_root.path);
     final base = GitSourceTree(git: git, commit: await git.mergeBase(ref));
-    final List<Violation> baseViolations;
     try {
-      baseViolations = await Engine(tree: base, config: config).run();
+      final baseViolations = await Engine(tree: base, config: config).run();
+      return DiffResult.compare(
+        base: baseViolations.map((v) => v.id),
+        head: head,
+      );
     } finally {
       await base.close();
     }
-    final diff = DiffResult.compare(
-      base: baseViolations,
-      head: await Engine(tree: head, config: config).run(),
-    );
-    TextReporter(_stdout).reportDiff(diff);
-    return _exitCode(diff.added);
   }
 
   /// Returns 1 if any of [violations] is an error, and 0 otherwise.
@@ -154,9 +197,6 @@ class TheseusCommand {
     if (results.rest.isNotEmpty) return 'Passing paths';
     if (results.option('format') != 'text') {
       return '--format=${results.option('format')}';
-    }
-    for (final option in ['baseline', 'write-baseline']) {
-      if (results.wasParsed(option)) return '--$option';
     }
     return null;
   }

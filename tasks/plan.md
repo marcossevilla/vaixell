@@ -135,7 +135,7 @@ Tasks are tracked in `tasks/todo.md`, which has the full acceptance criteria.
 ### Phase 2: Config and the risky core (diff mode)
 - [x] Task 3: `theseus:` config in `analysis_options.yaml`
 - [x] Task 4: `GitSourceTree` and `--git-diff` mode
-- [ ] Task 5: Baseline (`--baseline`, `--write-baseline`)
+- [x] Task 5: Baseline (`--baseline`, `--write-baseline`)
 
 ### Checkpoint B: config, diff and baseline modes all work
 

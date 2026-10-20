@@ -15,17 +15,24 @@ void main() {
   group(DiffResult, () {
     test('compares by id, ignoring locations', () {
       final diff = DiffResult.compare(
-        base: [_v('kept'), _v('removed')],
+        base: ['removed-b', 'kept', 'removed-a', 'kept'],
         head: [_v('kept', line: 9), _v('added')],
       );
       expect(diff.added.map((v) => v.id), equals(['added']));
-      expect(diff.fixed.map((v) => v.id), equals(['removed']));
+      expect(diff.fixed, equals(['removed-a', 'removed-b']));
     });
 
     test('is empty when nothing changed', () {
-      final diff = DiffResult.compare(base: [_v('a')], head: [_v('a')]);
+      final diff = DiffResult.compare(base: ['a'], head: [_v('a')]);
       expect(diff.added, isEmpty);
       expect(diff.fixed, isEmpty);
+    });
+
+    test('suppress drops added ids and keeps fixed ones', () {
+      final diff = DiffResult(added: [_v('a'), _v('b')], fixed: const ['c']);
+      final suppressed = diff.suppress({'a', 'c'});
+      expect(suppressed.added.map((v) => v.id), equals(['b']));
+      expect(suppressed.fixed, equals(['c']));
     });
   });
 }

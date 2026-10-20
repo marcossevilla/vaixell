@@ -51,7 +51,7 @@ void main() {
       TextReporter(out).reportDiff(
         DiffResult(
           added: [_violation('top-level-function:lib/a.dart:foo')],
-          fixed: [_violation('top-level-function:lib/a.dart:bar')],
+          fixed: const ['top-level-function:lib/a.dart:bar'],
         ),
       );
       expect(

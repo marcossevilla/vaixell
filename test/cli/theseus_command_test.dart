@@ -114,8 +114,6 @@ void main() {
     for (final arguments in [
       ['lib'],
       ['--format=json'],
-      ['--baseline=b.json'],
-      ['--write-baseline=b.json'],
     ]) {
       test('rejects unsupported $arguments with exit 64', () async {
         expect(await command.run(arguments), equals(ExitCode.usage.code));

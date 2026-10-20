@@ -9,8 +9,8 @@ import 'package:theseus_cli/src/engine/violation.dart';
 /// <path>:<line>:<column>: <severity>: <message> [<id>]
 /// ```
 ///
-/// Diff reports list the new violations the same way, then one
-/// `Fixed: <id>` line per fixed violation.
+/// Diff and baseline reports list the new violations the same way, then
+/// one `Fixed: <id>` line per fixed violation.
 class TextReporter {
   /// Creates a reporter that writes to [out].
   const new(this.out);
@@ -31,8 +31,8 @@ class TextReporter {
   /// Writes the new violations in [diff], the fixed ids and a summary.
   void reportDiff(DiffResult diff) {
     diff.added.forEach(_writeViolation);
-    for (final v in diff.fixed) {
-      out.writeln('Fixed: ${v.id}');
+    for (final id in diff.fixed) {
+      out.writeln('Fixed: $id');
     }
     final added = diff.added.length;
     out.writeln(
