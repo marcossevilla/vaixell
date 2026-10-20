@@ -20,15 +20,15 @@ positional paths) and exits with the right codes for usage errors. It doesn't
 run any analysis yet.
 
 **Acceptance criteria:**
-- [ ] `dart run bin/theseus.dart --help` prints usage. `--version` prints the
+- [x] `dart run bin/theseus.dart --help` prints usage. `--version` prints the
       version from the pubspec, using a generated or tested constant.
-- [ ] An unknown flag exits with `64` and prints usage to stderr.
-- [ ] CI workflow (`.github/workflows/ci.yaml`) runs format, analyze, test and
+- [x] An unknown flag exits with `64` and prints usage to stderr.
+- [x] CI workflow (`.github/workflows/ci.yaml`) runs format, analyze, test and
       the coverage gate on stable and on the SDK lower bound.
 
 **Verification:**
-- [ ] The standard checks pass.
-- [ ] `test/cli_test.dart` uses `test_process` to cover the help, version and
+- [x] The standard checks pass.
+- [x] `test/cli_test.dart` uses `test_process` to cover the help, version and
       unknown-flag cases.
 
 **Dependencies:** None
