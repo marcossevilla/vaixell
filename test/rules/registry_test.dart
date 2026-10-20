@@ -13,6 +13,7 @@ void main() {
         'top-level-variable',
         'extension-declaration',
         'static-method',
+        'raw-json',
       ]),
     );
   });

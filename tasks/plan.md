@@ -141,7 +141,7 @@ Tasks are tracked in `tasks/todo.md`, which has the full acceptance criteria.
 
 ### Phase 3: Rule set and discovery
 - [x] Task 6: Rules `top-level-variable`, `extension-declaration` and `static-method`
-- [ ] Task 7: Rule `raw-json`
+- [x] Task 7: Rule `raw-json`
 - [ ] Task 8: Workspace and monorepo auto-discovery
 
 ### Checkpoint C: v1 rule set runs on real repos

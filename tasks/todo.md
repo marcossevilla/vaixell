@@ -220,16 +220,16 @@ id from the symbol path. None of them has exemptions.
 through model classes instead of handling raw JSON.
 
 **Acceptance criteria:**
-- [ ] It flags `jsonDecode` / `jsonEncode` calls, `json.decode` /
+- [x] It flags `jsonDecode` / `jsonEncode` calls, `json.decode` /
       `json.encode` calls and `Map<String, dynamic>` type annotations
       outside the allowed contexts.
-- [ ] It doesn't flag code inside `fromJson` constructors or methods,
+- [x] It doesn't flag code inside `fromJson` constructors or methods,
       `toJson` methods, files under `**/models/**`, or generated files.
-- [ ] Running it on 2 public sample repos produces a false-positive count
+- [x] Running it on a public sample repo (marcossevilla/compass_app, per review) produces a false-positive count
       that's recorded in the PR description.
 
 **Verification:**
-- [ ] The standard checks pass.
+- [x] The standard checks pass.
 
 **Dependencies:** Task 3
 

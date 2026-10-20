@@ -138,7 +138,8 @@ void main() {
           'theseus:\n  rules:\n    no-globals: error\n',
           'analysis_options.yaml:3:5: Unknown rule `no-globals`. '
               'Available rules: parse-error, top-level-function, '
-              'top-level-variable, extension-declaration, static-method.',
+              'top-level-variable, extension-declaration, static-method, '
+              'raw-json.',
         ),
         'an unknown severity': (
           'theseus:\n  rules:\n    top-level-function: info\n',

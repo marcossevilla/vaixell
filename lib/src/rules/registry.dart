@@ -1,5 +1,6 @@
 import 'package:theseus_cli/src/rules/extension_declaration.dart';
 import 'package:theseus_cli/src/rules/parse_error.dart';
+import 'package:theseus_cli/src/rules/raw_json.dart';
 import 'package:theseus_cli/src/rules/rule.dart';
 import 'package:theseus_cli/src/rules/static_method.dart';
 import 'package:theseus_cli/src/rules/top_level_function.dart';
@@ -17,5 +18,6 @@ class RuleRegistry {
     TopLevelVariableRule(),
     ExtensionDeclarationRule(),
     StaticMethodRule(),
+    RawJsonRule(),
   ];
 }
