@@ -83,6 +83,29 @@ void main() {
       expect(out.toString(), equals('No violations found.\n'));
     });
 
+    test('exits 0 when the config makes violations warnings', () async {
+      await d.dir('lib', [d.file('a.dart', 'void foo() {}\n')]).create();
+      await d
+          .file(
+            'analysis_options.yaml',
+            'theseus:\n  rules:\n    top-level-function: warning\n',
+          )
+          .create();
+      expect(await command.run([]), equals(ExitCode.success.code));
+      expect(out.toString(), contains('lib/a.dart:1:6: warning: '));
+    });
+
+    test('exits 78 on an invalid config', () async {
+      await d.dir('lib', [d.file('a.dart', 'void foo() {}\n')]).create();
+      await d.file('analysis_options.yaml', 'theseus:\n  rulez: {}\n').create();
+      expect(await command.run([]), equals(ExitCode.config.code));
+      expect(
+        err.toString(),
+        startsWith('analysis_options.yaml:2:3: Unknown key `rulez`'),
+      );
+      expect(out.toString(), isEmpty);
+    });
+
     test('defaults to the current directory', () async {
       final command = TheseusCommand(stdout: out, stderr: err);
       expect(await command.run([]), equals(ExitCode.success.code));

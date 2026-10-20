@@ -12,6 +12,15 @@ class MemorySourceTree implements SourceTree {
       if (path.startsWith('$directory/')) path,
   ]..sort();
 
+  /// The paths passed to [read], in order.
+  final List<String> reads = [];
+
   @override
-  Future<String> read(String path) async => files[path]!;
+  Future<bool> exists(String path) async => files.containsKey(path);
+
+  @override
+  Future<String> read(String path) async {
+    reads.add(path);
+    return files[path]!;
+  }
 }

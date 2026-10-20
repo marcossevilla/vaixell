@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:args/args.dart';
 import 'package:io/io.dart';
+import 'package:theseus_cli/src/config/config.dart';
+import 'package:theseus_cli/src/config/config_loader.dart';
 import 'package:theseus_cli/src/engine/engine.dart';
 import 'package:theseus_cli/src/engine/violation.dart';
 import 'package:theseus_cli/src/report/text_reporter.dart';
@@ -93,7 +95,16 @@ class TheseusCommand {
       return ExitCode.usage.code;
     }
 
-    final violations = await Engine(tree: FileSystemSourceTree(_root)).run();
+    final tree = FileSystemSourceTree(_root);
+    final Config config;
+    try {
+      config = await ConfigLoader(tree).load();
+    } on ConfigException catch (error) {
+      _stderr.writeln(error);
+      return ExitCode.config.code;
+    }
+
+    final violations = await Engine(tree: tree, config: config).run();
     TextReporter(_stdout).report(violations);
     return violations.any((v) => v.severity == Severity.error)
         ? 1

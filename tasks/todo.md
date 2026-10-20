@@ -96,17 +96,17 @@ there's no config. The
 analyzer's top-level `include:` is never followed.
 
 **Acceptance criteria:**
-- [ ] With no file or no `theseus:` key, the run uses `recommended`.
+- [x] With no file or no `theseus:` key, the run uses `recommended`.
       `rules: {top-level-function: off}` turns that rule off, and `warning`
       makes it exit `0`.
-- [ ] Unknown keys, rules, presets or severities exit with `78` and a
+- [x] Unknown keys, rules, presets or severities exit with `78` and a
       `file:line:col` message. Setting `parse-error: off` is also rejected.
-- [ ] A top-level analyzer `include: package:foo/...` is ignored, with no
+- [x] A top-level analyzer `include: package:foo/...` is ignored, with no
       error and no file read.
 
 **Verification:**
-- [ ] The standard checks pass.
-- [ ] A table-driven config test covers the valid and invalid YAML cases.
+- [x] The standard checks pass.
+- [x] A table-driven config test covers the valid and invalid YAML cases.
 
 **Dependencies:** Task 2
 

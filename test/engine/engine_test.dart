@@ -1,10 +1,14 @@
+import 'package:glob/glob.dart';
 import 'package:test/test.dart';
 import 'package:theseus_cli/theseus_cli.dart';
 
 import '../helpers/memory_source_tree.dart';
 
-Future<List<Violation>> _run(Map<String, String> files) =>
-    Engine(tree: MemorySourceTree(files)).run();
+Future<List<Violation>> _run(Map<String, String> files, {Config? config}) =>
+    Engine(
+      tree: MemorySourceTree(files),
+      config: config ?? Config.recommended(),
+    ).run();
 
 void main() {
   group(Engine, () {
@@ -80,12 +84,36 @@ void main() {
       ]);
     });
 
-    test('uses the given rules only', () async {
-      final engine = Engine(
-        tree: MemorySourceTree({'lib/a.dart': 'void foo() {}\n'}),
-        rules: const [],
+    test('runs only the rules enabled in the config', () async {
+      final violations = await _run({
+        'lib/a.dart': 'void foo() {}\n',
+        'lib/b.dart': 'class {\n',
+      }, config: const Config(severities: {'parse-error': Severity.error}));
+      expect(violations.map((v) => v.rule), ['parse-error']);
+    });
+
+    test('uses the severities from the config', () async {
+      final violations = await _run(
+        {'lib/a.dart': 'void foo() {}\n'},
+        config: const Config(
+          severities: {'top-level-function': Severity.warning},
+        ),
       );
-      expect(await engine.run(), isEmpty);
+      expect(violations.single.severity, equals(Severity.warning));
+    });
+
+    test('skips files excluded by the config', () async {
+      final violations = await _run(
+        {
+          'lib/a.dart': 'void foo() {}\n',
+          'lib/legacy/b.dart': 'void foo() {}\n',
+        },
+        config: Config(
+          severities: Config.recommended().severities,
+          exclude: [Glob('lib/legacy/**')],
+        ),
+      );
+      expect(violations.map((v) => v.path), ['lib/a.dart']);
     });
   });
 }

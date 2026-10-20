@@ -133,7 +133,7 @@ Tasks are tracked in `tasks/todo.md`, which has the full acceptance criteria.
 ### Checkpoint A: one rule works end to end on a single package
 
 ### Phase 2: Config and the risky core (diff mode)
-- [ ] Task 3: `theseus:` config in `analysis_options.yaml`
+- [x] Task 3: `theseus:` config in `analysis_options.yaml`
 - [ ] Task 4: `GitSourceTree` and `--git-diff` mode
 - [ ] Task 5: Baseline (`--baseline`, `--write-baseline`)
 

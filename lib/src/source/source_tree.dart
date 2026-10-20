@@ -13,6 +13,9 @@ abstract interface class SourceTree {
   /// Returns an empty list when [directory] doesn't exist.
   Future<List<String>> listFiles(String directory);
 
+  /// Whether a file exists at [path].
+  Future<bool> exists(String path);
+
   /// Returns the contents of the file at [path], decoded as UTF-8.
   Future<String> read(String path);
 }
@@ -36,6 +39,10 @@ class FileSystemSourceTree implements SourceTree {
     ]..sort();
     return paths;
   }
+
+  @override
+  Future<bool> exists(String path) async =>
+      File(p.join(root.path, path)).existsSync();
 
   @override
   Future<String> read(String path) async {

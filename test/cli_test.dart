@@ -82,4 +82,18 @@ void main() {
     expect(await process.stdout.next, equals('No violations found.'));
     await process.shouldExit(ExitCode.success.code);
   });
+
+  test('exits 78 on an invalid config', () async {
+    await d.dir('pkg', [
+      d.file('analysis_options.yaml', 'theseus:\n  rules:\n    nope: off\n'),
+      d.dir('lib', [d.file('main.dart', 'void main() {}\n')]),
+    ]).create();
+
+    final process = await _theseus([], workingDirectory: d.path('pkg'));
+    expect(
+      await process.stderr.next,
+      startsWith('analysis_options.yaml:3:5: Unknown rule `nope`.'),
+    );
+    await process.shouldExit(ExitCode.config.code);
+  });
 }

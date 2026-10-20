@@ -28,6 +28,13 @@ void main() {
       expect(await tree.listFiles('missing'), isEmpty);
     });
 
+    test('checks whether files exist', () async {
+      expect(await tree.exists('pubspec.yaml'), isTrue);
+      expect(await tree.exists('lib/src/a.dart'), isTrue);
+      expect(await tree.exists('lib/src'), isFalse);
+      expect(await tree.exists('missing.yaml'), isFalse);
+    });
+
     test('reads files and tolerates malformed UTF-8', () async {
       expect(await tree.read('lib/src/a.dart'), equals('a'));
       await File('${d.sandbox}/lib/bad.dart').writeAsBytes([0x61, 0xff]);
