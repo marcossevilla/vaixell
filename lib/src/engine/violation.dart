@@ -44,6 +44,19 @@ class Violation {
   /// A human-readable description of the violation.
   final String message;
 
+  /// Returns the violation as a JSON object with the keys `id`, `rule`,
+  /// `severity` (`error` or `warning`), `path`, `line`, `column` and
+  /// `message`.
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'rule': rule,
+    'severity': severity.name,
+    'path': path,
+    'line': line,
+    'column': column,
+    'message': message,
+  };
+
   @override
   String toString() => 'Violation($id at $path:$line:$column)';
 }

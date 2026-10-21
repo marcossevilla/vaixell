@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "mode": "full",
+  "violations": [
+    {
+      "id": "top-level-function:lib/a.dart:foo",
+      "rule": "top-level-function",
+      "severity": "error",
+      "path": "lib/a.dart",
+      "line": 1,
+      "column": 6,
+      "message": "Top-level function `foo` is not allowed. Move it into a class."
+    },
+    {
+      "id": "top-level-variable:lib/a.dart:limit",
+      "rule": "top-level-variable",
+      "severity": "warning",
+      "path": "lib/a.dart",
+      "line": 2,
+      "column": 7,
+      "message": "Top-level variable `limit` is not allowed. Move it into a class."
+    },
+    {
+      "id": "parse-error:lib/b.dart",
+      "rule": "parse-error",
+      "severity": "error",
+      "path": "lib/b.dart",
+      "line": 2,
+      "column": 1,
+      "message": "Syntax error: Expected to find '}'."
+    }
+  ],
+  "summary": {
+    "violations": 3,
+    "errors": 2,
+    "warnings": 1
+  }
+}

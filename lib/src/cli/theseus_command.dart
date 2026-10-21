@@ -12,6 +12,9 @@ import 'package:theseus_cli/src/engine/engine.dart';
 import 'package:theseus_cli/src/engine/package.dart';
 import 'package:theseus_cli/src/engine/violation.dart';
 import 'package:theseus_cli/src/git/git_runner.dart';
+import 'package:theseus_cli/src/report/json_reporter.dart';
+import 'package:theseus_cli/src/report/report.dart';
+import 'package:theseus_cli/src/report/reporter.dart';
 import 'package:theseus_cli/src/report/text_reporter.dart';
 import 'package:theseus_cli/src/source/git_source_tree.dart';
 import 'package:theseus_cli/src/source/source_tree.dart';
@@ -112,32 +115,43 @@ class TheseusCommand {
     final invalidPath = results.rest.map(_invalidPath).nonNulls.firstOrNull;
     if (invalidPath != null) return _usageError(invalidPath);
 
+    final format = results.option('format')!;
     final tree = FileSystemSourceTree(_root);
     try {
       final packages = await _packages(tree, results.rest);
       if (writeBaselinePath != null) {
-        return await _writeBaseline(tree, packages, writeBaselinePath);
+        return await _writeBaseline(
+          tree,
+          packages,
+          writeBaselinePath,
+          // Keep stdout for the document in machine-readable formats.
+          status: format == 'text' ? _stdout : _stderr,
+        );
       }
       final baseline = baselinePath == null
           ? null
           : await BaselineFile(p.join(_root.path, baselinePath)).read();
       final violations = await Engine(tree: tree, packages: packages).run();
 
-      final DiffResult diff;
+      final Report report;
       if (ref != null) {
-        diff = (await _gitDiff(
+        final diff = await _gitDiff(violations, packages, ref);
+        report = Report.compared(
+          ReportMode.diff,
           violations,
-          packages,
-          ref,
-        )).suppress(baseline?.ids ?? const {});
+          diff.suppress(baseline?.ids ?? const {}),
+        );
       } else if (baseline != null) {
-        diff = DiffResult.compare(base: baseline.ids, head: violations);
+        report = Report.compared(
+          ReportMode.baseline,
+          violations,
+          DiffResult.compare(base: baseline.ids, head: violations),
+        );
       } else {
-        TextReporter(_stdout).report(violations);
-        return _exitCode(violations);
+        report = Report.full(violations);
       }
-      TextReporter(_stdout).reportDiff(diff);
-      return _exitCode(diff.added);
+      _reporter(format).write(report);
+      return _exitCode(report.failing);
     } on ConfigException catch (error) {
       _stderr.writeln(error);
       return ExitCode.config.code;
@@ -193,13 +207,14 @@ class TheseusCommand {
   Future<int> _writeBaseline(
     SourceTree tree,
     List<Package> packages,
-    String path,
-  ) async {
+    String path, {
+    required StringSink status,
+  }) async {
     final violations = await Engine(tree: tree, packages: packages).run();
     final baseline = Baseline(violations.map((v) => v.id));
     await BaselineFile(p.join(_root.path, path)).write(baseline);
     final count = baseline.ids.length;
-    _stdout.writeln(
+    status.writeln(
       'Wrote $count violation id${count == 1 ? '' : 's'} to $path.',
     );
     return ExitCode.success.code;
@@ -226,6 +241,11 @@ class TheseusCommand {
     }
   }
 
+  Reporter _reporter(String format) => switch (format) {
+    'json' => JsonReporter(_stdout),
+    _ => TextReporter(_stdout),
+  };
+
   /// Returns 1 if any of [violations] is an error, and 0 otherwise.
   int _exitCode(List<Violation> violations) =>
       violations.any((v) => v.severity == Severity.error)
@@ -235,9 +255,7 @@ class TheseusCommand {
   /// Returns a description of the first argument in [results] that is
   /// parsed but not implemented yet, or `null` if there is none.
   String? _unsupported(ArgResults results) {
-    if (results.option('format') != 'text') {
-      return '--format=${results.option('format')}';
-    }
+    if (results.option('format') == 'github') return '--format=github';
     return null;
   }
 }

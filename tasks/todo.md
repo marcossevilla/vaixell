@@ -302,13 +302,13 @@ paths override discovery.
 - a summary with counts
 
 **Acceptance criteria:**
-- [ ] The output is valid JSON on stdout. Nothing else is written to stdout.
-- [ ] Golden-file tests cover the full, diff and baseline modes.
-- [ ] The schema is documented in the doc comments of the public model
+- [x] The output is valid JSON on stdout. Nothing else is written to stdout.
+- [x] Golden-file tests cover the full, diff and baseline modes.
+- [x] The schema is documented in the doc comments of the public model
       classes.
 
 **Verification:**
-- [ ] The standard checks pass.
+- [x] The standard checks pass.
 
 **Dependencies:** Tasks 4 and 5
 

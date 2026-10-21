@@ -174,7 +174,7 @@ Tasks are tracked in `tasks/todo.md`, which has the full acceptance criteria.
 ### Checkpoint C: v1 rule set runs on real repos
 
 ### Phase 4: Output formats
-- [ ] Task 9: JSON reporter
+- [x] Task 9: JSON reporter
 - [ ] Task 10: GitHub reporter (annotations and step summary)
 
 ### Checkpoint D: phase 1 complete

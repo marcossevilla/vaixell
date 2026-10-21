@@ -1,6 +1,8 @@
 @Tags(['e2e'])
 library;
 
+import 'dart:convert';
+
 import 'package:io/io.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
@@ -145,6 +147,21 @@ void main() {
       endsWith('[top-level-function:packages/a/lib/a.dart:a]'),
     );
     expect(await process.stdout.next, equals('1 violation found.'));
+    await process.shouldExit(1);
+  });
+
+  test('--format=json prints only a JSON document on stdout', () async {
+    await d.dir('pkg', [
+      d.dir('lib', [d.file('a.dart', 'void foo() {}\n')]),
+    ]).create();
+
+    final process = await _theseus([
+      '--format=json',
+    ], workingDirectory: d.path('pkg'));
+    final stdout = (await process.stdout.rest.toList()).join('\n');
+    final json = jsonDecode(stdout) as Map<String, Object?>;
+    expect(json['mode'], equals('full'));
+    expect(json['summary'], containsPair('violations', 1));
     await process.shouldExit(1);
   });
 }

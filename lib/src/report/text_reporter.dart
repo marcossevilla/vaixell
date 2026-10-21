@@ -1,5 +1,7 @@
 import 'package:theseus_cli/src/engine/diff_result.dart';
 import 'package:theseus_cli/src/engine/violation.dart';
+import 'package:theseus_cli/src/report/report.dart';
+import 'package:theseus_cli/src/report/reporter.dart';
 
 /// Prints violations as human-readable lines.
 ///
@@ -11,12 +13,18 @@ import 'package:theseus_cli/src/engine/violation.dart';
 ///
 /// Diff and baseline reports list the new violations the same way, then
 /// one `Fixed: <id>` line per fixed violation.
-class TextReporter {
+class TextReporter implements Reporter {
   /// Creates a reporter that writes to [out].
   const new(this.out);
 
   /// Where the report is written.
   final StringSink out;
+
+  @override
+  void write(Report report) => switch (report.diff) {
+    final diff? => reportDiff(diff),
+    null => this.report(report.violations),
+  };
 
   /// Writes [violations] and a summary.
   void report(List<Violation> violations) {
