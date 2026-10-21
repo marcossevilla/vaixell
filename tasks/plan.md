@@ -50,7 +50,20 @@ wraps the CLI and finds the PR base on its own.
   nothing is merged). It accepts `include: <preset>`, a list of presets, and
   `rules: {name: off|warning|error}`. It never follows the analyzer's
   top-level `include:`. Unknown keys, rules or severities are errors that
-  report a file:line from `package:yaml` spans.
+  report a file:line from `package:yaml` spans. `exclude:` globs are
+  relative to the file that declares them.
+- **Package discovery** runs through `SourceTree`, so diff mode discovers
+  the same way on a git ref:
+  1. A root `workspace:` gives the root plus its members.
+  2. A root `pubspec.yaml` without a workspace gives the root plus any
+     `packages/*` or `pkgs/*` package. This covers apps with local
+     packages without picking up `example/`.
+  3. Without a root `pubspec.yaml`, every `packages/*`, `pkgs/*` and
+     top-level package, falling back to the root.
+
+  Positional paths replace discovery. Ids are relative to the directory
+  theseus runs in. Diff mode checks the head's packages and configs on both
+  sides.
 - **Presets are built in and versioned in code.** `recommended` is the default
   when no config exists, and it sets every v1 rule to `error`. A run with no
   config on an unfamiliar repo can exit 1 but still gives useful output. On
@@ -156,7 +169,7 @@ Tasks are tracked in `tasks/todo.md`, which has the full acceptance criteria.
 ### Phase 3: Rule set and discovery
 - [x] Task 6: Rules `top-level-variable`, `extension-declaration` and `static-method`
 - [x] Task 7: Rule `raw-json`
-- [ ] Task 8: Workspace and monorepo auto-discovery
+- [x] Task 8: Workspace and monorepo auto-discovery
 
 ### Checkpoint C: v1 rule set runs on real repos
 

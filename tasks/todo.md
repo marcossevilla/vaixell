@@ -248,23 +248,26 @@ through model classes instead of handling raw JSON.
 
 **Description:** Discover the packages through `SourceTree`, in this order:
 1. The root `pubspec.yaml` `workspace:` members, plus the root package.
-2. A single package.
-3. `packages/*`, `pkgs/*` and immediate children that have a `pubspec.yaml`.
+2. A root package, plus any `packages/*` or `pkgs/*` package (changed from
+   "a single package" in review, so apps with local packages are covered
+   without picking up `example/`).
+3. `packages/*`, `pkgs/*` and immediate children that have a `pubspec.yaml`,
+   falling back to the root.
 
 Ids use paths relative to the repo root. Each member uses the nearest
 `analysis_options.yaml` with a `theseus:` key, with no merging. Positional
 paths override discovery.
 
 **Acceptance criteria:**
-- [ ] Fixtures for a workspace, a monorepo without a workspace and a single
+- [x] Fixtures for a workspace, a monorepo without a workspace and a single
       package each scan the expected `lib/` directories.
-- [ ] A member's own `theseus:` config overrides the root config for that
+- [x] A member's own `theseus:` config overrides the root config for that
       member only.
-- [ ] Discovery works the same on `GitSourceTree`, so diff mode works in
+- [x] Discovery works the same on `GitSourceTree`, so diff mode works in
       monorepos.
 
 **Verification:**
-- [ ] The standard checks pass.
+- [x] The standard checks pass.
 
 **Dependencies:** Tasks 3 and 4
 
