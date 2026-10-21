@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:args/args.dart';
 import 'package:args/command_runner.dart';
 import 'package:cli_completion/cli_completion.dart';
@@ -15,9 +17,16 @@ import 'package:vaixell/src/version.dart';
 /// {@endtemplate}
 class VaixellCommandRunner extends CompletionCommandRunner<int> {
   /// {@macro vaixell_command_runner}
-  new({Logger? logger, PubUpdater? pubUpdater})
+  ///
+  /// [interactive] controls the update check and shell completion
+  /// auto-install. It defaults to `true` when stdout is a terminal and the
+  /// `CI` environment variable is not set.
+  new({Logger? logger, PubUpdater? pubUpdater, bool? interactive})
     : _logger = logger ?? Logger(),
       _pubUpdater = pubUpdater ?? PubUpdater(),
+      _interactive =
+          interactive ??
+          (stdout.hasTerminal && !Platform.environment.containsKey('CI')),
       super(
         'vaixell',
         'Checks architecture rules in Dart and Flutter repositories without '
@@ -49,13 +58,14 @@ class VaixellCommandRunner extends CompletionCommandRunner<int> {
 
   final Logger _logger;
   final PubUpdater _pubUpdater;
+  final bool _interactive;
 
   bool _isMachineReadable = false;
 
-  /// Disabled for machine-readable output, since installing completion files
-  /// logs to stdout and would corrupt the report.
+  /// Disabled when not interactive, and for machine-readable output, since
+  /// installing completion files logs to stdout and would corrupt the report.
   @override
-  bool get enableAutoInstall => !_isMachineReadable;
+  bool get enableAutoInstall => _interactive && !_isMachineReadable;
 
   @override
   Future<int> run(Iterable<String> args) async {
@@ -103,8 +113,7 @@ class VaixellCommandRunner extends CompletionCommandRunner<int> {
         ? _printVersion()
         : await super.runCommand(topLevelResults);
 
-    // Check for updates, unless stdout is a machine-readable report
-    if (command?.name != UpdateCommand.commandName && !_isMachineReadable) {
+    if (_shouldCheckForUpdates(command)) {
       await _checkForUpdates();
     }
 
@@ -114,6 +123,13 @@ class VaixellCommandRunner extends CompletionCommandRunner<int> {
   bool _isMachineReadableCheck(ArgResults? command) =>
       command?.name == CheckCommand.commandName &&
       command!.option('format') != 'text';
+
+  /// Whether to check for updates: only when interactive, and not for the
+  /// update command or a machine-readable report on stdout.
+  bool _shouldCheckForUpdates(ArgResults? command) =>
+      _interactive &&
+      !_isMachineReadable &&
+      command?.name != UpdateCommand.commandName;
 
   void _logArguments(ArgResults topLevelResults) {
     _logger

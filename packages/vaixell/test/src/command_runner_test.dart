@@ -40,6 +40,7 @@ void main() {
       commandRunner = VaixellCommandRunner(
         logger: logger,
         pubUpdater: pubUpdater,
+        interactive: true,
       );
     });
 
@@ -120,6 +121,26 @@ void main() {
     test('auto-installs completion files for a text check', () async {
       await commandRunner.run(['check']);
       expect(commandRunner.enableAutoInstall, isTrue);
+    });
+
+    group('when not interactive', () {
+      setUp(() {
+        commandRunner = VaixellCommandRunner(
+          logger: logger,
+          pubUpdater: pubUpdater,
+          interactive: false,
+        );
+      });
+
+      test('does not check for updates', () async {
+        await commandRunner.run(['check']);
+        verifyNever(() => pubUpdater.getLatestVersion(any()));
+      });
+
+      test('does not auto-install completion files', () async {
+        await commandRunner.run(['check']);
+        expect(commandRunner.enableAutoInstall, isFalse);
+      });
     });
 
     test('shows update message after a text check', () async {
