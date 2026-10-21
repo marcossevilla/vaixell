@@ -15,15 +15,15 @@ class const GitException(
 
 /// Runs git commands in a directory.
 class const GitRunner(
-  /// The directory git runs in. Relative paths are resolved against it.
+  /// The directory git runs in.
+  ///
+  /// Relative paths are resolved against it.
   final String workingDirectory, {
 
   /// The git binary to run.
   final String executable = 'git',
 }) {
   /// Creates a runner for the repository that contains [workingDirectory].
-  ///
-  /// [executable] is the git binary to run.
   this;
 
   /// Runs `git` with [arguments] and returns its stdout.

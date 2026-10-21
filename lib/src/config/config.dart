@@ -5,8 +5,9 @@ import 'package:yaml/yaml.dart';
 
 /// The resolved `vaixell:` configuration for a package.
 class const Config({
-  /// The severity of each enabled rule, by rule id. Rules that are missing
-  /// are off.
+  /// The severity of each enabled rule, by rule id.
+  ///
+  /// Rules that are missing are off.
   required final Map<String, Severity> severities,
 
   /// Globs, relative to [root], for files that aren't checked.

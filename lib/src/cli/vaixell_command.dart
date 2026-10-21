@@ -31,11 +31,11 @@ class VaixellCommand({
   Directory? root,
   Map<String, String>? environment,
 }) {
-  /// Creates a command that checks the packages in `root` (the current
+  /// Creates a command that checks the packages in [root] (the current
   /// directory by default), writes the report to `stdout` and writes
   /// diagnostics to `stderr`.
   ///
-  /// `environment` (the process environment by default) provides
+  /// [environment] (the process environment by default) provides
   /// `GITHUB_STEP_SUMMARY` for `--format=github`.
   this;
 

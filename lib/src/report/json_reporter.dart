@@ -7,7 +7,7 @@ import 'package:vaixell/src/report/reporter.dart';
 ///
 /// See [Report] for the schema.
 class const JsonReporter(
-  /// Where the document is written.
+  /// The sink that the document is written to.
   final StringSink out,
 ) implements Reporter {
   /// Creates a reporter that writes to [out].
