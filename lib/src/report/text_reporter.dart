@@ -12,12 +12,12 @@ import 'package:vaixell/src/report/reporter.dart';
 ///
 /// Diff and baseline reports list the new violations the same way, then
 /// one `Fixed: <id>` line per fixed violation.
-class TextReporter implements Reporter {
-  /// Creates a reporter that writes to [out].
-  const new(this.out);
-
+class const TextReporter(
   /// Where the report is written.
-  final StringSink out;
+  final StringSink out,
+) implements Reporter {
+  /// Creates a reporter that writes to [out].
+  this;
 
   @override
   void write(Report report) {

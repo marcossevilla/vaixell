@@ -7,9 +7,9 @@ import 'package:vaixell/src/rules/top_level_function.dart';
 import 'package:vaixell/src/rules/top_level_variable.dart';
 
 /// The closed set of rules that vaixell knows about.
-class RuleRegistry {
+class const RuleRegistry() {
   /// Creates the registry.
-  const new();
+  this;
 
   /// Every rule, in reporting order.
   List<Rule> get all => const [

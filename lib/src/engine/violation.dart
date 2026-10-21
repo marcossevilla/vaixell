@@ -8,41 +8,33 @@ enum Severity {
 }
 
 /// A rule violation found in a source file.
-class Violation {
-  /// Creates a violation.
-  const new({
-    required this.id,
-    required this.rule,
-    required this.severity,
-    required this.path,
-    required this.line,
-    required this.column,
-    required this.message,
-  });
-
+class const Violation({
   /// The stable identity of the violation, independent of line numbers.
   ///
   /// The format is `<rule>:<path>` or `<rule>:<path>:<symbol>`, with `#n`
   /// appended to the n-th occurrence of the same id in a file.
-  final String id;
+  required final String id,
 
   /// The id of the rule that produced the violation.
-  final String rule;
+  required final String rule,
 
   /// The severity of the violation.
-  final Severity severity;
+  required final Severity severity,
 
   /// The POSIX path of the file, relative to the repository root.
-  final String path;
+  required final String path,
 
   /// The 1-based line of the violation.
-  final int line;
+  required final int line,
 
   /// The 1-based column of the violation.
-  final int column;
+  required final int column,
 
   /// A human-readable description of the violation.
-  final String message;
+  required final String message,
+}) {
+  /// Creates a violation.
+  this;
 
   /// Returns the violation as a JSON object with the keys `id`, `rule`,
   /// `severity` (`error` or `warning`), `path`, `line`, `column` and

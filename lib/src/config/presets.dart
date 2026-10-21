@@ -2,9 +2,9 @@ import 'package:vaixell/src/engine/violation.dart';
 import 'package:vaixell/src/rules/registry.dart';
 
 /// The built-in presets that a config can `include`.
-class Presets {
+class const Presets() {
   /// Creates the preset catalog.
-  const new();
+  this;
 
   /// The preset used when a config doesn't `include` one.
   static const String defaultPreset = 'recommended';

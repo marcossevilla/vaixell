@@ -21,9 +21,9 @@ import 'package:vaixell/src/rules/rule.dart';
 /// Ids use the enclosing declaration and the kind of finding, such as
 /// `ApiClient.getUser@decode`, `@encode` or `@map`, so they don't change
 /// when code moves or when a finding of another kind is removed.
-final class RawJsonRule extends Rule {
+final class const RawJsonRule() extends Rule {
   /// Creates the rule.
-  const new();
+  this;
 
   @override
   String get id => 'raw-json';

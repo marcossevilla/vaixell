@@ -1,11 +1,7 @@
 import 'package:vaixell/vaixell.dart';
 
 /// A [SourceTree] backed by a map of path to contents.
-class MemorySourceTree implements SourceTree {
-  new(this.files);
-
-  final Map<String, String> files;
-
+class MemorySourceTree(final Map<String, String> files) implements SourceTree {
   @override
   Future<List<String>> listFiles(String directory) async => [
     for (final path in files.keys)

@@ -14,12 +14,12 @@ import 'package:yaml/yaml.dart';
 ///    app with local packages.
 /// 3. Otherwise, every `packages/*`, `pkgs/*` and top-level directory with a
 ///    `pubspec.yaml`, or the root when there are none.
-class PackageDiscovery {
-  /// Creates a discovery that reads [tree].
-  const new(this.tree);
-
+class const PackageDiscovery(
   /// The tree to search.
-  final SourceTree tree;
+  final SourceTree tree,
+) {
+  /// Creates a discovery that reads [tree].
+  this;
 
   static const String _pubspec = 'pubspec.yaml';
   static const List<String> _packageParents = ['packages', 'pkgs'];

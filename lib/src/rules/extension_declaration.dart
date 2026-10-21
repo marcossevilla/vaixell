@@ -2,9 +2,9 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:vaixell/src/rules/rule.dart';
 
 /// Reports extensions, named or unnamed, and extension types.
-final class ExtensionDeclarationRule extends Rule {
+final class const ExtensionDeclarationRule() extends Rule {
   /// Creates the rule.
-  const new();
+  this;
 
   /// The symbol used in ids for an extension without a name.
   static const String unnamed = '<unnamed>';

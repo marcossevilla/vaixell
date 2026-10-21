@@ -4,30 +4,26 @@ import 'package:vaixell/src/engine/violation.dart';
 import 'package:yaml/yaml.dart';
 
 /// The resolved `vaixell:` configuration for a package.
-class Config {
+class const Config({
+  /// The severity of each enabled rule, by rule id. Rules that are missing
+  /// are off.
+  required final Map<String, Severity> severities,
+
+  /// Globs, relative to [root], for files that aren't checked.
+  final List<Glob> exclude = const [],
+
+  /// The directory of the file that declared this config, relative to the
+  /// repository root, or `''` for the root itself.
+  final String root = '',
+}) {
   /// Creates a config that runs the rules in [severities] and skips files
   /// that match any of the [exclude] globs, which are relative to [root].
-  const new({
-    required this.severities,
-    this.exclude = const [],
-    this.root = '',
-  });
+  this;
 
   /// Creates the config used when there is no `vaixell:` section, which is
   /// the `recommended` preset.
   factory recommended() =>
       Config(severities: const Presets().all[Presets.defaultPreset]!);
-
-  /// The severity of each enabled rule, by rule id. Rules that are missing
-  /// are off.
-  final Map<String, Severity> severities;
-
-  /// Globs, relative to [root], for files that aren't checked.
-  final List<Glob> exclude;
-
-  /// The directory of the file that declared this config, relative to the
-  /// repository root, or `''` for the root itself.
-  final String root;
 
   /// Whether [path], relative to the repository root, matches one of the
   /// [exclude] globs.
@@ -40,15 +36,22 @@ class Config {
 }
 
 /// An invalid `vaixell:` configuration.
-class ConfigException implements Exception {
+class const ConfigException(
+  /// A description of the problem.
+  final String message, {
+
+  /// The path of the config file.
+  required final String path,
+
+  /// The 1-based line of the problem.
+  required final int line,
+
+  /// The 1-based column of the problem.
+  required final int column,
+}) implements Exception {
   /// Creates an exception for a problem at [line] and [column] of the
   /// config file at [path].
-  const new(
-    this.message, {
-    required this.path,
-    required this.line,
-    required this.column,
-  });
+  this;
 
   /// Creates an exception for a problem with [node] in the file at [path].
   factory at(YamlNode node, String message, {required String path}) =>
@@ -69,18 +72,6 @@ class ConfigException implements Exception {
       column: (start?.column ?? 0) + 1,
     );
   }
-
-  /// A description of the problem.
-  final String message;
-
-  /// The path of the config file.
-  final String path;
-
-  /// The 1-based line of the problem.
-  final int line;
-
-  /// The 1-based column of the problem.
-  final int column;
 
   @override
   String toString() => '$path:$line:$column: $message';
