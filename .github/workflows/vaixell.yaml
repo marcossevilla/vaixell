@@ -26,7 +26,7 @@ jobs:
     if: github.event_name == 'pull_request'
     permissions:
       pull-requests: read
-    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/semantic_pull_request.yml@v1
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/semantic_pull_request.yml@v2
 
   build:
     name: build (${{ matrix.sdk }})
@@ -43,9 +43,13 @@ jobs:
       report_on: lib
       coverage_excludes: lib/src/version.dart
       min_coverage: 100
+      # Only run once per matrix; the score does not depend on the SDK.
+      run_cognitive_complexity: ${{ matrix.sdk == 'stable' }}
+      # Resolved from the repository root, not working_directory.
+      cognitive_complexity_targets: packages/vaixell/lib
 
   spell-check:
-    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/spell_check.yml@v1
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/spell_check.yml@v2
     with:
       includes: |
         **/*.md
