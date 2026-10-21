@@ -129,4 +129,22 @@ void main() {
     expect(await process.stderr.next, endsWith('is not in a git repository.'));
     await process.shouldExit(ExitCode.software.code);
   });
+
+  test('checks workspace members from the root', () async {
+    await d.dir('repo', [
+      d.file('pubspec.yaml', 'name: w\nworkspace:\n  - packages/a\n'),
+      d.dir('packages/a', [
+        d.file('pubspec.yaml', 'name: a\n'),
+        d.dir('lib', [d.file('a.dart', 'void a() {}\n')]),
+      ]),
+    ]).create();
+
+    final process = await _theseus([], workingDirectory: d.path('repo'));
+    expect(
+      await process.stdout.next,
+      endsWith('[top-level-function:packages/a/lib/a.dart:a]'),
+    );
+    expect(await process.stdout.next, equals('1 violation found.'));
+    await process.shouldExit(1);
+  });
 }

@@ -7,7 +7,7 @@ import '../helpers/memory_source_tree.dart';
 Future<List<Violation>> _run(Map<String, String> files, {Config? config}) =>
     Engine(
       tree: MemorySourceTree(files),
-      config: config ?? Config.recommended(),
+      packages: [Package(path: '', config: config ?? Config.recommended())],
     ).run();
 
 void main() {
@@ -132,6 +132,38 @@ class Foo { static void bar() {} }
         ),
       );
       expect(violations.map((v) => v.path), ['lib/a.dart']);
+    });
+
+    test('checks each package with its own config', () async {
+      final violations = await Engine(
+        tree: MemorySourceTree({
+          'lib/root.dart': 'void root() {}\n',
+          'packages/a/lib/a.dart': 'void a() {}\nfinal x = 1;\n',
+          'packages/a/lib/legacy/old.dart': 'void old() {}\n',
+          'packages/b/lib/b.dart': 'void b() {}\n',
+          'packages/b/test/b_test.dart': 'void t() {}\n',
+        }),
+        packages: [
+          Package(path: '', config: Config.recommended()),
+          Package(
+            path: 'packages/a',
+            config: Config(
+              severities: const {'top-level-function': Severity.warning},
+              exclude: [Glob('lib/legacy/**')],
+              root: 'packages/a',
+            ),
+          ),
+          Package(path: 'packages/b', config: Config.recommended()),
+        ],
+      ).run();
+      expect(
+        violations.map((v) => '${v.id} ${v.severity.name}'),
+        equals([
+          'top-level-function:lib/root.dart:root error',
+          'top-level-function:packages/a/lib/a.dart:a warning',
+          'top-level-function:packages/b/lib/b.dart:b error',
+        ]),
+      );
     });
   });
 }

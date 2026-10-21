@@ -9,6 +9,7 @@ export 'src/config/config_loader.dart' show ConfigLoader, ConfigResolver;
 export 'src/discovery/package_discovery.dart' show PackageDiscovery;
 export 'src/engine/diff_result.dart' show DiffResult;
 export 'src/engine/engine.dart' show Engine;
+export 'src/engine/package.dart' show Package;
 export 'src/engine/violation.dart' show Severity, Violation;
 export 'src/git/git_runner.dart' show GitException, GitRunner;
 export 'src/source/git_source_tree.dart' show GitSourceTree;

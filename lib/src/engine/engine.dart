@@ -1,45 +1,52 @@
 import 'package:analyzer/dart/analysis/utilities.dart';
-import 'package:theseus_cli/src/config/config.dart';
+import 'package:path/path.dart' as p;
 import 'package:theseus_cli/src/engine/generated_files.dart';
+import 'package:theseus_cli/src/engine/package.dart';
 import 'package:theseus_cli/src/engine/violation.dart';
 import 'package:theseus_cli/src/engine/violation_ids.dart';
 import 'package:theseus_cli/src/rules/registry.dart';
 import 'package:theseus_cli/src/rules/rule.dart';
 import 'package:theseus_cli/src/source/source_tree.dart';
 
-/// Runs rules over the Dart files of a package.
+/// Runs rules over the Dart files of packages.
 class Engine {
-  /// Creates an engine that reads files from [tree] and checks them with
-  /// the rules enabled in [config].
-  new({required this.tree, required this.config});
+  /// Creates an engine that reads files from [tree] and checks each of the
+  /// [packages] with the rules enabled in its config.
+  new({required this.tree, required this.packages});
 
   /// The files to check.
   final SourceTree tree;
 
-  /// The rules to run, their severities and the files to skip.
-  final Config config;
+  /// The packages to check.
+  final List<Package> packages;
 
-  /// Checks every Dart file under `lib/` that isn't generated or excluded by
-  /// [config], and returns the violations, sorted by path, line and column.
+  /// Checks every Dart file under each package's `lib/` that isn't
+  /// generated or excluded by its config, and returns the violations,
+  /// sorted by path, line and column.
   Future<List<Violation>> run() async {
-    final rules = [
-      for (final rule in const RuleRegistry().all)
-        if (config.severities[rule.id] case final severity?) (rule, severity),
-    ];
     final violations = <Violation>[];
-    for (final path in await _dartFiles()) {
-      violations.addAll(_check(path, await tree.read(path), rules));
+    for (final package in packages) {
+      final rules = [
+        for (final rule in const RuleRegistry().all)
+          if (package.config.severities[rule.id] case final severity?)
+            (rule, severity),
+      ];
+      for (final path in await _dartFiles(package)) {
+        violations.addAll(_check(path, await tree.read(path), rules));
+      }
     }
     return violations..sort(_compare);
   }
 
-  Future<List<String>> _dartFiles() async {
+  Future<List<String>> _dartFiles(Package package) async {
     const generated = GeneratedFiles();
     return [
-      for (final path in await tree.listFiles('lib'))
+      for (final path in await tree.listFiles(
+        p.posix.join(package.path, 'lib'),
+      ))
         if (path.endsWith('.dart') &&
             !generated.matches(path) &&
-            !config.excludes(path))
+            !package.config.excludes(path))
           path,
     ];
   }

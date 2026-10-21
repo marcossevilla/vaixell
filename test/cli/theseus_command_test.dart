@@ -112,7 +112,6 @@ void main() {
     });
 
     for (final arguments in [
-      ['lib'],
       ['--format=json'],
     ]) {
       test('rejects unsupported $arguments with exit 64', () async {

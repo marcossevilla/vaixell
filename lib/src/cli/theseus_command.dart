@@ -6,8 +6,10 @@ import 'package:path/path.dart' as p;
 import 'package:theseus_cli/src/baseline/baseline.dart';
 import 'package:theseus_cli/src/config/config.dart';
 import 'package:theseus_cli/src/config/config_loader.dart';
+import 'package:theseus_cli/src/discovery/package_discovery.dart';
 import 'package:theseus_cli/src/engine/diff_result.dart';
 import 'package:theseus_cli/src/engine/engine.dart';
+import 'package:theseus_cli/src/engine/package.dart';
 import 'package:theseus_cli/src/engine/violation.dart';
 import 'package:theseus_cli/src/git/git_runner.dart';
 import 'package:theseus_cli/src/report/text_reporter.dart';
@@ -20,7 +22,7 @@ import 'package:theseus_cli/src/version.dart';
 /// Parses arguments and returns a process exit code that follows
 /// `package:io`'s [ExitCode].
 class TheseusCommand {
-  /// Creates a command that checks the package in `root` (the current
+  /// Creates a command that checks the packages in `root` (the current
   /// directory by default), writes the report to `stdout` and writes
   /// diagnostics to `stderr`.
   new({required this._stdout, required this._stderr, Directory? root})
@@ -68,6 +70,9 @@ class TheseusCommand {
       '\n'
       'Usage: theseus [options] [paths...]\n'
       '\n'
+      'Checks the given package directories, or the packages found in the\n'
+      'current directory: the workspace members, packages/* and pkgs/*.\n'
+      '\n'
       '${_parser.usage}';
 
   /// Runs the command with [arguments] and returns the exit code.
@@ -104,22 +109,25 @@ class TheseusCommand {
       );
     }
 
+    final invalidPath = results.rest.map(_invalidPath).nonNulls.firstOrNull;
+    if (invalidPath != null) return _usageError(invalidPath);
+
     final tree = FileSystemSourceTree(_root);
     try {
-      final config = await ConfigLoader(tree).load();
+      final packages = await _packages(tree, results.rest);
       if (writeBaselinePath != null) {
-        return await _writeBaseline(tree, config, writeBaselinePath);
+        return await _writeBaseline(tree, packages, writeBaselinePath);
       }
       final baseline = baselinePath == null
           ? null
           : await BaselineFile(p.join(_root.path, baselinePath)).read();
-      final violations = await Engine(tree: tree, config: config).run();
+      final violations = await Engine(tree: tree, packages: packages).run();
 
       final DiffResult diff;
       if (ref != null) {
         diff = (await _gitDiff(
           violations,
-          config,
+          packages,
           ref,
         )).suppress(baseline?.ids ?? const {});
       } else if (baseline != null) {
@@ -142,6 +150,38 @@ class TheseusCommand {
     }
   }
 
+  /// Returns the package directories from the positional [paths], or the
+  /// discovered ones when there are none, each with its nearest config.
+  Future<List<Package>> _packages(SourceTree tree, List<String> paths) async {
+    final dirs = paths.isEmpty
+        ? await PackageDiscovery(tree).discover()
+        : {for (final path in paths) _relative(path)}.toList();
+    final resolver = ConfigResolver(tree);
+    return [
+      for (final dir in dirs)
+        Package(path: dir, config: await resolver.forPackage(dir)),
+    ];
+  }
+
+  /// Returns why [path] can't be checked, or `null` if it can.
+  String? _invalidPath(String path) {
+    final full = p.normalize(p.join(_root.path, path));
+    if (!p.equals(full, _root.path) && !p.isWithin(_root.path, full)) {
+      return 'Path `$path` is outside `${_root.path}`.';
+    }
+    if (!Directory(full).existsSync()) {
+      return 'Path `$path` is not a directory.';
+    }
+    return null;
+  }
+
+  /// Returns [path] relative to the root, in POSIX style, where `''` is the
+  /// root itself.
+  String _relative(String path) {
+    final relative = p.relative(p.join(_root.path, path), from: _root.path);
+    return relative == '.' ? '' : p.posix.joinAll(p.split(relative));
+  }
+
   int _usageError(String message) {
     _stderr
       ..writeln(message)
@@ -152,10 +192,10 @@ class TheseusCommand {
 
   Future<int> _writeBaseline(
     SourceTree tree,
-    Config config,
+    List<Package> packages,
     String path,
   ) async {
-    final violations = await Engine(tree: tree, config: config).run();
+    final violations = await Engine(tree: tree, packages: packages).run();
     final baseline = Baseline(violations.map((v) => v.id));
     await BaselineFile(p.join(_root.path, path)).write(baseline);
     final count = baseline.ids.length;
@@ -166,16 +206,17 @@ class TheseusCommand {
   }
 
   /// Compares the [head] violations of the working tree with the merge-base
-  /// of [ref] and `HEAD`, checked with the working tree's [config].
+  /// of [ref] and `HEAD`, checking the same [packages], with the same
+  /// configs, on both sides.
   Future<DiffResult> _gitDiff(
     List<Violation> head,
-    Config config,
+    List<Package> packages,
     String ref,
   ) async {
     final git = GitRunner(_root.path);
     final base = GitSourceTree(git: git, commit: await git.mergeBase(ref));
     try {
-      final baseViolations = await Engine(tree: base, config: config).run();
+      final baseViolations = await Engine(tree: base, packages: packages).run();
       return DiffResult.compare(
         base: baseViolations.map((v) => v.id),
         head: head,
@@ -194,7 +235,6 @@ class TheseusCommand {
   /// Returns a description of the first argument in [results] that is
   /// parsed but not implemented yet, or `null` if there is none.
   String? _unsupported(ArgResults results) {
-    if (results.rest.isNotEmpty) return 'Passing paths';
     if (results.option('format') != 'text') {
       return '--format=${results.option('format')}';
     }
