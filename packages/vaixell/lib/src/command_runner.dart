@@ -50,6 +50,13 @@ class VaixellCommandRunner extends CompletionCommandRunner<int> {
   final Logger _logger;
   final PubUpdater _pubUpdater;
 
+  bool _isMachineReadable = false;
+
+  /// Disabled for machine-readable output, since installing completion files
+  /// logs to stdout and would corrupt the report.
+  @override
+  bool get enableAutoInstall => !_isMachineReadable;
+
   @override
   Future<int> run(Iterable<String> args) async {
     try {
@@ -80,6 +87,11 @@ class VaixellCommandRunner extends CompletionCommandRunner<int> {
 
   @override
   Future<int?> runCommand(ArgResults topLevelResults) async {
+    final command = topLevelResults.command;
+    _isMachineReadable =
+        command?.name == CheckCommand.commandName &&
+        command!.option('format') != 'text';
+
     // Fast track completion command
     if (topLevelResults.command?.name == 'completion') {
       await super.runCommand(topLevelResults);
@@ -117,11 +129,7 @@ class VaixellCommandRunner extends CompletionCommandRunner<int> {
     }
 
     // Check for updates, unless stdout is a machine-readable report
-    final command = topLevelResults.command;
-    final isMachineReadable =
-        command?.name == CheckCommand.commandName &&
-        command!.option('format') != 'text';
-    if (command?.name != UpdateCommand.commandName && !isMachineReadable) {
+    if (command?.name != UpdateCommand.commandName && !_isMachineReadable) {
       await _checkForUpdates();
     }
 

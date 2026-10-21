@@ -111,6 +111,17 @@ void main() {
       verifyNever(() => logger.info(updatePrompt));
     });
 
+    test('does not auto-install completion files for machine-readable '
+        'check output', () async {
+      await commandRunner.run(['check', '--format=json']);
+      expect(commandRunner.enableAutoInstall, isFalse);
+    });
+
+    test('auto-installs completion files for a text check', () async {
+      await commandRunner.run(['check']);
+      expect(commandRunner.enableAutoInstall, isTrue);
+    });
+
     test('shows update message after a text check', () async {
       when(() => pubUpdater.getLatestVersion(any()))
           .thenAnswer((_) async => latestVersion);
