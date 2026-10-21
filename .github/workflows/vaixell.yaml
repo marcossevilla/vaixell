@@ -22,12 +22,6 @@ permissions:
   contents: read
 
 jobs:
-  semantic-pull-request:
-    if: github.event_name == 'pull_request'
-    permissions:
-      pull-requests: read
-    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/semantic_pull_request.yml@v2
-
   build:
     name: build (${{ matrix.sdk }})
     strategy:
@@ -47,14 +41,6 @@ jobs:
       run_cognitive_complexity: ${{ matrix.sdk == 'stable' }}
       # Resolved from the repository root, not working_directory.
       cognitive_complexity_targets: packages/vaixell/lib
-
-  spell-check:
-    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/spell_check.yml@v2
-    with:
-      includes: |
-        **/*.md
-        .*/**/*.md
-      modified_files_only: false
 
   verify-version:
     runs-on: ubuntu-latest

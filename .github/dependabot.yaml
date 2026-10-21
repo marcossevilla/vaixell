@@ -6,6 +6,6 @@ updates:
     schedule:
       interval: "daily"
   - package-ecosystem: "pub"
-    directory: "/packages/vaixell"
+    directory: "/"
     schedule:
       interval: "daily"
