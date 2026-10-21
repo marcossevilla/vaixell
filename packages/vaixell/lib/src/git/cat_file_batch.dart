@@ -51,12 +51,10 @@ class CatFileBatch(final Process _process) {
   }
 
   Future<GitObject?> _lookup(String spec) async {
-    try {
-      _process.stdin.add(utf8.encode('$spec\n'));
-      await _process.stdin.flush();
-    } on IOException {
-      throw _exited;
-    }
+    // A failed write means the process exited, which closes stdout too, so
+    // the read below reports it.
+    _process.stdin.add(utf8.encode('$spec\n'));
+    await _process.stdin.flush().then((_) {}, onError: (_) {});
     final header = utf8.decode(await _readLine()).split(' ');
     if (header.length != 3) return null;
     final size = int.parse(header[2]);
