@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:theseus_cli/src/git/git_runner.dart';
+import 'package:vaixell/src/git/git_runner.dart';
 
 /// A git object read by [CatFileBatch].
 class GitObject {

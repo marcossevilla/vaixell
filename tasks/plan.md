@@ -1,6 +1,6 @@
-# Implementation Plan: theseus phase 1
+# Implementation Plan: vaixell phase 1
 
-Source of intent: `docs/intent/theseus.md`. Phase 2 plan:
+Source of intent: `docs/intent/vaixell.md`. Phase 2 plan:
 `tasks/plan-phase-2.md`.
 
 Phase 1 builds the CLI through Task 10: the rules, config, modes, discovery
@@ -10,27 +10,28 @@ README, publishing and per-rule excludes.
 
 ## Overview
 
-`theseus` is a Dart CLI, published to pub.dev as `theseus_cli` and run with
-`dart run theseus_cli@`, that checks architecture rules in any Dart or Flutter repo. It parses source
-without type resolution and needs no `pub get` in the target repo. It runs in
+`vaixell` is a Dart CLI, published to pub.dev and run with
+`dart run vaixell@`, that checks architecture rules in any Dart or Flutter
+repo. It parses source without type resolution and needs no `pub get` in the target repo. It runs in
 two modes: a full-project run with an optional baseline, and a diff run
 (`--git-diff=<ref>`) that reports new and fixed violation ids. Config lives
-under a `theseus:` key in `analysis_options.yaml`. A thin composite GitHub
+under a `vaixell:` key in `analysis_options.yaml`. A thin composite GitHub
 Action, modeled on analytica's `packages/cognitive_complexity/action.yml`,
 wraps the CLI and finds the PR base on its own.
 
 ## Architecture Decisions
 
-- **Name and location.** The pub package is `theseus_cli` (the name `theseus`
-  is taken by an abandoned maze library). The pubspec declares two
-  executables, `theseus_cli` (so that `dart run theseus_cli@` works) and
-  `theseus`, both pointing at `bin/theseus.dart`. The library import is
-  `package:theseus_cli/theseus_cli.dart`, and the repo is
-  `github.com/marcossevilla/theseus`.
-- **Single package at the repo root.** `bin/theseus.dart`, `lib/theseus_cli.dart`
+- **Name and location.** The project was renamed from `vaixell` to
+  `vaixell` before the first push. The pub package and its one executable
+  are both `vaixell`, so `dart run vaixell@` works. (As `vaixell`, the
+  package had to be `vaixell` with a second executable, because the
+  name `vaixell` was taken on pub.dev.) The library import is
+  `package:vaixell/vaixell.dart`, and the repo is
+  `github.com/marcossevilla/vaixell`.
+- **Single package at the repo root.** `bin/vaixell.dart`, `lib/vaixell.dart`
   (public library API, so teams can depend on it instead of using plugins) and
   `lib/src/**`, with `action.yml` at the root so users can write
-  `uses: marcossevilla/theseus@v1`. No workspace is needed for v1.
+  `uses: marcossevilla/vaixell@v1`. No workspace is needed for v1.
 - **Unresolved AST only.** Use `package:analyzer`'s `parseString` on file
   contents. Syntax errors become `parse-error` violations, and the run doesn't
   crash. This is the "no pub get, no type resolution" constraint.
@@ -51,7 +52,7 @@ wraps the CLI and finds the PR base on its own.
 - **Diff mode uses the head config for both sides.** Turning a rule on in a PR
   doesn't make every existing violation "new". The base side is the
   merge-base of `<ref>` and `HEAD`.
-- **Config parser.** It reads `theseus:` from the root `analysis_options.yaml`
+- **Config parser.** It reads `vaixell:` from the root `analysis_options.yaml`
   (and, in workspaces, the member's own file, where the nearest file wins and
   nothing is merged). It accepts `include: <preset>`, a list of presets, and
   `rules: {name: off|warning|error}`. It never follows the analyzer's
@@ -68,7 +69,7 @@ wraps the CLI and finds the PR base on its own.
      top-level package, falling back to the root.
 
   Positional paths replace discovery. Ids are relative to the directory
-  theseus runs in. Diff mode checks the head's packages and configs on both
+  vaixell runs in. Diff mode checks the head's packages and configs on both
   sides.
 - **Presets are built in and versioned in code.** `recommended` is the default
   when no config exists, and it sets every v1 rule to `error`. A run with no
@@ -120,14 +121,14 @@ wraps the CLI and finds the PR base on its own.
   - `64`: usage error.
   - `78`: config error.
   - `70`: internal or git failure.
-- **Theseus passes its own check.** Only `lib/` is scanned, so `bin/` can
+- **Vaixell passes its own check.** Only `lib/` is scanned, so `bin/` can
   stay a thin `main`. Code in `lib/` has no top-level functions or variables,
   no extensions, no static methods and no raw JSON (the JSON reporter and the
   baseline use model classes with `toJson`/`fromJson`).
   Code is organized into classes from the first commit. Enforcing it in CI
   is phase 2 (Task 13).
 - **Do not depend on `package:analytica` (0.x) for v1.** Its shapes don't fit
-  what theseus needs: analytica lists modified files, while theseus has to
+  what vaixell needs: analytica lists modified files, while vaixell has to
   read the full tree at a ref. Its API is also built on top-level functions,
   which would fight the self-check. We borrow its patterns (discovery order,
   action script, GitHub emitters) and not its code.
@@ -140,7 +141,7 @@ wraps the CLI and finds the PR base on its own.
 ```
 Scaffold (pubspec, lints, CI, CLI shell)
   └── Engine core: SourceTree(fs) → discovery(single pkg) → parse → rules → Violation(id) → text reporter → exit code
-        ├── Config (analysis_options `theseus:`, presets, severities)
+        ├── Config (analysis_options `vaixell:`, presets, severities)
         │     └── Remaining rules (top-level-variable, extension, static-method, raw-json)
         ├── GitSourceTree → diff mode (new/fixed)
         │     └── Baseline (same id-set comparison)
@@ -160,7 +161,7 @@ Tasks are tracked in `tasks/todo.md`, which has the full acceptance criteria.
 ### Checkpoint A: one rule works end to end on a single package
 
 ### Phase 2: Config and the risky core (diff mode)
-- [x] Task 3: `theseus:` config in `analysis_options.yaml`
+- [x] Task 3: `vaixell:` config in `analysis_options.yaml`
 - [x] Task 4: `GitSourceTree` and `--git-diff` mode
 - [x] Task 5: Baseline (`--baseline`, `--write-baseline`)
 
@@ -189,7 +190,7 @@ Tasks 11–14 continue in `tasks/plan-phase-2.md`.
 | Reading git trees is slow or fragile in big repos or shallow CI clones | High | Use `cat-file --batch`, a single process for each ref. The action fetches the base ref (like analytica). Report a clear exit-70 error when the ref can't be reached. Do this early, in Task 4. |
 | `raw-json` causes false positives without types (for example, `Map<String, dynamic>` used for non-JSON data) | Med | Measured on `marcossevilla/compass_app`: 21/21 findings were boundary code that already used models. Allowing JSON handed straight to `fromJson` and `jsonEncode` of non-literals cut that to 12, all from the `jsonDecode(s) as List` → `.cast<Map<String, dynamic>>()` → `.map(Model.fromJson)` pattern, which needs data flow to recognize. Per-rule `exclude:` globs (phase 2, Task 14) cover the rest. |
 | The self-check forces awkward code style (no statics or top-level functions) | Med | Design for it from Task 1. Exempt `main`. Revisit the defaults if the restrictions hurt readability. |
-| `dart run theseus_cli@` behaves differently across SDK versions | Med | The SDK lower bound is 3.13, and CI runs on stable and the lower bound. Testing the action is phase 2. |
+| `dart run vaixell@` behaves differently across SDK versions | Med | The SDK lower bound is 3.13, and CI runs on stable and the lower bound. Testing the action is phase 2. |
 | Generated files (`*.g.dart`, `*.freezed.dart`) flood the results | Med | Exclude them by default and add an `exclude:` globs key to the config. |
 
 ## Resolved Questions
@@ -205,7 +206,7 @@ Tasks 11–14 continue in `tasks/plan-phase-2.md`.
 - **PR feedback:** annotations and the step summary in phase 1 (Task 10),
   plus a sticky PR comment with a table of rule, file and line in phase 2
   (Task 12).
-- **Package and repo:** `theseus_cli` on pub.dev, `marcossevilla/theseus`
+- **Package and repo:** `vaixell` on pub.dev, `marcossevilla/vaixell`
   on GitHub.
 
 ## Open Questions

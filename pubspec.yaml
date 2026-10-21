@@ -1,8 +1,8 @@
-name: theseus_cli
+name: vaixell
 description: Checks architecture rules in Dart and Flutter repositories without resolving types or running pub get.
 version: 0.1.0-dev.1
-repository: https://github.com/marcossevilla/theseus
-issue_tracker: https://github.com/marcossevilla/theseus/issues
+repository: https://github.com/marcossevilla/vaixell
+issue_tracker: https://github.com/marcossevilla/vaixell/issues
 topics:
   - architecture
   - lints
@@ -12,8 +12,7 @@ environment:
   sdk: ^3.13.0
 
 executables:
-  theseus_cli: theseus
-  theseus: theseus
+  vaixell:
 
 dependencies:
   analyzer: ^14.5.0

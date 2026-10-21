@@ -1,5 +1,5 @@
-import 'package:theseus_cli/src/engine/diff_result.dart';
-import 'package:theseus_cli/src/engine/violation.dart';
+import 'package:vaixell/src/engine/diff_result.dart';
+import 'package:vaixell/src/engine/violation.dart';
 
 /// How a run decided which violations are new.
 enum ReportMode {

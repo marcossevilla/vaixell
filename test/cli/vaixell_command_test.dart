@@ -3,18 +3,18 @@ import 'dart:io';
 import 'package:io/io.dart';
 import 'package:test/test.dart';
 import 'package:test_descriptor/test_descriptor.dart' as d;
-import 'package:theseus_cli/theseus_cli.dart';
+import 'package:vaixell/vaixell.dart';
 
 void main() {
-  group(TheseusCommand, () {
+  group(VaixellCommand, () {
     late StringBuffer out;
     late StringBuffer err;
-    late TheseusCommand command;
+    late VaixellCommand command;
 
     setUp(() {
       out = StringBuffer();
       err = StringBuffer();
-      command = TheseusCommand(
+      command = VaixellCommand(
         stdout: out,
         stderr: err,
         root: Directory(d.sandbox),
@@ -31,7 +31,7 @@ void main() {
       expect(
         command.usage,
         allOf([
-          contains('Usage: theseus [options] [paths...]'),
+          contains('Usage: vaixell [options] [paths...]'),
           contains('--help'),
           contains('--version'),
           contains('--format'),
@@ -44,7 +44,7 @@ void main() {
 
     test('--version prints the version and exits 0', () async {
       expect(await command.run(['--version']), equals(ExitCode.success.code));
-      expect(out.toString(), equals('${TheseusVersion.current}\n'));
+      expect(out.toString(), equals('${VaixellVersion.current}\n'));
     });
 
     test('an unknown flag prints usage to stderr and exits 64', () async {
@@ -88,7 +88,7 @@ void main() {
       await d
           .file(
             'analysis_options.yaml',
-            'theseus:\n  rules:\n    top-level-function: warning\n',
+            'vaixell:\n  rules:\n    top-level-function: warning\n',
           )
           .create();
       expect(await command.run([]), equals(ExitCode.success.code));
@@ -97,7 +97,7 @@ void main() {
 
     test('exits 78 on an invalid config', () async {
       await d.dir('lib', [d.file('a.dart', 'void foo() {}\n')]).create();
-      await d.file('analysis_options.yaml', 'theseus:\n  rulez: {}\n').create();
+      await d.file('analysis_options.yaml', 'vaixell:\n  rulez: {}\n').create();
       expect(await command.run([]), equals(ExitCode.config.code));
       expect(
         err.toString(),
@@ -107,7 +107,7 @@ void main() {
     });
 
     test('defaults to the current directory', () async {
-      final command = TheseusCommand(stdout: out, stderr: err);
+      final command = VaixellCommand(stdout: out, stderr: err);
       expect(await command.run([]), equals(ExitCode.success.code));
     });
   });

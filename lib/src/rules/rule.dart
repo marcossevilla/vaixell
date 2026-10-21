@@ -1,6 +1,6 @@
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:theseus_cli/src/engine/violation.dart';
+import 'package:vaixell/src/engine/violation.dart';
 
 /// A Dart file that has been parsed without type resolution.
 class ParsedFile {

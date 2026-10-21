@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:io/io.dart';
 import 'package:test/test.dart';
 import 'package:test_descriptor/test_descriptor.dart' as d;
-import 'package:theseus_cli/theseus_cli.dart';
+import 'package:vaixell/vaixell.dart';
 
 import '../helpers/git_repo.dart';
 
@@ -68,7 +68,7 @@ void main() {
     Future<int> run(List<String> arguments) {
       out = StringBuffer();
       err = StringBuffer();
-      return TheseusCommand(
+      return VaixellCommand(
         stdout: out,
         stderr: err,
         root: Directory(d.sandbox),
@@ -79,7 +79,7 @@ void main() {
       await d
           .file(
             'analysis_options.yaml',
-            'theseus:\n  rules:\n    top-level-variable: warning\n',
+            'vaixell:\n  rules:\n    top-level-variable: warning\n',
           )
           .create();
       await d.dir('lib', [
@@ -134,7 +134,7 @@ void main() {
     });
 
     test('errors still go to stderr only', () async {
-      await d.file('analysis_options.yaml', 'theseus:\n  nope: 1\n').create();
+      await d.file('analysis_options.yaml', 'vaixell:\n  nope: 1\n').create();
       expect(await run([]), equals(ExitCode.config.code));
       expect(out.toString(), isEmpty);
     });

@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import 'package:theseus_cli/src/engine/generated_files.dart';
+import 'package:vaixell/src/engine/generated_files.dart';
 
 void main() {
   group(GeneratedFiles, () {

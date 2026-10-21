@@ -1,6 +1,6 @@
 import 'package:path/path.dart' as p;
-import 'package:theseus_cli/src/config/config.dart';
-import 'package:theseus_cli/src/source/source_tree.dart';
+import 'package:vaixell/src/config/config.dart';
+import 'package:vaixell/src/source/source_tree.dart';
 import 'package:yaml/yaml.dart';
 
 /// Finds the packages to check in a [SourceTree].

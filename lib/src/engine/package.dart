@@ -1,4 +1,4 @@
-import 'package:theseus_cli/src/config/config.dart';
+import 'package:vaixell/src/config/config.dart';
 
 /// A package to check and the config that applies to it.
 class Package {

@@ -3,29 +3,29 @@ import 'dart:io';
 import 'package:args/args.dart';
 import 'package:io/io.dart';
 import 'package:path/path.dart' as p;
-import 'package:theseus_cli/src/baseline/baseline.dart';
-import 'package:theseus_cli/src/config/config.dart';
-import 'package:theseus_cli/src/config/config_loader.dart';
-import 'package:theseus_cli/src/discovery/package_discovery.dart';
-import 'package:theseus_cli/src/engine/diff_result.dart';
-import 'package:theseus_cli/src/engine/engine.dart';
-import 'package:theseus_cli/src/engine/package.dart';
-import 'package:theseus_cli/src/engine/violation.dart';
-import 'package:theseus_cli/src/git/git_runner.dart';
-import 'package:theseus_cli/src/report/github_reporter.dart';
-import 'package:theseus_cli/src/report/json_reporter.dart';
-import 'package:theseus_cli/src/report/report.dart';
-import 'package:theseus_cli/src/report/reporter.dart';
-import 'package:theseus_cli/src/report/text_reporter.dart';
-import 'package:theseus_cli/src/source/git_source_tree.dart';
-import 'package:theseus_cli/src/source/source_tree.dart';
-import 'package:theseus_cli/src/version.dart';
+import 'package:vaixell/src/baseline/baseline.dart';
+import 'package:vaixell/src/config/config.dart';
+import 'package:vaixell/src/config/config_loader.dart';
+import 'package:vaixell/src/discovery/package_discovery.dart';
+import 'package:vaixell/src/engine/diff_result.dart';
+import 'package:vaixell/src/engine/engine.dart';
+import 'package:vaixell/src/engine/package.dart';
+import 'package:vaixell/src/engine/violation.dart';
+import 'package:vaixell/src/git/git_runner.dart';
+import 'package:vaixell/src/report/github_reporter.dart';
+import 'package:vaixell/src/report/json_reporter.dart';
+import 'package:vaixell/src/report/report.dart';
+import 'package:vaixell/src/report/reporter.dart';
+import 'package:vaixell/src/report/text_reporter.dart';
+import 'package:vaixell/src/source/git_source_tree.dart';
+import 'package:vaixell/src/source/source_tree.dart';
+import 'package:vaixell/src/version.dart';
 
-/// The `theseus` command line interface.
+/// The `vaixell` command line interface.
 ///
 /// Parses arguments and returns a process exit code that follows
 /// `package:io`'s [ExitCode].
-class TheseusCommand {
+class VaixellCommand {
   /// Creates a command that checks the packages in `root` (the current
   /// directory by default), writes the report to `stdout` and writes
   /// diagnostics to `stderr`.
@@ -52,7 +52,7 @@ class TheseusCommand {
       negatable: false,
       help: 'Print this usage information.',
     )
-    ..addFlag('version', negatable: false, help: 'Print the theseus version.')
+    ..addFlag('version', negatable: false, help: 'Print the vaixell version.')
     ..addOption(
       'format',
       allowed: ['text', 'json', 'github'],
@@ -81,7 +81,7 @@ class TheseusCommand {
   String get usage =>
       'Checks architecture rules in Dart and Flutter repositories.\n'
       '\n'
-      'Usage: theseus [options] [paths...]\n'
+      'Usage: vaixell [options] [paths...]\n'
       '\n'
       'Checks the given package directories, or the packages found in the\n'
       'current directory: the workspace members, packages/* and pkgs/*.\n'
@@ -106,7 +106,7 @@ class TheseusCommand {
       return ExitCode.success.code;
     }
     if (results.flag('version')) {
-      _stdout.writeln(TheseusVersion.current);
+      _stdout.writeln(VaixellVersion.current);
       return ExitCode.success.code;
     }
     final ref = results.option('git-diff');

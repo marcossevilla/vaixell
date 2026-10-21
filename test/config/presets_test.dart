@@ -1,7 +1,7 @@
 import 'package:test/test.dart';
-import 'package:theseus_cli/src/config/presets.dart';
-import 'package:theseus_cli/src/rules/registry.dart';
-import 'package:theseus_cli/theseus_cli.dart';
+import 'package:vaixell/src/config/presets.dart';
+import 'package:vaixell/src/rules/registry.dart';
+import 'package:vaixell/vaixell.dart';
 
 void main() {
   test('recommended enables every rule as an error', () {

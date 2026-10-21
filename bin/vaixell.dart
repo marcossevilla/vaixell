@@ -1,9 +1,9 @@
 import 'dart:io';
 
-import 'package:theseus_cli/theseus_cli.dart';
+import 'package:vaixell/vaixell.dart';
 
 Future<void> main(List<String> arguments) async {
-  exitCode = await TheseusCommand(
+  exitCode = await VaixellCommand(
     stdout: stdout,
     stderr: stderr,
   ).run(arguments);

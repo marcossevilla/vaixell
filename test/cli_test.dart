@@ -8,13 +8,13 @@ import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 import 'package:test_descriptor/test_descriptor.dart' as d;
 import 'package:test_process/test_process.dart';
-import 'package:theseus_cli/theseus_cli.dart';
+import 'package:vaixell/vaixell.dart';
 
 import 'helpers/git_repo.dart';
 
-final String _script = p.absolute('bin', 'theseus.dart');
+final String _script = p.absolute('bin', 'vaixell.dart');
 
-Future<TestProcess> _theseus(
+Future<TestProcess> _vaixell(
   List<String> arguments, {
   String? workingDirectory,
 }) => TestProcess.start('dart', [
@@ -25,25 +25,25 @@ Future<TestProcess> _theseus(
 
 void main() {
   test('--help prints usage', () async {
-    final process = await _theseus(['--help']);
+    final process = await _vaixell(['--help']);
     await expectLater(
       process.stdout,
-      emitsThrough('Usage: theseus [options] [paths...]'),
+      emitsThrough('Usage: vaixell [options] [paths...]'),
     );
     await process.shouldExit(ExitCode.success.code);
   });
 
   test('--version prints the pubspec version', () async {
-    final process = await _theseus(['--version']);
-    expect(await process.stdout.next, equals(TheseusVersion.current));
+    final process = await _vaixell(['--version']);
+    expect(await process.stdout.next, equals(VaixellVersion.current));
     await process.shouldExit(ExitCode.success.code);
   });
 
   test('an unknown flag exits 64 with usage on stderr', () async {
-    final process = await _theseus(['--nope']);
+    final process = await _vaixell(['--nope']);
     await expectLater(
       process.stderr,
-      emitsThrough('Usage: theseus [options] [paths...]'),
+      emitsThrough('Usage: vaixell [options] [paths...]'),
     );
     await expectLater(process.stdout, emitsDone);
     await process.shouldExit(ExitCode.usage.code);
@@ -61,7 +61,7 @@ void main() {
       ]),
     ]).create();
 
-    final process = await _theseus([], workingDirectory: d.path('pkg'));
+    final process = await _vaixell([], workingDirectory: d.path('pkg'));
     expect(
       await process.stdout.next,
       equals(
@@ -82,18 +82,18 @@ void main() {
       d.dir('lib', [d.file('main.dart', 'void main() {}\n')]),
     ]).create();
 
-    final process = await _theseus([], workingDirectory: d.path('pkg'));
+    final process = await _vaixell([], workingDirectory: d.path('pkg'));
     expect(await process.stdout.next, equals('No violations found.'));
     await process.shouldExit(ExitCode.success.code);
   });
 
   test('exits 78 on an invalid config', () async {
     await d.dir('pkg', [
-      d.file('analysis_options.yaml', 'theseus:\n  rules:\n    nope: off\n'),
+      d.file('analysis_options.yaml', 'vaixell:\n  rules:\n    nope: off\n'),
       d.dir('lib', [d.file('main.dart', 'void main() {}\n')]),
     ]).create();
 
-    final process = await _theseus([], workingDirectory: d.path('pkg'));
+    final process = await _vaixell([], workingDirectory: d.path('pkg'));
     expect(
       await process.stderr.next,
       startsWith('analysis_options.yaml:3:5: Unknown rule `nope`.'),
@@ -110,7 +110,7 @@ void main() {
     await gitCommitAll(pkg);
     await d.dir('pkg/lib', [d.file('a.dart', 'void added() {}\n')]).create();
 
-    final process = await _theseus(['--git-diff=main'], workingDirectory: pkg);
+    final process = await _vaixell(['--git-diff=main'], workingDirectory: pkg);
     expect(
       await process.stdout.next,
       endsWith('[top-level-function:lib/a.dart:added]'),
@@ -125,7 +125,7 @@ void main() {
 
   test('--git-diff exits 70 outside a git repository', () async {
     await d.dir('pkg', [d.dir('lib')]).create();
-    final process = await _theseus([
+    final process = await _vaixell([
       '--git-diff=main',
     ], workingDirectory: d.path('pkg'));
     expect(await process.stderr.next, endsWith('is not in a git repository.'));
@@ -141,7 +141,7 @@ void main() {
       ]),
     ]).create();
 
-    final process = await _theseus([], workingDirectory: d.path('repo'));
+    final process = await _vaixell([], workingDirectory: d.path('repo'));
     expect(
       await process.stdout.next,
       endsWith('[top-level-function:packages/a/lib/a.dart:a]'),
@@ -155,7 +155,7 @@ void main() {
       d.dir('lib', [d.file('a.dart', 'void foo() {}\n')]),
     ]).create();
 
-    final process = await _theseus([
+    final process = await _vaixell([
       '--format=json',
     ], workingDirectory: d.path('pkg'));
     final stdout = (await process.stdout.rest.toList()).join('\n');

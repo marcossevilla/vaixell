@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import 'package:theseus_cli/src/rules/raw_json.dart';
+import 'package:vaixell/src/rules/raw_json.dart';
 
 import '../helpers/parse.dart';
 

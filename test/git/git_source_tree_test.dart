@@ -1,7 +1,7 @@
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 import 'package:test_descriptor/test_descriptor.dart' as d;
-import 'package:theseus_cli/theseus_cli.dart';
+import 'package:vaixell/vaixell.dart';
 
 import '../helpers/git_repo.dart';
 
@@ -12,7 +12,7 @@ void main() {
     setUp(() async {
       await gitInit(d.sandbox);
       await d.dir('pkg', [
-        d.file('analysis_options.yaml', 'theseus:\n'),
+        d.file('analysis_options.yaml', 'vaixell:\n'),
         d.dir('lib', [
           d.file('b.dart', 'b'),
           d.dir('src', [d.file('a.dart', 'a')]),

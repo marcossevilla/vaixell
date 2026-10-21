@@ -1,12 +1,12 @@
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:path/path.dart' as p;
-import 'package:theseus_cli/src/engine/generated_files.dart';
-import 'package:theseus_cli/src/engine/package.dart';
-import 'package:theseus_cli/src/engine/violation.dart';
-import 'package:theseus_cli/src/engine/violation_ids.dart';
-import 'package:theseus_cli/src/rules/registry.dart';
-import 'package:theseus_cli/src/rules/rule.dart';
-import 'package:theseus_cli/src/source/source_tree.dart';
+import 'package:vaixell/src/engine/generated_files.dart';
+import 'package:vaixell/src/engine/package.dart';
+import 'package:vaixell/src/engine/violation.dart';
+import 'package:vaixell/src/engine/violation_ids.dart';
+import 'package:vaixell/src/rules/registry.dart';
+import 'package:vaixell/src/rules/rule.dart';
+import 'package:vaixell/src/source/source_tree.dart';
 
 /// Runs rules over the Dart files of packages.
 class Engine {

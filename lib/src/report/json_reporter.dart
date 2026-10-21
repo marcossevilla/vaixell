@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-import 'package:theseus_cli/src/report/report.dart';
-import 'package:theseus_cli/src/report/reporter.dart';
+import 'package:vaixell/src/report/report.dart';
+import 'package:vaixell/src/report/reporter.dart';
 
 /// Writes a [Report] as one indented JSON document.
 ///

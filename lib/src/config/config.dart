@@ -1,9 +1,9 @@
 import 'package:glob/glob.dart';
-import 'package:theseus_cli/src/config/presets.dart';
-import 'package:theseus_cli/src/engine/violation.dart';
+import 'package:vaixell/src/config/presets.dart';
+import 'package:vaixell/src/engine/violation.dart';
 import 'package:yaml/yaml.dart';
 
-/// The resolved `theseus:` configuration for a package.
+/// The resolved `vaixell:` configuration for a package.
 class Config {
   /// Creates a config that runs the rules in [severities] and skips files
   /// that match any of the [exclude] globs, which are relative to [root].
@@ -13,7 +13,7 @@ class Config {
     this.root = '',
   });
 
-  /// Creates the config used when there is no `theseus:` section, which is
+  /// Creates the config used when there is no `vaixell:` section, which is
   /// the `recommended` preset.
   factory recommended() =>
       Config(severities: const Presets().all[Presets.defaultPreset]!);
@@ -39,7 +39,7 @@ class Config {
   }
 }
 
-/// An invalid `theseus:` configuration.
+/// An invalid `vaixell:` configuration.
 class ConfigException implements Exception {
   /// Creates an exception for a problem at [line] and [column] of the
   /// config file at [path].

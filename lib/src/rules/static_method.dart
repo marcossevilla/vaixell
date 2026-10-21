@@ -1,6 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:theseus_cli/src/rules/extension_declaration.dart';
-import 'package:theseus_cli/src/rules/rule.dart';
+import 'package:vaixell/src/rules/extension_declaration.dart';
+import 'package:vaixell/src/rules/rule.dart';
 
 /// Reports static methods, getters and setters, public or private, in
 /// classes, mixins, enums, extensions and extension types.

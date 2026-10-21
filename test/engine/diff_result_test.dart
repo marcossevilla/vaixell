@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import 'package:theseus_cli/theseus_cli.dart';
+import 'package:vaixell/vaixell.dart';
 
 Violation _v(String id, {int line = 1}) => Violation(
   id: id,

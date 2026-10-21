@@ -1,7 +1,7 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
-import 'package:theseus_cli/src/rules/extension_declaration.dart';
-import 'package:theseus_cli/src/rules/rule.dart';
+import 'package:vaixell/src/rules/extension_declaration.dart';
+import 'package:vaixell/src/rules/rule.dart';
 
 /// Reports raw JSON handling outside model classes.
 ///

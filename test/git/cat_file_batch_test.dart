@@ -3,8 +3,8 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:test_descriptor/test_descriptor.dart' as d;
-import 'package:theseus_cli/src/git/cat_file_batch.dart';
-import 'package:theseus_cli/theseus_cli.dart';
+import 'package:vaixell/src/git/cat_file_batch.dart';
+import 'package:vaixell/vaixell.dart';
 
 import '../helpers/git_repo.dart';
 

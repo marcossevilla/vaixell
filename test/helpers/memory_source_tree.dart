@@ -1,4 +1,4 @@
-import 'package:theseus_cli/theseus_cli.dart';
+import 'package:vaixell/vaixell.dart';
 
 /// A [SourceTree] backed by a map of path to contents.
 class MemorySourceTree implements SourceTree {

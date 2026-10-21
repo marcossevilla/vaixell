@@ -1,4 +1,4 @@
-import 'package:theseus_cli/src/rules/rule.dart';
+import 'package:vaixell/src/rules/rule.dart';
 
 /// Reports files that can't be parsed.
 ///

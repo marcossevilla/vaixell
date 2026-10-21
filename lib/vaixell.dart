@@ -3,7 +3,7 @@ library;
 
 export 'src/baseline/baseline.dart'
     show Baseline, BaselineException, BaselineFile;
-export 'src/cli/theseus_command.dart' show TheseusCommand;
+export 'src/cli/vaixell_command.dart' show VaixellCommand;
 export 'src/config/config.dart' show Config, ConfigException;
 export 'src/config/config_loader.dart' show ConfigLoader, ConfigResolver;
 export 'src/discovery/package_discovery.dart' show PackageDiscovery;
@@ -19,4 +19,4 @@ export 'src/report/reporter.dart' show Reporter;
 export 'src/report/text_reporter.dart' show TextReporter;
 export 'src/source/git_source_tree.dart' show GitSourceTree;
 export 'src/source/source_tree.dart' show FileSystemSourceTree, SourceTree;
-export 'src/version.dart' show TheseusVersion;
+export 'src/version.dart' show VaixellVersion;

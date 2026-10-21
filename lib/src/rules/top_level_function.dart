@@ -1,5 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:theseus_cli/src/rules/rule.dart';
+import 'package:vaixell/src/rules/rule.dart';
 
 /// Reports top-level functions, getters and setters.
 ///

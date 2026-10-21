@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:test_descriptor/test_descriptor.dart' as d;
-import 'package:theseus_cli/theseus_cli.dart';
+import 'package:vaixell/vaixell.dart';
 
 Violation _v(
   String id, {
@@ -37,7 +37,7 @@ void main() {
       );
       const properties =
           'file=lib/a.dart,line=3,col=6,'
-          'title=theseus top-level-function';
+          'title=vaixell top-level-function';
       expect(
         lines(),
         equals([
@@ -74,7 +74,7 @@ void main() {
       expect(
         lines().first,
         equals(
-          '::error file=lib/a%2Cb%3Ac%25.dart,line=3,col=6,title=theseus '
+          '::error file=lib/a%2Cb%3Ac%25.dart,line=3,col=6,title=vaixell '
           'top-level-function::100%25 sure:%0D%0Ayes, really [id]',
         ),
       );
@@ -117,7 +117,7 @@ void main() {
           File(path).readAsStringSync(),
           equals(
             'previous step\n'
-            '## theseus\n'
+            '## vaixell\n'
             '\n'
             '**No violations found.** (full mode)\n'
             '\n',
@@ -138,7 +138,7 @@ void main() {
         expect(
           File(path).readAsStringSync(),
           equals(
-            '## theseus\n'
+            '## vaixell\n'
             '\n'
             '**1 new violation, 2 fixed.** (baseline mode)\n'
             '\n'
@@ -196,7 +196,7 @@ void main() {
   group('--format=github', () {
     Future<(int, String)> run(Map<String, String> environment) async {
       final out = StringBuffer();
-      final code = await TheseusCommand(
+      final code = await VaixellCommand(
         stdout: out,
         stderr: StringBuffer(),
         root: Directory(d.sandbox),
@@ -215,7 +215,7 @@ void main() {
       expect(output, startsWith('::error file=lib/a.dart,line=1,col=6,'));
       expect(
         File(d.path('summary.md')).readAsStringSync(),
-        startsWith('## theseus\n'),
+        startsWith('## vaixell\n'),
       );
     });
 

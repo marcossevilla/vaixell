@@ -1,8 +1,8 @@
 import 'dart:convert';
 
-import 'package:theseus_cli/src/git/cat_file_batch.dart';
-import 'package:theseus_cli/src/git/git_runner.dart';
-import 'package:theseus_cli/src/source/source_tree.dart';
+import 'package:vaixell/src/git/cat_file_batch.dart';
+import 'package:vaixell/src/git/git_runner.dart';
+import 'package:vaixell/src/source/source_tree.dart';
 
 /// A [SourceTree] that reads files at a git commit.
 ///

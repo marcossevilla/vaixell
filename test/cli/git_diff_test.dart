@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:io/io.dart';
 import 'package:test/test.dart';
 import 'package:test_descriptor/test_descriptor.dart' as d;
-import 'package:theseus_cli/theseus_cli.dart';
+import 'package:vaixell/vaixell.dart';
 
 import '../helpers/git_repo.dart';
 
@@ -12,7 +12,7 @@ void main() {
     late StringBuffer out;
     late StringBuffer err;
 
-    Future<int> run(List<String> arguments, {String? root}) => TheseusCommand(
+    Future<int> run(List<String> arguments, {String? root}) => VaixellCommand(
       stdout: out,
       stderr: err,
       root: Directory(root ?? d.sandbox),
@@ -82,7 +82,7 @@ void main() {
       await d
           .file(
             'analysis_options.yaml',
-            'theseus:\n  rules:\n    top-level-function: off\n',
+            'vaixell:\n  rules:\n    top-level-function: off\n',
           )
           .create();
 
@@ -94,7 +94,7 @@ void main() {
       await d
           .file(
             'analysis_options.yaml',
-            'theseus:\n  rules:\n    top-level-function: warning\n',
+            'vaixell:\n  rules:\n    top-level-function: warning\n',
           )
           .create();
       await writeLib({'b.dart': 'void added() {}\n'});
@@ -137,7 +137,7 @@ void main() {
 
     test('exits 70 outside a git repository', () async {
       // The sandbox is a repository, so use a directory outside it.
-      final plain = await Directory.systemTemp.createTemp('theseus_');
+      final plain = await Directory.systemTemp.createTemp('vaixell_');
       addTearDown(() => plain.delete(recursive: true));
       expect(
         await run(['--git-diff=main'], root: plain.path),

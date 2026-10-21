@@ -1,6 +1,6 @@
 import 'package:glob/glob.dart';
 import 'package:test/test.dart';
-import 'package:theseus_cli/theseus_cli.dart';
+import 'package:vaixell/vaixell.dart';
 
 import '../helpers/memory_source_tree.dart';
 

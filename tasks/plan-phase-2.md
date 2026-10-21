@@ -1,6 +1,6 @@
-# Implementation Plan: theseus phase 2
+# Implementation Plan: vaixell phase 2
 
-Source of intent: `docs/intent/theseus.md`. Phase 1 plan: `tasks/plan.md`.
+Source of intent: `docs/intent/vaixell.md`. Phase 1 plan: `tasks/plan.md`.
 
 ## Overview
 
@@ -26,7 +26,7 @@ Phase 2 assumes Checkpoint D in `tasks/plan.md` is done:
 ## Architecture Decisions
 
 - **The action is thin.** `action.yml` at the repo root (so users write
-  `uses: marcossevilla/theseus@v1`) is a composite action modeled on
+  `uses: marcossevilla/vaixell@v1`) is a composite action modeled on
   analytica's `packages/cognitive_complexity/action.yml`. It finds the PR
   base, fetches it, runs the CLI and returns the CLI's exit code. All logic
   stays in the CLI.
@@ -39,7 +39,7 @@ Phase 2 assumes Checkpoint D in `tasks/plan.md` is done:
   comment to a resolved status. If the run crashed, it leaves the comment
   alone. The rows are capped so the comment stays under GitHub's
   65536-character limit, and the step summary always has the full table.
-- **Theseus passes its own check in CI.** `dart run bin/theseus.dart` runs
+- **Vaixell passes its own check in CI.** `dart run bin/vaixell.dart` runs
   on this repo with no baseline. Phase 1 already keeps it clean.
 - **Per-rule excludes come after the release.** A rule entry in `rules:` can
   take `{severity, exclude}` next to the plain `rule: severity` form. The
@@ -75,7 +75,7 @@ Phase 1 (Tasks 1–10, Checkpoint D)
 **Description:** Add an `action.yml` at the root, modeled on analytica's.
 - On `pull_request`, it detects the base (`origin/$GITHUB_BASE_REF`) and
   fetches it.
-- It runs `dart run theseus_cli@<version> --format=github [--git-diff=...]`,
+- It runs `dart run vaixell@<version> --format=github [--git-diff=...]`,
   passing through the user inputs.
 - It returns the CLI's exit code.
 
@@ -103,7 +103,7 @@ Phase 1 (Tasks 1–10, Checkpoint D)
 ## Task 12: Sticky PR comment with a table of failing rules
 
 **Description:** `--comment-output=<file>` writes a markdown comment with a
-hidden marker (`<!-- theseus-comment-marker -->`), the counts of new and fixed
+hidden marker (`<!-- vaixell-comment-marker -->`), the counts of new and fixed
 violations, and a table with Rule, File:Line and Message columns. The file:line
 entries link to the head SHA. The action finds the marked comment with `gh`
 and updates it, or creates one if it doesn't exist.
@@ -129,7 +129,7 @@ and updates it, or creates one if it doesn't exist.
 **Dependencies:** Tasks 10 and 11
 
 **Files likely touched:** `lib/src/report/pr_comment_writer.dart`,
-`lib/src/cli/theseus_command.dart`, `action.yml`,
+`lib/src/cli/vaixell_command.dart`, `action.yml`,
 `test/report/pr_comment_writer_test.dart`
 
 **Estimated scope:** M
@@ -138,7 +138,7 @@ and updates it, or creates one if it doesn't exist.
 
 ## Task 13: Self-check, README and publish readiness
 
-**Description:** Make theseus pass its own check and enforce it in CI. Write
+**Description:** Make vaixell pass its own check and enforce it in CI. Write
 the README with these sections:
 - install and run
 - the config reference
@@ -151,10 +151,10 @@ the README with these sections:
 Also prepare the CHANGELOG and the pub.dev metadata.
 
 **Acceptance criteria:**
-- [ ] The CI step `dart run bin/theseus.dart` exits `0` on this repo, with
+- [ ] The CI step `dart run bin/vaixell.dart` exits `0` on this repo, with
       no baseline.
 - [ ] `dart pub publish --dry-run` has no warnings, and the `executables:`
-      entry makes `dart run theseus_cli@` work.
+      entry makes `dart run vaixell@` work.
 - [ ] The README examples match the actual `--help` output. A test checks
       this.
 
@@ -172,10 +172,10 @@ Also prepare the CHANGELOG and the pub.dev metadata.
 ---
 
 ## Checkpoint E: v1 release
-- [ ] All the success criteria in `docs/intent/theseus.md` are met:
+- [ ] All the success criteria in `docs/intent/vaixell.md` are met:
   - It runs with no config on an unfamiliar repo and gives useful output.
   - PRs fail only on new violations.
-  - Theseus passes its own check.
+  - Vaixell passes its own check.
 - [ ] Human approval to tag and publish.
 
 ---
@@ -189,7 +189,7 @@ types, such as the list-decoding pattern in API clients that `raw-json`
 still flags.
 
 ```yaml
-theseus:
+vaixell:
   rules:
     top-level-function: warning
     raw-json:
@@ -226,11 +226,11 @@ can move ahead of the release if `raw-json` noise blocks adoption.
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| The action runs `dart run theseus_cli@<version>`, which needs the package on pub.dev, but publishing is Task 13 | High | The self-test workflow in Task 11 runs the action from this checkout (`dart run bin/theseus.dart`) or a git descriptor (`dart run 'theseus_cli@{git: ...}'`). Switch the action's default to the pub.dev version when Task 13 publishes. |
+| The action runs `dart run vaixell@<version>`, which needs the package on pub.dev, but publishing is Task 13 | High | The self-test workflow in Task 11 runs the action from this checkout (`dart run bin/vaixell.dart`) or a git descriptor (`dart run 'vaixell@{git: ...}'`). Switch the action's default to the pub.dev version when Task 13 publishes. |
 | Shallow `actions/checkout` clones don't have the PR base, so `--git-diff` exits `70` | High | The action fetches the base ref with enough depth to find the merge-base, like analytica. The CLI already explains a missing ref. |
 | A `gh` API failure (permissions, rate limits) hides the CLI's result | Med | The comment step runs after the CLI step, never changes the exit code, and the README documents `pull-requests: write`. |
 | The PR comment goes over GitHub's 65536-character limit | Med | `--max-comment-rows` caps the table and points to the step summary, which always has the full table. |
-| `dart run theseus_cli@` behaves differently across SDK versions | Med | The SDK lower bound is 3.13. Test the action with `dart-lang/setup-dart` on stable and the lower bound. |
+| `dart run vaixell@` behaves differently across SDK versions | Med | The SDK lower bound is 3.13. Test the action with `dart-lang/setup-dart` on stable and the lower bound. |
 
 ## Open Questions
 

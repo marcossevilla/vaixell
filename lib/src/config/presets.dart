@@ -1,5 +1,5 @@
-import 'package:theseus_cli/src/engine/violation.dart';
-import 'package:theseus_cli/src/rules/registry.dart';
+import 'package:vaixell/src/engine/violation.dart';
+import 'package:vaixell/src/rules/registry.dart';
 
 /// The built-in presets that a config can `include`.
 class Presets {

@@ -1,5 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:theseus_cli/src/rules/rule.dart';
+import 'package:vaixell/src/rules/rule.dart';
 
 /// Reports top-level variables, including `final`, `late` and `const` ones.
 final class TopLevelVariableRule extends Rule {

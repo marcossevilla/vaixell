@@ -1,4 +1,4 @@
-# theseus phase 1: Tasks
+# vaixell phase 1: Tasks
 
 See `tasks/plan.md` for the design decisions. Tasks 11–14 are in
 `tasks/plan-phase-2.md`. The standard verification for every task is:
@@ -12,16 +12,15 @@ See `tasks/plan.md` for the design decisions. Tasks 11–14 are in
 
 ## Task 1: Scaffold the package, lints, CI and CLI shell
 
-**Description:** Create the git repo (remote `marcossevilla/theseus`), the `theseus_cli`
-package at the root (executables `theseus_cli` and `theseus`, both pointing at
-`bin/theseus.dart`), the
+**Description:** Create the git repo (remote `marcossevilla/vaixell`), the `vaixell`
+package at the root (one executable, `vaixell`, at `bin/vaixell.dart`), the
 lints and the CI. Add a CLI shell that parses arguments (`--help`,
 `--version`, `--format`, `--git-diff`, `--baseline`, `--write-baseline`,
 positional paths) and exits with the right codes for usage errors. It doesn't
 run any analysis yet.
 
 **Acceptance criteria:**
-- [x] `dart run bin/theseus.dart --help` prints usage. `--version` prints the
+- [x] `dart run bin/vaixell.dart --help` prints usage. `--version` prints the
       version from the pubspec, using a generated or tested constant.
 - [x] An unknown flag exits with `64` and prints usage to stderr.
 - [x] CI workflow (`.github/workflows/ci.yaml`) runs format, analyze, test and
@@ -35,7 +34,7 @@ run any analysis yet.
 **Dependencies:** None
 
 **Files likely touched:** `pubspec.yaml`, `analysis_options.yaml`,
-`bin/theseus.dart`, `lib/theseus_cli.dart`, `lib/src/cli/theseus_command.dart`,
+`bin/vaixell.dart`, `lib/vaixell.dart`, `lib/src/cli/vaixell_command.dart`,
 `test/cli_test.dart`, `.github/workflows/ci.yaml`, `.gitignore`
 
 **Estimated scope:** M
@@ -79,16 +78,16 @@ prints them, and the exit code reflects the result.
 
 ## Checkpoint A
 - [x] All tests pass and coverage is 100%.
-- [x] `dart run bin/theseus.dart` on a scratch Flutter app gives readable
+- [x] `dart run bin/vaixell.dart` on a scratch Flutter app gives readable
       output.
 - [x] Review the id format with a human before building diff and baseline
       on top of it.
 
 ---
 
-## Task 3: `theseus:` config in `analysis_options.yaml`
+## Task 3: `vaixell:` config in `analysis_options.yaml`
 
-**Description:** Load the `theseus:` key from `analysis_options.yaml` through
+**Description:** Load the `vaixell:` key from `analysis_options.yaml` through
 `SourceTree`. It supports `include: <preset | [presets]>`,
 `rules: {id: off|warning|error}` and `exclude: [globs]`. Add the
 `recommended` preset, which sets every rule to `error` and is the default when
@@ -96,7 +95,7 @@ there's no config. The
 analyzer's top-level `include:` is never followed.
 
 **Acceptance criteria:**
-- [x] With no file or no `theseus:` key, the run uses `recommended`.
+- [x] With no file or no `vaixell:` key, the run uses `recommended`.
       `rules: {top-level-function: off}` turns that rule off, and `warning`
       makes it exit `0`.
 - [x] Unknown keys, rules, presets or severities exit with `78` and a
@@ -142,7 +141,7 @@ the run.
 
 **Files likely touched:** `lib/src/source/git_source_tree.dart`,
 `lib/src/git/git_runner.dart`, `lib/src/engine/diff_result.dart`,
-`lib/src/cli/theseus_command.dart`, `test/git/*`
+`lib/src/cli/vaixell_command.dart`, `test/git/*`
 
 **Estimated scope:** M
 
@@ -168,7 +167,7 @@ reports only new ones, and lists stale (fixed) entries.
 **Dependencies:** Task 4 (shares the id-set comparison)
 
 **Files likely touched:** `lib/src/baseline/baseline.dart`,
-`lib/src/cli/theseus_command.dart`, `test/baseline_test.dart`
+`lib/src/cli/vaixell_command.dart`, `test/baseline_test.dart`
 
 **Estimated scope:** S
 
@@ -255,13 +254,13 @@ through model classes instead of handling raw JSON.
    falling back to the root.
 
 Ids use paths relative to the repo root. Each member uses the nearest
-`analysis_options.yaml` with a `theseus:` key, with no merging. Positional
+`analysis_options.yaml` with a `vaixell:` key, with no merging. Positional
 paths override discovery.
 
 **Acceptance criteria:**
 - [x] Fixtures for a workspace, a monorepo without a workspace and a single
       package each scan the expected `lib/` directories.
-- [x] A member's own `theseus:` config overrides the root config for that
+- [x] A member's own `vaixell:` config overrides the root config for that
       member only.
 - [x] Discovery works the same on `GitSourceTree`, so diff mode works in
       monorepos.

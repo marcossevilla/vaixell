@@ -1,5 +1,5 @@
 import 'package:analyzer/dart/analysis/utilities.dart';
-import 'package:theseus_cli/src/rules/rule.dart';
+import 'package:vaixell/src/rules/rule.dart';
 
 /// Parses [content] as the file at [path].
 ParsedFile parse(String content, {String path = 'lib/a.dart'}) => ParsedFile(

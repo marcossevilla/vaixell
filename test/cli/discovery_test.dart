@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:io/io.dart';
 import 'package:test/test.dart';
 import 'package:test_descriptor/test_descriptor.dart' as d;
-import 'package:theseus_cli/theseus_cli.dart';
+import 'package:vaixell/vaixell.dart';
 
 import '../helpers/git_repo.dart';
 
@@ -15,7 +15,7 @@ void main() {
     Future<int> run(List<String> arguments) {
       out = StringBuffer();
       err = StringBuffer();
-      return TheseusCommand(
+      return VaixellCommand(
         stdout: out,
         stderr: err,
         root: Directory(d.sandbox),
@@ -40,7 +40,7 @@ workspace:
       await d
           .file(
             'analysis_options.yaml',
-            'theseus:\n  rules:\n    top-level-variable: off\n',
+            'vaixell:\n  rules:\n    top-level-variable: off\n',
           )
           .create();
       await d.dir('lib', [d.file('root.dart', 'void root() {}\n')]).create();
@@ -48,7 +48,7 @@ workspace:
         d.file('pubspec.yaml', 'name: a\n'),
         d.file(
           'analysis_options.yaml',
-          'theseus:\n  rules:\n    top-level-function: off\n',
+          'vaixell:\n  rules:\n    top-level-function: off\n',
         ),
         d.dir('lib', [d.file('a.dart', 'void a() {}\nfinal x = 1;\n')]),
       ]).create();
@@ -68,7 +68,7 @@ workspace:
           // Package a's own config turns top-level-function off, and
           // doesn't inherit the root's top-level-variable: off.
           'top-level-variable:packages/a/lib/a.dart:x',
-          // Package b has no theseus key, so the root config applies.
+          // Package b has no vaixell key, so the root config applies.
           'top-level-function:packages/b/lib/b.dart:b',
         ]),
       );
@@ -110,7 +110,7 @@ workspace:
 
     test('an invalid member config exits 78 with its path', () async {
       await d
-          .file('packages/b/analysis_options.yaml', 'theseus:\n  bad: 1\n')
+          .file('packages/b/analysis_options.yaml', 'vaixell:\n  bad: 1\n')
           .create();
       expect(await run([]), equals(ExitCode.config.code));
       expect(

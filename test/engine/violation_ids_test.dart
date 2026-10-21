@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import 'package:theseus_cli/src/engine/violation_ids.dart';
+import 'package:vaixell/src/engine/violation_ids.dart';
 
 void main() {
   group(ViolationIds, () {

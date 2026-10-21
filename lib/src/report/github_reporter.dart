@@ -1,9 +1,9 @@
 import 'dart:io';
 
-import 'package:theseus_cli/src/engine/violation.dart';
-import 'package:theseus_cli/src/report/report.dart';
-import 'package:theseus_cli/src/report/reporter.dart';
-import 'package:theseus_cli/src/report/text_reporter.dart';
+import 'package:vaixell/src/engine/violation.dart';
+import 'package:vaixell/src/report/report.dart';
+import 'package:vaixell/src/report/reporter.dart';
+import 'package:vaixell/src/report/text_reporter.dart';
 
 /// Writes a [Report] for GitHub Actions.
 ///
@@ -57,7 +57,7 @@ class GithubReporter implements Reporter {
   String _annotation(Violation v) =>
       '::${v.severity.name} '
       'file=${_property(v.path)},line=${v.line},col=${v.column},'
-      'title=${_property('theseus ${v.rule}')}'
+      'title=${_property('vaixell ${v.rule}')}'
       '::${_data('${v.message} [${v.id}]')}';
 
   /// Escapes the message of a workflow command.
@@ -72,7 +72,7 @@ class GithubReporter implements Reporter {
 
   String _markdown(Report report, TextReporter text, int skipped) {
     final buffer = StringBuffer()
-      ..writeln('## theseus')
+      ..writeln('## vaixell')
       ..writeln()
       ..writeln('**${text.summary(report)}** (${report.mode.name} mode)')
       ..writeln();

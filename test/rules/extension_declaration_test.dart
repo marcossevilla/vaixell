@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import 'package:theseus_cli/src/rules/extension_declaration.dart';
+import 'package:vaixell/src/rules/extension_declaration.dart';
 
 import '../helpers/parse.dart';
 

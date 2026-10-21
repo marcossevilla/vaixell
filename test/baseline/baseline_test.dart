@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:test_descriptor/test_descriptor.dart' as d;
-import 'package:theseus_cli/theseus_cli.dart';
+import 'package:vaixell/vaixell.dart';
 
 void main() {
   group(Baseline, () {

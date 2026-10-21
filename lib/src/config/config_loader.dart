@@ -1,16 +1,16 @@
 import 'package:glob/glob.dart';
 import 'package:path/path.dart' as p;
-import 'package:theseus_cli/src/config/config.dart';
-import 'package:theseus_cli/src/config/presets.dart';
-import 'package:theseus_cli/src/engine/violation.dart';
-import 'package:theseus_cli/src/rules/parse_error.dart';
-import 'package:theseus_cli/src/rules/registry.dart';
-import 'package:theseus_cli/src/source/source_tree.dart';
+import 'package:vaixell/src/config/config.dart';
+import 'package:vaixell/src/config/presets.dart';
+import 'package:vaixell/src/engine/violation.dart';
+import 'package:vaixell/src/rules/parse_error.dart';
+import 'package:vaixell/src/rules/registry.dart';
+import 'package:vaixell/src/source/source_tree.dart';
 import 'package:yaml/yaml.dart';
 
-/// Loads the `theseus:` section of `analysis_options.yaml`.
+/// Loads the `vaixell:` section of `analysis_options.yaml`.
 ///
-/// Only the `theseus:` key is read. The analyzer's own top-level `include:`
+/// Only the `vaixell:` key is read. The analyzer's own top-level `include:`
 /// is never followed, so the target repo needs no `pub get`.
 class ConfigLoader {
   /// Creates a loader that reads the config at [path] in [tree].
@@ -36,22 +36,22 @@ class ConfigLoader {
   };
 
   /// Returns the config, or [Config.recommended] when the file or its
-  /// `theseus:` key is missing.
+  /// `vaixell:` key is missing.
   ///
   /// Throws a [ConfigException] when the file isn't valid YAML or the
-  /// `theseus:` section is invalid.
+  /// `vaixell:` section is invalid.
   Future<Config> load() async => await loadIfPresent() ?? Config.recommended();
 
-  /// Returns the config, or `null` when the file or its `theseus:` key is
-  /// missing. An empty `theseus:` key counts as present.
+  /// Returns the config, or `null` when the file or its `vaixell:` key is
+  /// missing. An empty `vaixell:` key counts as present.
   ///
   /// Throws a [ConfigException] when the file isn't valid YAML or the
-  /// `theseus:` section is invalid.
+  /// `vaixell:` section is invalid.
   Future<Config?> loadIfPresent() async {
     if (!await tree.exists(path)) return null;
     final root = _parse(await tree.read(path));
-    if (root is! YamlMap || !root.containsKey('theseus')) return null;
-    final section = root.nodes['theseus']!;
+    if (root is! YamlMap || !root.containsKey('vaixell')) return null;
+    final section = root.nodes['vaixell']!;
     if (section.value == null) {
       return Config(severities: Config.recommended().severities, root: _root);
     }
@@ -68,7 +68,7 @@ class ConfigLoader {
 
   Config _section(YamlNode section) {
     if (section is! YamlMap) {
-      throw _error(section, '`theseus` must be a map.');
+      throw _error(section, '`vaixell` must be a map.');
     }
     var presets = const [Presets.defaultPreset];
     var overrides = const <String, Severity?>{};
@@ -84,7 +84,7 @@ class ConfigLoader {
         case final name:
           throw _error(
             key,
-            'Unknown key `$name` under `theseus`. '
+            'Unknown key `$name` under `vaixell`. '
             'Expected one of: ${_keys.join(', ')}.',
           );
       }
@@ -183,7 +183,7 @@ class ConfigLoader {
 }
 
 /// Finds the config for each package: the nearest `analysis_options.yaml`
-/// with a `theseus:` key, from the package directory up to the root.
+/// with a `vaixell:` key, from the package directory up to the root.
 ///
 /// Configs are never merged. Each file is read at most once.
 class ConfigResolver {
@@ -196,7 +196,7 @@ class ConfigResolver {
   final Map<String, Future<Config?>> _cache = {};
 
   /// Returns the config for the package at [package], relative to the root,
-  /// or [Config.recommended] when no file up to the root has a `theseus:`
+  /// or [Config.recommended] when no file up to the root has a `vaixell:`
   /// key.
   ///
   /// Throws a [ConfigException] for the first invalid file on the way.
