@@ -1,6 +1,12 @@
-# Implementation Plan: theseus v1
+# Implementation Plan: theseus phase 1
 
-Source of intent: `docs/intent/theseus.md`.
+Source of intent: `docs/intent/theseus.md`. Phase 2 plan:
+`tasks/plan-phase-2.md`.
+
+Phase 1 builds the CLI through Task 10: the rules, config, modes, discovery
+and the `text`, `json` and `github` output formats. Phase 2 (Tasks 11–14)
+covers the GitHub Action, the sticky PR comment, the self-check in CI, the
+README, publishing and per-rule excludes.
 
 ## Overview
 
@@ -105,13 +111,8 @@ wraps the CLI and finds the PR base on its own.
 - **Reporters:** `text` (the default locally), `json` (with a versioned
   `schemaVersion`) and `github` (`::error`/`::warning` annotations plus a
   markdown table in `$GITHUB_STEP_SUMMARY`).
-- **Sticky PR comment.** `--comment-output=<file>` writes a markdown comment
-  with a hidden marker and a table with Rule, File:Line and Message columns for
-  the new violations. The action creates or updates the comment with `gh`,
-  like analytica does. When a later run is clean, it changes the comment to a
-  resolved status. If the run crashed, it leaves the comment alone. The rows
-  are capped so the comment stays under GitHub's 65536-character limit, and
-  the step summary always has the full table.
+- **Sticky PR comment, action and publishing** are phase 2. See
+  `tasks/plan-phase-2.md`.
 - **Exit codes** follow `package:io` `ExitCode`, the same as analytica:
   - `0`: clean.
   - `1`: at least one error-severity violation. In diff or baseline mode, only
@@ -123,8 +124,8 @@ wraps the CLI and finds the PR base on its own.
   stay a thin `main`. Code in `lib/` has no top-level functions or variables,
   no extensions, no static methods and no raw JSON (the JSON reporter and the
   baseline use model classes with `toJson`/`fromJson`).
-  Code is organized into classes from the first commit, and CI runs
-  `dart run bin/theseus.dart` on the repo.
+  Code is organized into classes from the first commit. Enforcing it in CI
+  is phase 2 (Task 13).
 - **Do not depend on `package:analytica` (0.x) for v1.** Its shapes don't fit
   what theseus needs: analytica lists modified files, while theseus has to
   read the full tree at a ref. Its API is also built on top-level functions,
@@ -145,8 +146,7 @@ Scaffold (pubspec, lints, CI, CLI shell)
         │     └── Baseline (same id-set comparison)
         ├── Workspace / monorepo discovery (+ per-member config)
         └── Reporters: json, github
-              └── Composite action (diff base auto-detect)
-                    └── Self-check + README + publish dry-run
+              └── Phase 2: action, PR comment, self-check, README, publish
 ```
 
 ## Task List
@@ -173,17 +173,13 @@ Tasks are tracked in `tasks/todo.md`, which has the full acceptance criteria.
 
 ### Checkpoint C: v1 rule set runs on real repos
 
-### Phase 4: Output, the action and the release
+### Phase 4: Output formats
 - [ ] Task 9: JSON reporter
 - [ ] Task 10: GitHub reporter (annotations and step summary)
-- [ ] Task 11: Composite GitHub Action
-- [ ] Task 12: Sticky PR comment with a table of failing rules
-- [ ] Task 13: Self-check, README and publish readiness
 
-### Checkpoint D: ready to release v1
+### Checkpoint D: phase 1 complete
 
-### Phase 5: After v1
-- [ ] Task 14: Per-rule `exclude:` globs
+Tasks 11–14 continue in `tasks/plan-phase-2.md`.
 
 ## Risks and Mitigations
 
@@ -191,9 +187,9 @@ Tasks are tracked in `tasks/todo.md`, which has the full acceptance criteria.
 |------|--------|------------|
 | Ids shift on harmless edits (renames, reorders), so diff mode reports noise | High | Ids leave out line numbers and use the symbol path. Add tests that move code around and check the ids stay the same. Use the `#n` suffix only for true duplicates. |
 | Reading git trees is slow or fragile in big repos or shallow CI clones | High | Use `cat-file --batch`, a single process for each ref. The action fetches the base ref (like analytica). Report a clear exit-70 error when the ref can't be reached. Do this early, in Task 4. |
-| `raw-json` causes false positives without types (for example, `Map<String, dynamic>` used for non-JSON data) | Med | Measured on `marcossevilla/compass_app`: 21/21 findings were boundary code that already used models. Allowing JSON handed straight to `fromJson` and `jsonEncode` of non-literals cut that to 12, all from the `jsonDecode(s) as List` → `.cast<Map<String, dynamic>>()` → `.map(Model.fromJson)` pattern, which needs data flow to recognize. Per-rule `exclude:` globs (Task 14) cover the rest. |
+| `raw-json` causes false positives without types (for example, `Map<String, dynamic>` used for non-JSON data) | Med | Measured on `marcossevilla/compass_app`: 21/21 findings were boundary code that already used models. Allowing JSON handed straight to `fromJson` and `jsonEncode` of non-literals cut that to 12, all from the `jsonDecode(s) as List` → `.cast<Map<String, dynamic>>()` → `.map(Model.fromJson)` pattern, which needs data flow to recognize. Per-rule `exclude:` globs (phase 2, Task 14) cover the rest. |
 | The self-check forces awkward code style (no statics or top-level functions) | Med | Design for it from Task 1. Exempt `main`. Revisit the defaults if the restrictions hurt readability. |
-| `dart run theseus_cli@` behaves differently across SDK versions | Med | Pin the SDK lower bound to one that supports it. Test the action with `dart-lang/setup-dart`, using both stable and the lower bound. |
+| `dart run theseus_cli@` behaves differently across SDK versions | Med | The SDK lower bound is 3.13, and CI runs on stable and the lower bound. Testing the action is phase 2. |
 | Generated files (`*.g.dart`, `*.freezed.dart`) flood the results | Med | Exclude them by default and add an `exclude:` globs key to the config. |
 
 ## Resolved Questions
@@ -203,11 +199,12 @@ Tasks are tracked in `tasks/todo.md`, which has the full acceptance criteria.
 - **`raw-json`:** it makes code use model classes to (de)serialize JSON, as
   described in the Architecture Decisions. Boundary code that hands JSON
   straight to `fromJson`, or encodes a non-literal, is allowed. Per-rule
-  excludes come after v1 (Task 14).
+  excludes are phase 2 (Task 14).
 - **Scope:** `lib/` only.
 - **Exemptions:** none, apart from `main`.
-- **PR feedback:** a sticky PR comment with a table of rule, file and line,
-  plus annotations and the step summary.
+- **PR feedback:** annotations and the step summary in phase 1 (Task 10),
+  plus a sticky PR comment with a table of rule, file and line in phase 2
+  (Task 12).
 - **Package and repo:** `theseus_cli` on pub.dev, `marcossevilla/theseus`
   on GitHub.
 
