@@ -88,45 +88,19 @@ class VaixellCommandRunner extends CompletionCommandRunner<int> {
   @override
   Future<int?> runCommand(ArgResults topLevelResults) async {
     final command = topLevelResults.command;
-    _isMachineReadable =
-        command?.name == CheckCommand.commandName &&
-        command!.option('format') != 'text';
+    _isMachineReadable = _isMachineReadableCheck(command);
 
     // Fast track completion command
-    if (topLevelResults.command?.name == 'completion') {
+    if (command?.name == 'completion') {
       await super.runCommand(topLevelResults);
       return ExitCode.success.code;
     }
 
-    // Verbose logs
-    _logger
-      ..detail('Argument information:')
-      ..detail('  Top level options:');
-    for (final option in topLevelResults.options) {
-      if (topLevelResults.wasParsed(option)) {
-        _logger.detail('  - $option: ${topLevelResults[option]}');
-      }
-    }
-    if (topLevelResults.command != null) {
-      final commandResult = topLevelResults.command!;
-      _logger
-        ..detail('  Command: ${commandResult.name}')
-        ..detail('    Command options:');
-      for (final option in commandResult.options) {
-        if (commandResult.wasParsed(option)) {
-          _logger.detail('    - $option: ${commandResult[option]}');
-        }
-      }
-    }
+    _logArguments(topLevelResults);
 
-    // Run the command or show version
-    final int? exitCode;
-    if (topLevelResults['version'] == true) {
-      _logger.info(packageVersion);
-      exitCode = ExitCode.success.code;
-    } else {
-      exitCode = await super.runCommand(topLevelResults);
-    }
+    final exitCode = topLevelResults['version'] == true
+        ? _printVersion()
+        : await super.runCommand(topLevelResults);
 
     // Check for updates, unless stdout is a machine-readable report
     if (command?.name != UpdateCommand.commandName && !_isMachineReadable) {
@@ -134,6 +108,37 @@ class VaixellCommandRunner extends CompletionCommandRunner<int> {
     }
 
     return exitCode;
+  }
+
+  bool _isMachineReadableCheck(ArgResults? command) =>
+      command?.name == CheckCommand.commandName &&
+      command!.option('format') != 'text';
+
+  void _logArguments(ArgResults topLevelResults) {
+    _logger
+      ..detail('Argument information:')
+      ..detail('  Top level options:');
+    _logParsedOptions(topLevelResults, indent: '  ');
+
+    final command = topLevelResults.command;
+    if (command == null) {
+      return;
+    }
+    _logger
+      ..detail('  Command: ${command.name}')
+      ..detail('    Command options:');
+    _logParsedOptions(command, indent: '    ');
+  }
+
+  void _logParsedOptions(ArgResults results, {required String indent}) {
+    for (final option in results.options.where(results.wasParsed)) {
+      _logger.detail('$indent- $option: ${results[option]}');
+    }
+  }
+
+  int _printVersion() {
+    _logger.info(packageVersion);
+    return ExitCode.success.code;
   }
 
   /// Checks if the current version (set by the build runner on the
