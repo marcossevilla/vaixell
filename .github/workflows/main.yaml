@@ -1,4 +1,4 @@
-name: repository
+name: main
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
