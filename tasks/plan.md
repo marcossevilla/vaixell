@@ -71,10 +71,24 @@ wraps the CLI and finds the PR base on its own.
   - `Map<String, dynamic>` type annotations
 
   It allows these inside `fromJson` constructors or methods and `toJson`
-  methods, in files under `**/models/**`, and in generated files.
-- **Rules are a sealed registry.** Each rule is a class with an `id`, a
-  default severity and an AST visitor that emits violations. There is no
-  plugin loading.
+  methods, in files under `**/models/**`, and in generated files. It also
+  allows code at an I/O boundary that hands JSON to a model:
+  - a decode call or `Map<String, dynamic>` cast passed straight to a
+    `fromJson` call, such as
+    `User.fromJson(jsonDecode(body) as Map<String, dynamic>)`
+  - an encode call whose argument isn't a collection literal, such as
+    `jsonEncode(user)`
+
+  It doesn't flag the `JsonDecoder` / `JsonEncoder` converter classes.
+  Ids add the kind of finding to the enclosing declaration, for example
+  `raw-json:lib/src/api.dart:Api.getUser@decode` (`@encode`, `@map`), so
+  removing one kind doesn't renumber another.
+- **Rules are a closed registry.** Each rule extends an `abstract base
+  class Rule` with an `id`, a default severity and an AST visitor that emits
+  violations, and `RuleRegistry` lists every rule. There is no plugin
+  loading. A `sealed` hierarchy was considered and dropped: its only gain is
+  exhaustive switches, which nothing needs, and it would force every rule
+  into `part` files.
 - **Reporters:** `text` (the default locally), `json` (with a versioned
   `schemaVersion`) and `github` (`::error`/`::warning` annotations plus a
   markdown table in `$GITHUB_STEP_SUMMARY`).
@@ -155,13 +169,16 @@ Tasks are tracked in `tasks/todo.md`, which has the full acceptance criteria.
 
 ### Checkpoint D: ready to release v1
 
+### Phase 5: After v1
+- [ ] Task 14: Per-rule `exclude:` globs
+
 ## Risks and Mitigations
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
 | Ids shift on harmless edits (renames, reorders), so diff mode reports noise | High | Ids leave out line numbers and use the symbol path. Add tests that move code around and check the ids stay the same. Use the `#n` suffix only for true duplicates. |
 | Reading git trees is slow or fragile in big repos or shallow CI clones | High | Use `cat-file --batch`, a single process for each ref. The action fetches the base ref (like analytica). Report a clear exit-70 error when the ref can't be reached. Do this early, in Task 4. |
-| `raw-json` causes false positives without types (for example, `Map<String, dynamic>` used for non-JSON data) | Med | Users can turn it off or exclude paths with globs. Record the false-positive counts from sample repos in Task 7 and revisit the allowed contexts if they're noisy. |
+| `raw-json` causes false positives without types (for example, `Map<String, dynamic>` used for non-JSON data) | Med | Measured on `marcossevilla/compass_app`: 21/21 findings were boundary code that already used models. Allowing JSON handed straight to `fromJson` and `jsonEncode` of non-literals cut that to 12, all from the `jsonDecode(s) as List` → `.cast<Map<String, dynamic>>()` → `.map(Model.fromJson)` pattern, which needs data flow to recognize. Per-rule `exclude:` globs (Task 14) cover the rest. |
 | The self-check forces awkward code style (no statics or top-level functions) | Med | Design for it from Task 1. Exempt `main`. Revisit the defaults if the restrictions hurt readability. |
 | `dart run theseus_cli@` behaves differently across SDK versions | Med | Pin the SDK lower bound to one that supports it. Test the action with `dart-lang/setup-dart`, using both stable and the lower bound. |
 | Generated files (`*.g.dart`, `*.freezed.dart`) flood the results | Med | Exclude them by default and add an `exclude:` globs key to the config. |
@@ -170,7 +187,9 @@ Tasks are tracked in `tasks/todo.md`, which has the full acceptance criteria.
 
 - **Default severity:** every rule in `recommended` is `error`.
 - **`raw-json`:** it makes code use model classes to (de)serialize JSON, as
-  described in the Architecture Decisions.
+  described in the Architecture Decisions. Boundary code that hands JSON
+  straight to `fromJson`, or encodes a non-literal, is allowed. Per-rule
+  excludes come after v1 (Task 14).
 - **Scope:** `lib/` only.
 - **Exemptions:** none, apart from `main`.
 - **PR feedback:** a sticky PR comment with a table of rule, file and line,

@@ -225,8 +225,12 @@ through model classes instead of handling raw JSON.
       outside the allowed contexts.
 - [x] It doesn't flag code inside `fromJson` constructors or methods,
       `toJson` methods, files under `**/models/**`, or generated files.
-- [x] Running it on a public sample repo (marcossevilla/compass_app, per review) produces a false-positive count
-      that's recorded in the PR description.
+- [x] It doesn't flag a decode call or `Map<String, dynamic>` cast passed
+      straight to a `fromJson` call, or an encode call whose argument isn't
+      a collection literal.
+- [x] Running it on a public sample repo (`marcossevilla/compass_app`, per
+      review) produces a false-positive count that's recorded in the commit
+      message: 21/21 before the boundary allowances, 12 after.
 
 **Verification:**
 - [x] The standard checks pass.
@@ -443,3 +447,44 @@ Also prepare the CHANGELOG and the pub.dev metadata.
   - PRs fail only on new violations.
   - Theseus passes its own check.
 - [ ] Human approval to tag and publish.
+
+---
+
+## Task 14: Per-rule `exclude:` globs
+
+**Description:** Let a rule entry in `rules:` take a map with a severity and
+its own `exclude:` globs, next to the current `rule: severity` form. This
+covers code that's correct by intent but can't be recognized without
+types, such as the list-decoding pattern in API clients that `raw-json`
+still flags.
+
+```yaml
+theseus:
+  rules:
+    top-level-function: warning
+    raw-json:
+      severity: error
+      exclude:
+        - "**/*_client.dart"
+```
+
+**Acceptance criteria:**
+- [ ] Both forms are accepted. A rule's globs skip that rule only, while
+      the top-level `exclude:` still skips every rule.
+- [ ] Unknown keys in the map form, a missing `severity`, or invalid globs
+      exit `78` with a `file:line:col` message.
+- [ ] `parse-error` can't take per-rule excludes, so syntax errors are
+      always reported.
+- [ ] On `marcossevilla/compass_app`, one per-rule glob clears the 12
+      remaining `raw-json` findings.
+
+**Verification:**
+- [ ] The standard checks pass.
+- [ ] Table-driven config tests cover both forms and the invalid cases.
+
+**Dependencies:** Task 13
+
+**Files likely touched:** `lib/src/config/{config,config_loader}.dart`,
+`lib/src/engine/engine.dart`, `test/config/*`, `README.md`
+
+**Estimated scope:** S
