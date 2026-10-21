@@ -49,6 +49,15 @@ void main() {
       );
     });
 
+    test('lists immediate subdirectories at the commit', () async {
+      await d.dir('pkg/untracked/dir').create();
+      final tree = treeIn(d.path('pkg'));
+      expect(await tree.listDirectories(''), equals(['lib']));
+      expect(await tree.listDirectories('lib'), equals(['lib/src']));
+      expect(await tree.listDirectories('missing'), isEmpty);
+      expect(await treeIn(d.sandbox).listDirectories(''), equals(['pkg']));
+    });
+
     test('checks whether files exist', () async {
       final tree = treeIn(d.path('pkg'));
       addTearDown(tree.close);

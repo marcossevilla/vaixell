@@ -16,6 +16,17 @@ class MemorySourceTree implements SourceTree {
   final List<String> reads = [];
 
   @override
+  Future<List<String>> listDirectories(String directory) async {
+    final prefix = directory.isEmpty ? '' : '$directory/';
+    return {
+      for (final path in files.keys)
+        if (path.startsWith(prefix) &&
+            path.substring(prefix.length).contains('/'))
+          '$prefix${path.substring(prefix.length).split('/').first}',
+    }.toList()..sort();
+  }
+
+  @override
   Future<bool> exists(String path) async => files.containsKey(path);
 
   @override

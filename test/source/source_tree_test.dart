@@ -28,6 +28,15 @@ void main() {
       expect(await tree.listFiles('missing'), isEmpty);
     });
 
+    test('lists immediate subdirectories as sorted POSIX paths', () async {
+      await d.dir('lib/src/deep/er').create();
+      await d.dir('tool').create();
+      expect(await tree.listDirectories(''), equals(['lib', 'tool']));
+      expect(await tree.listDirectories('lib'), equals(['lib/src']));
+      expect(await tree.listDirectories('lib/src/a.dart'), isEmpty);
+      expect(await tree.listDirectories('missing'), isEmpty);
+    });
+
     test('checks whether files exist', () async {
       expect(await tree.exists('pubspec.yaml'), isTrue);
       expect(await tree.exists('lib/src/a.dart'), isTrue);

@@ -39,6 +39,23 @@ class GitSourceTree implements SourceTree {
   }
 
   @override
+  Future<List<String>> listDirectories(String directory) async {
+    final output = await git.run([
+      'ls-tree',
+      '-d',
+      '--name-only',
+      '-z',
+      commit,
+      '--',
+      if (directory.isEmpty) '.' else '$directory/',
+    ]);
+    return [
+      for (final path in output.split('\x00'))
+        if (path.isNotEmpty) path,
+    ]..sort();
+  }
+
+  @override
   Future<bool> exists(String path) async => (await _blob(path)) != null;
 
   @override

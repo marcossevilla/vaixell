@@ -6,6 +6,7 @@ export 'src/baseline/baseline.dart'
 export 'src/cli/theseus_command.dart' show TheseusCommand;
 export 'src/config/config.dart' show Config, ConfigException;
 export 'src/config/config_loader.dart' show ConfigLoader, ConfigResolver;
+export 'src/discovery/package_discovery.dart' show PackageDiscovery;
 export 'src/engine/diff_result.dart' show DiffResult;
 export 'src/engine/engine.dart' show Engine;
 export 'src/engine/violation.dart' show Severity, Violation;
