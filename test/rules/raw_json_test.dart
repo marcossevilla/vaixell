@@ -19,7 +19,7 @@ void main() {
         parse('''
 void f(String s) {
   jsonDecode(s);
-  jsonEncode(s);
+  jsonEncode({'a': s});
 }
 '''),
       );
@@ -46,7 +46,7 @@ void f(String s) {
         parse('''
 void f(String s) {
   json.decode(s);
-  convert.json.encode(s);
+  convert.json.encode([s]);
   convert.jsonDecode(s);
 }
 '''),
@@ -128,6 +128,74 @@ class B {
 }
 '''),
         equals(['A.fromJson2@map']),
+      );
+    });
+
+    test('allows JSON passed straight to fromJson', () {
+      expect(
+        symbols('''
+void f(String s, Object o) {
+  User.fromJson(jsonDecode(s));
+  User.fromJson(jsonDecode(s) as Map<String, dynamic>);
+  User.fromJson((json.decode(s) as Map<String, dynamic>));
+  User.fromJson(o as Map<String, dynamic>);
+  new User.fromJson(jsonDecode(s) as Map<String, dynamic>);
+  api.User.fromJson(jsonDecode(s));
+}
+'''),
+        isEmpty,
+      );
+    });
+
+    test('flags JSON that only passes near fromJson', () {
+      expect(
+        symbols('''
+void f(String s) {
+  User.toJsonX(jsonDecode(s));
+  new User(jsonDecode(s) as Map<String, dynamic>);
+  User.fromJson(wrap(jsonDecode(s)));
+  User.fromJson(jsonDecode(s) as List<Map<String, dynamic>>);
+  final m = jsonDecode(s) as Map<String, dynamic>;
+  User.fromJson(m);
+}
+'''),
+        equals([
+          'f@decode',
+          'f@decode',
+          'f@map',
+          'f@decode',
+          'f@map',
+          'f@decode',
+          'f@map',
+        ]),
+      );
+    });
+
+    test('allows encoding a value that is not a collection literal', () {
+      expect(
+        symbols('''
+void f(User user) {
+  jsonEncode(user);
+  json.encode(user.settings);
+  jsonEncode((user));
+}
+'''),
+        isEmpty,
+      );
+    });
+
+    test('flags encoding collection literals', () {
+      expect(
+        symbols('''
+void f(String s) {
+  jsonEncode({'a': s});
+  jsonEncode(<Object?>[s]);
+  json.encode(({'a': s}));
+  jsonEncode();
+  jsonEncode(toEncodable: s);
+}
+'''),
+        equals(['f@encode', 'f@encode', 'f@encode', 'f@encode', 'f@encode']),
       );
     });
 

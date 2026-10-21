@@ -10,6 +10,14 @@ import 'package:theseus_cli/src/rules/rule.dart';
 /// inside `fromJson` constructors and methods, inside `toJson` methods, and
 /// in files under a `models` directory. Generated files are never checked.
 ///
+/// Code at an I/O boundary that hands JSON to a model is also allowed:
+///
+/// - A decode call or `Map<String, dynamic>` cast that is passed straight
+///   to a `fromJson` call, as in
+///   `User.fromJson(jsonDecode(body) as Map<String, dynamic>)`.
+/// - An encode call whose argument isn't a collection literal, as in
+///   `jsonEncode(user)`, which calls `User.toJson`.
+///
 /// Ids use the enclosing declaration and the kind of finding, such as
 /// `ApiClient.getUser@decode`, `@encode` or `@map`, so they don't change
 /// when code moves or when a finding of another kind is removed.
@@ -71,7 +79,8 @@ class _RawJsonVisitor extends RecursiveAstVisitor<void> {
       null || SimpleIdentifier() => method,
       _ => null,
     };
-    if (_calls[call] case (final kind, final advice)) {
+    if (_calls[call] case (final kind, final advice)
+        when !_handsOffToModel(node, kind)) {
       _report(
         node,
         kind,
@@ -83,7 +92,7 @@ class _RawJsonVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitNamedType(NamedType node) {
-    if (_isRawJsonMap(node)) {
+    if (_isRawJsonMap(node) && !_isCastForFromJson(node)) {
       _report(
         node,
         'map',
@@ -92,6 +101,49 @@ class _RawJsonVisitor extends RecursiveAstVisitor<void> {
       );
     }
     super.visitNamedType(node);
+  }
+
+  /// Whether the [call] of [kind] hands JSON to or from a model class.
+  bool _handsOffToModel(MethodInvocation call, String kind) => kind == 'decode'
+      ? _feedsFromJson(call)
+      : switch (call.argumentList.arguments.firstOrNull) {
+          final Expression argument =>
+            argument.unParenthesized is! TypedLiteral,
+          _ => false,
+        };
+
+  /// Whether [type] is the target of an `as` cast passed to `fromJson`.
+  bool _isCastForFromJson(NamedType type) => switch (type.parent) {
+    final AsExpression cast => _feedsFromJson(cast),
+    _ => false,
+  };
+
+  /// Whether [expression], ignoring parentheses and `as` casts, is an
+  /// argument of a `fromJson` call.
+  bool _feedsFromJson(Expression expression) {
+    AstNode node = expression;
+    while (true) {
+      switch (node.parent) {
+        case final ParenthesizedExpression parent:
+          node = parent;
+        case final AsExpression parent when parent.expression == node:
+          node = parent;
+        case ArgumentList(
+          parent: MethodInvocation(methodName: SimpleIdentifier(:final name)),
+        ):
+          return name == 'fromJson';
+        case ArgumentList(
+          parent: InstanceCreationExpression(:final constructorName),
+        ):
+          // Unresolved, `new User.fromJson` reads `User.` as an import
+          // prefix and `fromJson` as the type name.
+          final name =
+              constructorName.name?.name ?? constructorName.type.name.lexeme;
+          return name == 'fromJson';
+        default:
+          return false;
+      }
+    }
   }
 
   bool _isRawJsonMap(NamedType node) =>
