@@ -12,15 +12,15 @@ import 'package:yaml/yaml.dart';
 ///
 /// Only the `vaixell:` key is read. The analyzer's own top-level `include:`
 /// is never followed, so the target repo needs no `pub get`.
-class ConfigLoader {
-  /// Creates a loader that reads the config at [path] in [tree].
-  const new(this.tree, {this.path = 'analysis_options.yaml'});
-
+class const ConfigLoader(
   /// The tree that holds the config file.
-  final SourceTree tree;
+  final SourceTree tree, {
 
   /// The path of the config file in [tree].
-  final String path;
+  final String path = 'analysis_options.yaml',
+}) {
+  /// Creates a loader that reads the config at [path] in [tree].
+  this;
 
   static const List<String> _keys = ['include', 'rules', 'exclude'];
   static const Map<String, Severity?> _severities = {
@@ -186,12 +186,12 @@ class ConfigLoader {
 /// with a `vaixell:` key, from the package directory up to the root.
 ///
 /// Configs are never merged. Each file is read at most once.
-class ConfigResolver {
-  /// Creates a resolver that reads configs from [tree].
-  new(this.tree);
-
+class ConfigResolver(
   /// The tree that holds the config files.
-  final SourceTree tree;
+  final SourceTree tree,
+) {
+  /// Creates a resolver that reads configs from [tree].
+  this;
 
   final Map<String, Future<Config?>> _cache = {};
 

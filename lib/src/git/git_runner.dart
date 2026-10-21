@@ -2,29 +2,29 @@ import 'dart:convert';
 import 'dart:io';
 
 /// A git command that failed, or a repository in an unusable state.
-class GitException implements Exception {
-  /// Creates an exception with a [message] for the user.
-  const new(this.message);
-
+class const GitException(
   /// A description of the problem.
-  final String message;
+  final String message,
+) implements Exception {
+  /// Creates an exception with a [message] for the user.
+  this;
 
   @override
   String toString() => message;
 }
 
 /// Runs git commands in a directory.
-class GitRunner {
-  /// Creates a runner for the repository that contains [workingDirectory].
+class const GitRunner(
+  /// The directory git runs in.
   ///
-  /// [executable] is the git binary to run.
-  const new(this.workingDirectory, {this.executable = 'git'});
-
-  /// The directory git runs in. Relative paths are resolved against it.
-  final String workingDirectory;
+  /// Relative paths are resolved against it.
+  final String workingDirectory, {
 
   /// The git binary to run.
-  final String executable;
+  final String executable = 'git',
+}) {
+  /// Creates a runner for the repository that contains [workingDirectory].
+  this;
 
   /// Runs `git` with [arguments] and returns its stdout.
   ///

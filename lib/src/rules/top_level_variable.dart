@@ -2,9 +2,9 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:vaixell/src/rules/rule.dart';
 
 /// Reports top-level variables, including `final`, `late` and `const` ones.
-final class TopLevelVariableRule extends Rule {
+final class const TopLevelVariableRule() extends Rule {
   /// Creates the rule.
-  const new();
+  this;
 
   @override
   String get id => 'top-level-variable';

@@ -5,9 +5,9 @@ import 'package:vaixell/src/rules/rule.dart';
 ///
 /// A top-level `main` function is allowed, because apps need an entrypoint
 /// in `lib/main.dart`.
-final class TopLevelFunctionRule extends Rule {
+final class const TopLevelFunctionRule() extends Rule {
   /// Creates the rule.
-  const new();
+  this;
 
   @override
   String get id => 'top-level-function';

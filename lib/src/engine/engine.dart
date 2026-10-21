@@ -9,16 +9,16 @@ import 'package:vaixell/src/rules/rule.dart';
 import 'package:vaixell/src/source/source_tree.dart';
 
 /// Runs rules over the Dart files of packages.
-class Engine {
-  /// Creates an engine that reads files from [tree] and checks each of the
-  /// [packages] with the rules enabled in its config.
-  new({required this.tree, required this.packages});
-
+class Engine({
   /// The files to check.
-  final SourceTree tree;
+  required final SourceTree tree,
 
   /// The packages to check.
-  final List<Package> packages;
+  required final List<Package> packages,
+}) {
+  /// Creates an engine that reads files from [tree] and checks each of the
+  /// [packages] with the rules enabled in its config.
+  this;
 
   /// Checks every Dart file under each package's `lib/` that isn't
   /// generated or excluded by its config, and returns the violations,

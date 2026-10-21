@@ -1,7 +1,7 @@
 /// Recognizes files produced by code generators.
-class GeneratedFiles {
+class const GeneratedFiles() {
   /// Creates a matcher for generated files.
-  const new();
+  this;
 
   static const List<String> _suffixes = [
     '.g.dart',

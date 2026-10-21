@@ -27,12 +27,12 @@ abstract interface class SourceTree {
 }
 
 /// A [SourceTree] backed by a directory on the local file system.
-class FileSystemSourceTree implements SourceTree {
-  /// Creates a tree rooted at [root].
-  new(this.root);
-
+class FileSystemSourceTree(
   /// The root directory of the tree.
-  final Directory root;
+  final Directory root,
+) implements SourceTree {
+  /// Creates a tree rooted at [root].
+  this;
 
   @override
   Future<List<String>> listFiles(String directory) async {

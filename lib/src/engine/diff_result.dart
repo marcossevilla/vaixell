@@ -1,9 +1,15 @@
 import 'package:vaixell/src/engine/violation.dart';
 
 /// The violations added and fixed relative to a base set of ids.
-class DiffResult {
+class const DiffResult({
+  /// Violations in the head run whose ids aren't in the base.
+  required final List<Violation> added,
+
+  /// Sorted ids in the base that aren't in the head run.
+  required final List<String> fixed,
+}) {
   /// Creates a result with [added] violations and [fixed] ids.
-  const new({required this.added, required this.fixed});
+  this;
 
   /// Compares the violations of a [head] run with the [base] ids, which
   /// come from a base run or a baseline file.
@@ -24,12 +30,6 @@ class DiffResult {
       ]..sort(),
     );
   }
-
-  /// Violations in the head run whose ids aren't in the base.
-  final List<Violation> added;
-
-  /// Sorted ids in the base that aren't in the head run.
-  final List<String> fixed;
 
   /// Returns a copy without the added violations whose ids are in [ids].
   DiffResult suppress(Set<String> ids) => DiffResult(

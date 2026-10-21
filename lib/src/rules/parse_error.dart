@@ -4,9 +4,9 @@ import 'package:vaixell/src/rules/rule.dart';
 ///
 /// Other rules skip files with syntax errors, so this rule makes sure those
 /// files still fail the run.
-final class ParseErrorRule extends Rule {
+final class const ParseErrorRule() extends Rule {
   /// Creates the rule.
-  const new();
+  this;
 
   @override
   String get id => 'parse-error';

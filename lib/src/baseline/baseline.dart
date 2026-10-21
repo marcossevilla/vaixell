@@ -13,9 +13,9 @@ import 'dart:io';
 ///   ]
 /// }
 /// ```
-class Baseline {
+class Baseline(Iterable<String> ids) {
   /// Creates a baseline with the violation [ids].
-  new(Iterable<String> ids) : ids = {...ids};
+  this;
 
   /// Reads a baseline from its decoded JSON.
   ///
@@ -41,7 +41,7 @@ class Baseline {
   static const int schemaVersion = 1;
 
   /// The violation ids in the baseline.
-  final Set<String> ids;
+  final Set<String> ids = {...ids};
 
   /// Returns the JSON for this baseline, with the ids sorted.
   Map<String, Object?> toJson() => {
@@ -51,24 +51,24 @@ class Baseline {
 }
 
 /// A problem reading a baseline file.
-class BaselineException implements Exception {
-  /// Creates an exception with a [message] for the user.
-  const new(this.message);
-
+class const BaselineException(
   /// A description of the problem.
-  final String message;
+  final String message,
+) implements Exception {
+  /// Creates an exception with a [message] for the user.
+  this;
 
   @override
   String toString() => message;
 }
 
 /// Reads and writes a [Baseline] at [path].
-class BaselineFile {
-  /// Creates a handle for the baseline file at [path].
-  const new(this.path);
-
+class const BaselineFile(
   /// The path of the baseline file.
-  final String path;
+  final String path,
+) {
+  /// Creates a handle for the baseline file at [path].
+  this;
 
   /// Reads the baseline.
   ///

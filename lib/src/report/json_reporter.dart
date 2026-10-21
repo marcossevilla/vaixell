@@ -6,12 +6,12 @@ import 'package:vaixell/src/report/reporter.dart';
 /// Writes a [Report] as one indented JSON document.
 ///
 /// See [Report] for the schema.
-class JsonReporter implements Reporter {
+class const JsonReporter(
+  /// The sink that the document is written to.
+  final StringSink out,
+) implements Reporter {
   /// Creates a reporter that writes to [out].
-  const new(this.out);
-
-  /// Where the document is written.
-  final StringSink out;
+  this;
 
   @override
   void write(Report report) =>

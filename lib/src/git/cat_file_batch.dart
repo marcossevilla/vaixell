@@ -5,23 +5,23 @@ import 'dart:io';
 import 'package:vaixell/src/git/git_runner.dart';
 
 /// A git object read by [CatFileBatch].
-class GitObject {
-  /// Creates an object of [type] with [bytes] as its contents.
-  const new({required this.type, required this.bytes});
-
+class const GitObject({
   /// The object type, for example `blob` or `tree`.
-  final String type;
+  required final String type,
 
   /// The raw contents of the object.
-  final List<int> bytes;
+  required final List<int> bytes,
+}) {
+  /// Creates an object of [type] with [bytes] as its contents.
+  this;
 }
 
 /// Reads git objects through one long-running `git cat-file --batch`
 /// process.
-class CatFileBatch {
+class CatFileBatch(final Process _process) {
   /// Creates a reader that talks to a started `git cat-file --batch`
   /// process.
-  new(this._process) {
+  this {
     _process.stdout.listen(_onData, onDone: _onDone);
   }
 
@@ -29,7 +29,6 @@ class CatFileBatch {
     '`git cat-file --batch` exited unexpectedly.',
   );
 
-  final Process _process;
   final List<int> _buffer = [];
   Completer<void>? _waiting;
   bool _done = false;

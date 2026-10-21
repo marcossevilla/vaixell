@@ -9,15 +9,15 @@ import 'package:vaixell/src/source/source_tree.dart';
 /// Paths are relative to the runner's working directory, so a package in a
 /// subdirectory of the repository sees the same paths as on disk. Nothing
 /// is checked out. Call [close] when done.
-class GitSourceTree implements SourceTree {
-  /// Creates a tree for [commit], using [git] to read it.
-  new({required this.git, required this.commit});
-
+class GitSourceTree({
   /// The runner used to read the repository.
-  final GitRunner git;
+  required final GitRunner git,
 
   /// The commit to read.
-  final String commit;
+  required final String commit,
+}) implements SourceTree {
+  /// Creates a tree for [commit], using [git] to read it.
+  this;
 
   Future<CatFileBatch>? _batch;
 

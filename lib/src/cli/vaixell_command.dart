@@ -25,25 +25,22 @@ import 'package:vaixell/src/version.dart';
 ///
 /// Parses arguments and returns a process exit code that follows
 /// `package:io`'s [ExitCode].
-class VaixellCommand {
-  /// Creates a command that checks the packages in `root` (the current
+class VaixellCommand({
+  required final StringSink _stdout,
+  required final StringSink _stderr,
+  Directory? root,
+  Map<String, String>? environment,
+}) {
+  /// Creates a command that checks the packages in [root] (the current
   /// directory by default), writes the report to `stdout` and writes
   /// diagnostics to `stderr`.
   ///
-  /// `environment` (the process environment by default) provides
+  /// [environment] (the process environment by default) provides
   /// `GITHUB_STEP_SUMMARY` for `--format=github`.
-  new({
-    required this._stdout,
-    required this._stderr,
-    Directory? root,
-    Map<String, String>? environment,
-  }) : _root = root ?? Directory.current,
-       _environment = environment ?? Platform.environment;
+  this;
 
-  final StringSink _stdout;
-  final StringSink _stderr;
-  final Map<String, String> _environment;
-  final Directory _root;
+  final Map<String, String> _environment = environment ?? Platform.environment;
+  final Directory _root = root ?? Directory.current;
 
   final ArgParser _parser = ArgParser(usageLineLength: 80)
     ..addFlag(

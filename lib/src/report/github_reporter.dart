@@ -14,21 +14,21 @@ import 'package:vaixell/src/report/text_reporter.dart';
 /// past that are printed as plain lines instead. A summary line follows.
 ///
 /// When [summaryPath] is set, usually from `$GITHUB_STEP_SUMMARY`, a
-/// markdown summary with the counts and tables of new and fixed violations
+/// Markdown summary with the counts and tables of new and fixed violations
 /// is appended to that file.
-class GithubReporter implements Reporter {
+class const GithubReporter(
+  /// The sink that workflow commands are written to.
+  final StringSink out, {
+
+  /// The step summary file, or `null` to skip the summary.
+  final String? summaryPath,
+}) implements Reporter {
   /// Creates a reporter that writes commands to [out] and appends the
-  /// markdown summary to [summaryPath], if set.
-  const new(this.out, {this.summaryPath});
+  /// Markdown summary to [summaryPath], if set.
+  this;
 
   /// The number of annotations of each severity GitHub shows per step.
   static const int maxAnnotations = 10;
-
-  /// Where the workflow commands are written.
-  final StringSink out;
-
-  /// The step summary file, or `null` to skip the summary.
-  final String? summaryPath;
 
   @override
   void write(Report report) {
