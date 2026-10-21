@@ -280,11 +280,14 @@ paths override discovery.
 ---
 
 ## Checkpoint C
-- [ ] All tests pass and coverage is 100%.
-- [ ] Manual check: run with no config on 2 or 3 unfamiliar public repos
+- [x] All tests pass and coverage is 100%.
+- [x] Manual check: run with no config on 2 or 3 unfamiliar public repos
       (one workspace, one Flutter app). The output is useful, with no crashes
-      and no generated-file noise.
-- [ ] Human review of the default severities and the rule exemptions.
+      and no generated-file noise. Done on `marcossevilla/compass_app` (a
+      workspace with a Flutter app package) and Flutter's `packages/flutter`.
+- [x] Human review of the default severities and the rule exemptions. Every
+      rule stays at `error` in `recommended`, and discovery includes
+      `packages/*` and `pkgs/*` next to a root package.
 
 ---
 

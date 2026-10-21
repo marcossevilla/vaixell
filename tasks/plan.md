@@ -198,7 +198,8 @@ Tasks are tracked in `tasks/todo.md`, which has the full acceptance criteria.
 
 ## Resolved Questions
 
-- **Default severity:** every rule in `recommended` is `error`.
+- **Default severity:** every rule in `recommended` is `error`, confirmed at
+  Checkpoint C after runs on compass_app and Flutter's `packages/flutter`.
 - **`raw-json`:** it makes code use model classes to (de)serialize JSON, as
   described in the Architecture Decisions. Boundary code that hands JSON
   straight to `fromJson`, or encodes a non-literal, is allowed. Per-rule
