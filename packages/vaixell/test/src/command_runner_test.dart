@@ -192,7 +192,7 @@ void main() {
         final result = await commandRunner.run([
           '--verbose',
           'check',
-          '--format=json',
+          '--format=text',
         ]);
         expect(result, equals(ExitCode.success.code));
 
@@ -201,7 +201,19 @@ void main() {
         verify(() => logger.detail('  - verbose: true')).called(1);
         verify(() => logger.detail('  Command: check')).called(1);
         verify(() => logger.detail('    Command options:')).called(1);
-        verify(() => logger.detail('    - format: json')).called(1);
+        verify(() => logger.detail('    - format: text')).called(1);
+      });
+
+      test('does not log arguments for machine-readable check '
+          'output', () async {
+        final result = await commandRunner.run([
+          '--verbose',
+          'check',
+          '--format=json',
+        ]);
+        expect(result, equals(ExitCode.success.code));
+
+        verifyNever(() => logger.detail(any()));
       });
     });
   });

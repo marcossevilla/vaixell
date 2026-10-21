@@ -96,7 +96,8 @@ class VaixellCommandRunner extends CompletionCommandRunner<int> {
       return ExitCode.success.code;
     }
 
-    _logArguments(topLevelResults);
+    // Logged to stdout, so skipped when stdout is a machine-readable report
+    if (!_isMachineReadable) _logArguments(topLevelResults);
 
     final exitCode = topLevelResults['version'] == true
         ? _printVersion()
