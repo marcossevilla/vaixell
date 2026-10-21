@@ -175,7 +175,7 @@ Tasks are tracked in `tasks/todo.md`, which has the full acceptance criteria.
 
 ### Phase 4: Output formats
 - [x] Task 9: JSON reporter
-- [ ] Task 10: GitHub reporter (annotations and step summary)
+- [x] Task 10: GitHub reporter (annotations and step summary)
 
 ### Checkpoint D: phase 1 complete
 

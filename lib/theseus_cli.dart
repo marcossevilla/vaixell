@@ -12,6 +12,7 @@ export 'src/engine/engine.dart' show Engine;
 export 'src/engine/package.dart' show Package;
 export 'src/engine/violation.dart' show Severity, Violation;
 export 'src/git/git_runner.dart' show GitException, GitRunner;
+export 'src/report/github_reporter.dart' show GithubReporter;
 export 'src/report/json_reporter.dart' show JsonReporter;
 export 'src/report/report.dart' show Report, ReportMode;
 export 'src/report/reporter.dart' show Reporter;

@@ -110,15 +110,5 @@ void main() {
       final command = TheseusCommand(stdout: out, stderr: err);
       expect(await command.run([]), equals(ExitCode.success.code));
     });
-
-    for (final arguments in [
-      ['--format=github'],
-    ]) {
-      test('rejects unsupported $arguments with exit 64', () async {
-        expect(await command.run(arguments), equals(ExitCode.usage.code));
-        expect(err.toString(), contains('is not supported yet.'));
-        expect(out.toString(), isEmpty);
-      });
-    }
   });
 }

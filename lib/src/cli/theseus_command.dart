@@ -12,6 +12,7 @@ import 'package:theseus_cli/src/engine/engine.dart';
 import 'package:theseus_cli/src/engine/package.dart';
 import 'package:theseus_cli/src/engine/violation.dart';
 import 'package:theseus_cli/src/git/git_runner.dart';
+import 'package:theseus_cli/src/report/github_reporter.dart';
 import 'package:theseus_cli/src/report/json_reporter.dart';
 import 'package:theseus_cli/src/report/report.dart';
 import 'package:theseus_cli/src/report/reporter.dart';
@@ -28,11 +29,20 @@ class TheseusCommand {
   /// Creates a command that checks the packages in `root` (the current
   /// directory by default), writes the report to `stdout` and writes
   /// diagnostics to `stderr`.
-  new({required this._stdout, required this._stderr, Directory? root})
-    : _root = root ?? Directory.current;
+  ///
+  /// `environment` (the process environment by default) provides
+  /// `GITHUB_STEP_SUMMARY` for `--format=github`.
+  new({
+    required this._stdout,
+    required this._stderr,
+    Directory? root,
+    Map<String, String>? environment,
+  }) : _root = root ?? Directory.current,
+       _environment = environment ?? Platform.environment;
 
   final StringSink _stdout;
   final StringSink _stderr;
+  final Map<String, String> _environment;
   final Directory _root;
 
   final ArgParser _parser = ArgParser(usageLineLength: 80)
@@ -98,10 +108,6 @@ class TheseusCommand {
     if (results.flag('version')) {
       _stdout.writeln(TheseusVersion.current);
       return ExitCode.success.code;
-    }
-    final unsupported = _unsupported(results);
-    if (unsupported != null) {
-      return _usageError('$unsupported is not supported yet.');
     }
     final ref = results.option('git-diff');
     final baselinePath = results.option('baseline');
@@ -243,6 +249,13 @@ class TheseusCommand {
 
   Reporter _reporter(String format) => switch (format) {
     'json' => JsonReporter(_stdout),
+    'github' => GithubReporter(
+      _stdout,
+      summaryPath: switch (_environment['GITHUB_STEP_SUMMARY']) {
+        '' => null,
+        final path => path,
+      },
+    ),
     _ => TextReporter(_stdout),
   };
 
@@ -251,11 +264,4 @@ class TheseusCommand {
       violations.any((v) => v.severity == Severity.error)
       ? 1
       : ExitCode.success.code;
-
-  /// Returns a description of the first argument in [results] that is
-  /// parsed but not implemented yet, or `null` if there is none.
-  String? _unsupported(ArgResults results) {
-    if (results.option('format') == 'github') return '--format=github';
-    return null;
-  }
 }

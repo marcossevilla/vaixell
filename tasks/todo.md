@@ -327,15 +327,16 @@ also appends a markdown summary (counts plus tables of new and fixed
 violations) to `$GITHUB_STEP_SUMMARY` when that variable is set.
 
 **Acceptance criteria:**
-- [ ] Annotation messages escape `%`, `\r`, `\n`, `:` and `,` as the workflow
-      command format requires.
-- [ ] The summary file is appended to, not overwritten. Without the env var,
+- [x] Annotation messages escape `%`, `\r`, `\n`, `:` and `,` as the workflow
+      command format requires. As in `@actions/core`, `:` and `,` are escaped
+      in property values (`file=`, `title=`) and not in the message.
+- [x] The summary file is appended to, not overwritten. Without the env var,
       no summary is written.
-- [ ] The number of annotations is capped (GitHub limits them per step), and
+- [x] The number of annotations is capped (GitHub limits them per step), and
       the summary says how many were left out.
 
 **Verification:**
-- [ ] The standard checks pass.
+- [x] The standard checks pass.
 
 **Dependencies:** Task 9
 
@@ -347,9 +348,11 @@ violations) to `$GITHUB_STEP_SUMMARY` when that variable is set.
 ---
 
 ## Checkpoint D: phase 1 complete
-- [ ] All tests pass and coverage is 100%.
-- [ ] `--format=json` and `--format=github` work in full, diff and baseline
+- [x] All tests pass and coverage is 100%.
+- [x] `--format=json` and `--format=github` work in full, diff and baseline
       modes, and `text` output is unchanged.
-- [ ] Manual check: run `--format=github` with `--git-diff` on a
-      compass_app PR and read the annotations and the summary.
+- [x] Manual check: run `--format=github` with `--git-diff` on a
+      compass_app PR and read the annotations and the summary. Done on PR
+      #197 (1 fixed) and a full run (10 annotations, 18 plain lines and a
+      note in the summary).
 - [ ] Human review before starting phase 2 (`tasks/plan-phase-2.md`).

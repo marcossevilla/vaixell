@@ -1,4 +1,3 @@
-import 'package:theseus_cli/src/engine/diff_result.dart';
 import 'package:theseus_cli/src/engine/violation.dart';
 import 'package:theseus_cli/src/report/report.dart';
 import 'package:theseus_cli/src/report/reporter.dart';
@@ -21,36 +20,34 @@ class TextReporter implements Reporter {
   final StringSink out;
 
   @override
-  void write(Report report) => switch (report.diff) {
-    final diff? => reportDiff(diff),
-    null => this.report(report.violations),
-  };
-
-  /// Writes [violations] and a summary.
-  void report(List<Violation> violations) {
-    violations.forEach(_writeViolation);
-    out.writeln(switch (violations.length) {
-      0 => 'No violations found.',
-      1 => '1 violation found.',
-      final n => '$n violations found.',
-    });
-  }
-
-  /// Writes the new violations in [diff], the fixed ids and a summary.
-  void reportDiff(DiffResult diff) {
-    diff.added.forEach(_writeViolation);
-    for (final id in diff.fixed) {
+  void write(Report report) {
+    for (final violation in report.failing) {
+      out.writeln(describe(violation));
+    }
+    for (final id in report.diff?.fixed ?? const <String>[]) {
       out.writeln('Fixed: $id');
     }
-    final added = diff.added.length;
-    out.writeln(
-      '$added new violation${added == 1 ? '' : 's'}, '
-      '${diff.fixed.length} fixed.',
-    );
+    out.writeln(summary(report));
   }
 
-  void _writeViolation(Violation v) => out.writeln(
-    '${v.path}:${v.line}:${v.column}: ${v.severity.name}: '
-    '${v.message} [${v.id}]',
-  );
+  /// Returns the one-line description of [v].
+  String describe(Violation v) =>
+      '${v.path}:${v.line}:${v.column}: ${v.severity.name}: '
+      '${v.message} [${v.id}]';
+
+  /// Returns the summary line for [report], such as `2 violations found.`
+  /// or `1 new violation, 0 fixed.`
+  String summary(Report report) {
+    final diff = report.diff;
+    if (diff == null) {
+      return switch (report.violations.length) {
+        0 => 'No violations found.',
+        1 => '1 violation found.',
+        final n => '$n violations found.',
+      };
+    }
+    final added = diff.added.length;
+    return '$added new violation${added == 1 ? '' : 's'}, '
+        '${diff.fixed.length} fixed.';
+  }
 }
