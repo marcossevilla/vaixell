@@ -80,7 +80,7 @@ class VaixellCommandRunner extends CompletionCommandRunner<int> {
       // exit with an error code
       _logger
         ..err(e.message)
-        ..err('$stackTrace')
+        ..detail('$stackTrace')
         ..info('')
         ..info(usage);
       return ExitCode.usage.code;

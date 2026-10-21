@@ -172,6 +172,7 @@ void main() {
       final result = await commandRunner.run(['--version']);
       expect(result, equals(ExitCode.usage.code));
       verify(() => logger.err(exception.message)).called(1);
+      verify(() => logger.detail(any(that: contains('#0')))).called(1);
       verify(() => logger.info(commandRunner.usage)).called(1);
     });
 

@@ -68,6 +68,9 @@ class CheckCommand({
   /// The name of this command.
   static const String commandName = 'check';
 
+  /// The exit code when any reported violation is an error.
+  static const int _violationsExitCode = 1;
+
   final Map<String, String> _environment = environment ?? Platform.environment;
   final Directory _root = root ?? Directory.current;
 
@@ -237,9 +240,10 @@ class CheckCommand({
     _ => TextReporter(output),
   };
 
-  /// Returns 1 if any of [violations] is an error, and 0 otherwise.
+  /// Returns [_violationsExitCode] if any of [violations] is an error, and 0
+  /// otherwise.
   int _exitCode(List<Violation> violations) =>
       violations.any((v) => v.severity == Severity.error)
-      ? 1
+      ? _violationsExitCode
       : ExitCode.success.code;
 }
