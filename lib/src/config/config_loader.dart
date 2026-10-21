@@ -29,16 +29,32 @@ class ConfigLoader {
     'error': Severity.error,
   };
 
+  /// The directory of [path], which the `exclude` globs are relative to.
+  String get _root => switch (p.posix.dirname(path)) {
+    '.' => '',
+    final dir => dir,
+  };
+
   /// Returns the config, or [Config.recommended] when the file or its
   /// `theseus:` key is missing.
   ///
   /// Throws a [ConfigException] when the file isn't valid YAML or the
   /// `theseus:` section is invalid.
-  Future<Config> load() async {
-    if (!await tree.exists(path)) return Config.recommended();
+  Future<Config> load() async => await loadIfPresent() ?? Config.recommended();
+
+  /// Returns the config, or `null` when the file or its `theseus:` key is
+  /// missing. An empty `theseus:` key counts as present.
+  ///
+  /// Throws a [ConfigException] when the file isn't valid YAML or the
+  /// `theseus:` section is invalid.
+  Future<Config?> loadIfPresent() async {
+    if (!await tree.exists(path)) return null;
     final root = _parse(await tree.read(path));
-    final section = root is YamlMap ? root.nodes['theseus'] : null;
-    if (section == null || section.value == null) return Config.recommended();
+    if (root is! YamlMap || !root.containsKey('theseus')) return null;
+    final section = root.nodes['theseus']!;
+    if (section.value == null) {
+      return Config(severities: Config.recommended().severities, root: _root);
+    }
     return _section(section);
   }
 
@@ -46,13 +62,7 @@ class ConfigLoader {
     try {
       return loadYamlNode(content, sourceUrl: Uri.file(path));
     } on YamlException catch (error) {
-      final start = error.span?.start;
-      throw ConfigException(
-        error.message,
-        path: path,
-        line: (start?.line ?? 0) + 1,
-        column: (start?.column ?? 0) + 1,
-      );
+      throw ConfigException.yaml(error, path: path);
     }
   }
 
@@ -92,7 +102,7 @@ class ConfigLoader {
       }
     });
     severities.putIfAbsent(const ParseErrorRule().id, () => Severity.error);
-    return Config(severities: severities, exclude: exclude);
+    return Config(severities: severities, exclude: exclude, root: _root);
   }
 
   List<String> _include(YamlNode node) {
@@ -168,10 +178,42 @@ class ConfigLoader {
     }
   }
 
-  ConfigException _error(YamlNode node, String message) => ConfigException(
-    message,
-    path: path,
-    line: node.span.start.line + 1,
-    column: node.span.start.column + 1,
-  );
+  ConfigException _error(YamlNode node, String message) =>
+      ConfigException.at(node, message, path: path);
+}
+
+/// Finds the config for each package: the nearest `analysis_options.yaml`
+/// with a `theseus:` key, from the package directory up to the root.
+///
+/// Configs are never merged. Each file is read at most once.
+class ConfigResolver {
+  /// Creates a resolver that reads configs from [tree].
+  new(this.tree);
+
+  /// The tree that holds the config files.
+  final SourceTree tree;
+
+  final Map<String, Future<Config?>> _cache = {};
+
+  /// Returns the config for the package at [package], relative to the root,
+  /// or [Config.recommended] when no file up to the root has a `theseus:`
+  /// key.
+  ///
+  /// Throws a [ConfigException] for the first invalid file on the way.
+  Future<Config> forPackage(String package) async {
+    for (var dir = package; ; dir = _parent(dir)) {
+      final path = p.posix.join(dir, 'analysis_options.yaml');
+      final config = await _cache.putIfAbsent(
+        path,
+        () => ConfigLoader(tree, path: path).loadIfPresent(),
+      );
+      if (config != null) return config;
+      if (dir.isEmpty) return Config.recommended();
+    }
+  }
+
+  String _parent(String dir) => switch (p.posix.dirname(dir)) {
+    '.' => '',
+    final parent => parent,
+  };
 }

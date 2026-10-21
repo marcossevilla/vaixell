@@ -79,6 +79,47 @@ void main() {
         expect(config.excludes('lib/src/a.dart'), isFalse);
       });
 
+      test('loadIfPresent returns null without a theseus key', () async {
+        for (final files in [
+          <String, String>{},
+          {'analysis_options.yaml': ''},
+          {'analysis_options.yaml': 'linter: {}\n'},
+        ]) {
+          expect(
+            await ConfigLoader(MemorySourceTree(files)).loadIfPresent(),
+            isNull,
+            reason: '$files',
+          );
+        }
+      });
+
+      test('an empty theseus key counts as present', () async {
+        final tree = MemorySourceTree({
+          'pkg/analysis_options.yaml': 'theseus:\n',
+        });
+        final config = await ConfigLoader(
+          tree,
+          path: 'pkg/analysis_options.yaml',
+        ).loadIfPresent();
+        expect(config!.severities, equals(_recommended));
+        expect(config.root, equals('pkg'));
+      });
+
+      test('exclude globs are relative to the config file', () async {
+        final tree = MemorySourceTree({
+          'pkg/analysis_options.yaml': 'theseus:\n  exclude: [lib/legacy/**]\n',
+        });
+        final config = await ConfigLoader(
+          tree,
+          path: 'pkg/analysis_options.yaml',
+        ).load();
+        expect(config.root, equals('pkg'));
+        expect(config.excludes('pkg/lib/legacy/a.dart'), isTrue);
+        expect(config.excludes('pkg/lib/a.dart'), isFalse);
+        expect(config.excludes('lib/legacy/a.dart'), isFalse);
+        expect(config.excludes('pkg2/lib/legacy/a.dart'), isFalse);
+      });
+
       test('reads only analysis_options.yaml', () async {
         final tree = MemorySourceTree({
           'analysis_options.yaml':
@@ -181,6 +222,79 @@ void main() {
           );
         });
       }
+    });
+  });
+
+  group(ConfigResolver, () {
+    const off = 'theseus:\n  rules:\n    top-level-function: off\n';
+    const warning = 'theseus:\n  rules:\n    top-level-function: warning\n';
+
+    Future<Severity?> severityFor(
+      Map<String, String> files,
+      String package,
+    ) async =>
+        (await ConfigResolver(MemorySourceTree(files)).forPackage(package))
+            .severities['top-level-function'];
+
+    test('uses recommended without any config', () async {
+      expect(await severityFor({}, 'packages/a'), equals(Severity.error));
+    });
+
+    test('uses the root config for members without one', () async {
+      expect(
+        await severityFor({'analysis_options.yaml': warning}, 'packages/a'),
+        equals(Severity.warning),
+      );
+    });
+
+    test("a member's config wins for that member only", () async {
+      final files = {
+        'analysis_options.yaml': warning,
+        'packages/a/analysis_options.yaml': off,
+      };
+      expect(await severityFor(files, 'packages/a'), isNull);
+      expect(await severityFor(files, 'packages/b'), equals(Severity.warning));
+      expect(await severityFor(files, ''), equals(Severity.warning));
+    });
+
+    test('skips files without a theseus key and never merges', () async {
+      final files = {
+        'analysis_options.yaml': 'theseus:\n  exclude: [lib/gen/**]\n',
+        'packages/analysis_options.yaml': warning,
+        'packages/a/analysis_options.yaml': 'linter: {}\n',
+      };
+      final config = await ConfigResolver(MemorySourceTree(files))
+          .forPackage('packages/a');
+      expect(config.root, equals('packages'));
+      expect(config.exclude, isEmpty);
+      expect(config.severities['top-level-function'], equals(Severity.warning));
+    });
+
+    test('reads each file once', () async {
+      final tree = MemorySourceTree({'analysis_options.yaml': warning});
+      final resolver = ConfigResolver(tree);
+      await resolver.forPackage('packages/a');
+      await resolver.forPackage('packages/b');
+      await resolver.forPackage('');
+      expect(tree.reads, equals(['analysis_options.yaml']));
+    });
+
+    test("reports errors from a member's file", () async {
+      final resolver = ConfigResolver(
+        MemorySourceTree({
+          'packages/a/analysis_options.yaml': 'theseus:\n  nope: 1\n',
+        }),
+      );
+      await expectLater(
+        resolver.forPackage('packages/a'),
+        throwsA(
+          isA<ConfigException>().having(
+            (e) => e.toString(),
+            'toString()',
+            startsWith('packages/a/analysis_options.yaml:2:3: Unknown key'),
+          ),
+        ),
+      );
     });
   });
 }
