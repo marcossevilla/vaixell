@@ -1,0 +1,71 @@
+name: vaixell
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/vaixell.yaml"
+      - "packages/vaixell/**"
+      - "pubspec.yaml"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/vaixell.yaml"
+      - "packages/vaixell/**"
+      - "pubspec.yaml"
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-pull-request:
+    if: github.event_name == 'pull_request'
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/semantic_pull_request.yml@v1
+
+  build:
+    name: build (${{ matrix.sdk }})
+    strategy:
+      fail-fast: false
+      matrix:
+        # `stable` plus the SDK lower bound from pubspec.yaml.
+        sdk: [stable, 3.13.0]
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/dart_package.yml@v2
+    with:
+      dart_sdk: ${{ matrix.sdk }}
+      working_directory: packages/vaixell
+      analyze_directories: bin lib test
+      report_on: lib
+      coverage_excludes: lib/src/version.dart
+      min_coverage: 100
+
+  spell-check:
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/spell_check.yml@v1
+    with:
+      includes: |
+        **/*.md
+        .*/**/*.md
+      modified_files_only: false
+
+  verify-version:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/vaixell
+    steps:
+      - name: 📚 Git Checkout
+        uses: actions/checkout@v4
+
+      - name: 🎯 Setup Dart
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: "3.13.0"
+
+      - name: 📦 Install Dependencies
+        run: dart pub get
+
+      - name: 🔎 Verify version
+        run: dart test --run-skipped -t version-verify

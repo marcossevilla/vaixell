@@ -1,29 +1,8 @@
-name: vaixell
-description: Checks architecture rules in Dart and Flutter repositories without resolving types or running pub get.
-version: 0.1.0-dev.1
-repository: https://github.com/marcossevilla/vaixell
-issue_tracker: https://github.com/marcossevilla/vaixell/issues
-topics:
-  - architecture
-  - lints
-  - cli
+name: vaixell_workspace
+publish_to: none
 
 environment:
   sdk: ^3.13.0
 
-executables:
-  vaixell:
-
-dependencies:
-  analyzer: ^14.5.0
-  args: ^2.7.0
-  glob: ^2.2.0
-  io: ^1.1.0
-  path: ^1.9.1
-  yaml: ^3.1.4
-
-dev_dependencies:
-  test: ^1.33.0
-  test_descriptor: ^2.0.2
-  test_process: ^2.1.1
-  very_good_analysis: ^11.0.0
+workspace:
+  - packages/vaixell

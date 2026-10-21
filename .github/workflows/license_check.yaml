@@ -1,0 +1,31 @@
+name: license_check
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "pubspec.yaml"
+      - "packages/vaixell/pubspec.yaml"
+      - ".github/workflows/license_check.yaml"
+  push:
+    branches:
+      - main
+    paths:
+      - "pubspec.yaml"
+      - "packages/vaixell/pubspec.yaml"
+      - ".github/workflows/license_check.yaml"
+
+permissions:
+  contents: read
+
+jobs:
+  license_check:
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/license_check.yml@v1
+    with:
+      working_directory: packages/vaixell
+      allowed: "MIT,BSD-3-Clause,BSD-2-Clause,Apache-2.0"
