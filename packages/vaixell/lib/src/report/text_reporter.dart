@@ -1,6 +1,6 @@
-import 'package:vaixell/src/engine/violation.dart';
 import 'package:vaixell/src/report/report.dart';
 import 'package:vaixell/src/report/reporter.dart';
+import 'package:vaixell/src/violation/violation.dart';
 
 /// Prints violations as human-readable lines.
 ///

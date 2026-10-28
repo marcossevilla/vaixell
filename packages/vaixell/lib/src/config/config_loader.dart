@@ -2,10 +2,10 @@ import 'package:glob/glob.dart';
 import 'package:path/path.dart' as p;
 import 'package:vaixell/src/config/config.dart';
 import 'package:vaixell/src/config/presets.dart';
-import 'package:vaixell/src/engine/violation.dart';
 import 'package:vaixell/src/rules/parse_error.dart';
 import 'package:vaixell/src/rules/registry.dart';
 import 'package:vaixell/src/source/source_tree.dart';
+import 'package:vaixell/src/violation/violation.dart';
 import 'package:yaml/yaml.dart';
 
 /// Loads the `vaixell:` section of `analysis_options.yaml`.

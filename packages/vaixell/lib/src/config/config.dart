@@ -1,6 +1,6 @@
 import 'package:glob/glob.dart';
 import 'package:vaixell/src/config/presets.dart';
-import 'package:vaixell/src/engine/violation.dart';
+import 'package:vaixell/src/violation/violation.dart';
 import 'package:yaml/yaml.dart';
 
 /// The resolved `vaixell:` configuration for a package.

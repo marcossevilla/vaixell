@@ -1,9 +1,9 @@
 import 'dart:io';
 
-import 'package:vaixell/src/engine/violation.dart';
 import 'package:vaixell/src/report/report.dart';
 import 'package:vaixell/src/report/reporter.dart';
 import 'package:vaixell/src/report/text_reporter.dart';
+import 'package:vaixell/src/violation/violation.dart';
 
 /// Writes a [Report] for GitHub Actions.
 ///

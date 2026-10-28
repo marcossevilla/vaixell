@@ -2,11 +2,11 @@ import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:path/path.dart' as p;
 import 'package:vaixell/src/engine/generated_files.dart';
 import 'package:vaixell/src/engine/package.dart';
-import 'package:vaixell/src/engine/violation.dart';
 import 'package:vaixell/src/engine/violation_ids.dart';
 import 'package:vaixell/src/rules/registry.dart';
 import 'package:vaixell/src/rules/rule.dart';
 import 'package:vaixell/src/source/source_tree.dart';
+import 'package:vaixell/src/violation/violation.dart';
 
 /// Runs rules over the Dart files of packages.
 class Engine({
