@@ -1,0 +1,56 @@
+name: release_please
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🚀 Release Please
+        id: release
+        uses: googleapis/release-please-action@v5
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          config-file: .release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      # release-please bumps pubspec.yaml; regenerate lib/src/version.dart on
+      # the release branch so the build_verify check stays green.
+      - name: 📚 Git Checkout
+        if: ${{ steps.release.outputs.pr }}
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+
+      - name: 🎯 Setup Dart
+        if: ${{ steps.release.outputs.pr }}
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: "3.13.0"
+
+      - name: 🔢 Sync version.dart
+        if: ${{ steps.release.outputs.pr }}
+        working-directory: packages/vaixell
+        run: |
+          dart pub get
+          dart run build_runner build --delete-conflicting-outputs
+          if git diff --quiet -- lib/src/version.dart; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib/src/version.dart
+          git commit -m "chore: sync version.dart"
+          git push
