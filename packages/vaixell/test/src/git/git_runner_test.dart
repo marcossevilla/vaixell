@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:test/test.dart';
 import 'package:test_descriptor/test_descriptor.dart' as d;
 import 'package:vaixell/vaixell.dart';
@@ -25,12 +27,63 @@ void main() {
       );
     });
 
+    test('runs git in the working directory', () async {
+      List<String>? arguments;
+      String? directory;
+      final fake = GitRunner(
+        d.sandbox,
+        runGit: (args, {throwOnError = true, processWorkingDir}) async {
+          expect(throwOnError, isFalse);
+          arguments = args;
+          directory = processWorkingDir;
+          return ProcessResult(0, 0, 'out', '');
+        },
+      );
+      expect(await fake.run(['status']), equals('out'));
+      expect(arguments, equals(['status']));
+      expect(directory, equals(d.sandbox));
+    });
+
+    for (final exitCode in [127, 9009]) {
+      test('throws when the shell can not find git ($exitCode)', () async {
+        final missing = GitRunner(
+          d.sandbox,
+          runGit: (_, {throwOnError = true, processWorkingDir}) async =>
+              ProcessResult(0, exitCode, '', 'git: command not found\n'),
+        );
+        await expectLater(
+          missing.run(['--version']),
+          _gitError('Could not run `git`: git: command not found'),
+        );
+      });
+    }
+
     test('throws when git can not start', () async {
-      final missing = GitRunner(d.sandbox, executable: 'no-such-git');
+      final missing = GitRunner(
+        d.sandbox,
+        runGit: (args, {throwOnError = true, processWorkingDir}) =>
+            throw ProcessException('git', args, 'No such file'),
+      );
       await expectLater(
         missing.run(['--version']),
-        _gitError(startsWith('Could not run `no-such-git`: ')),
+        _gitError('Could not run `git`: No such file'),
       );
+    });
+
+    test('starts git through startProcess', () async {
+      String? executable;
+      String? directory;
+      final fake = GitRunner(
+        d.sandbox,
+        startProcess: (exe, args, {workingDirectory}) {
+          executable = exe;
+          directory = workingDirectory;
+          return Process.start('git', args);
+        },
+      );
+      await (await fake.start(['--version'])).exitCode;
+      expect(executable, equals('git'));
+      expect(directory, equals(d.sandbox));
     });
 
     group('mergeBase', () {
