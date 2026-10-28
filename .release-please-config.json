@@ -1,0 +1,26 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "changelog-sections": [
+    { "type": "feat", "section": "Features" },
+    { "type": "fix", "section": "Bug Fixes" },
+    { "type": "refactor", "section": "Refactors" },
+    { "type": "perf", "section": "Performance Improvements" },
+    { "type": "deps", "section": "Dependencies" },
+    { "type": "docs", "section": "Docs" },
+    { "type": "chore", "section": "Miscellaneous Chores", "hidden": true },
+    { "type": "test", "section": "Tests", "hidden": true },
+    { "type": "ci", "section": "Continuous Integration", "hidden": true }
+  ],
+  "pull-request-header": ":rotating_light: There are changes ready for release :rocket:\n\nℹ Merge this PR once the release is ready.\n",
+  "pull-request-title-pattern": "chore: release ${version}",
+  "bump-minor-pre-major": true,
+  "include-component-in-tag": false,
+  "packages": {
+    "packages/vaixell": {
+      "release-type": "dart",
+      "package-name": "vaixell",
+      "initial-version": "0.1.0",
+      "changelog-path": "CHANGELOG.md"
+    }
+  }
+}
