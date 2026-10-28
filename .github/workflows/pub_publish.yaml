@@ -4,7 +4,6 @@ on:
   push:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+*" # tag pattern on pub.dev: 'v{{version}}'
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -12,9 +11,8 @@ permissions:
 jobs:
   publish:
     permissions:
-      contents: read
       id-token: write # Required for authentication using OIDC
-    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/dart_pub_publish.yml@v2
+    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
     with:
-      dart_sdk: "3.13.0"
-      working_directory: packages/vaixell
+      environment: pub.dev
+      working-directory: packages/vaixell
