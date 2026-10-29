@@ -5,10 +5,10 @@ import 'package:vaixell/vaixell.dart';
 import '../../helpers/memory_source_tree.dart';
 
 Future<List<Violation>> _run(Map<String, String> files, {Config? config}) =>
-    Engine(
+    const Engine().run(
       tree: MemorySourceTree(files),
       packages: [Package(path: '', config: config ?? Config.recommended())],
-    ).run();
+    );
 
 void main() {
   group(Engine, () {
@@ -135,7 +135,7 @@ class Foo { static void bar() {} }
     });
 
     test('checks each package with its own config', () async {
-      final violations = await Engine(
+      final violations = await const Engine().run(
         tree: MemorySourceTree({
           'lib/root.dart': 'void root() {}\n',
           'packages/a/lib/a.dart': 'void a() {}\nfinal x = 1;\n',
@@ -155,7 +155,7 @@ class Foo { static void bar() {} }
           ),
           Package(path: 'packages/b', config: Config.recommended()),
         ],
-      ).run();
+      );
       expect(
         violations.map((v) => '${v.id} ${v.severity.name}'),
         equals([

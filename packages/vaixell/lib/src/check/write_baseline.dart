@@ -33,7 +33,10 @@ class WriteBaseline({
   /// Throws a [ConfigException] when discovery or a config fails.
   Future<Baseline> call(String path, {List<String> paths = const []}) async {
     final packages = await PackageResolver(root: root, tree: _tree)(paths);
-    final violations = await Engine(tree: _tree, packages: packages).run();
+    final violations = await const Engine().run(
+      tree: _tree,
+      packages: packages,
+    );
     final baseline = Baseline(violations.map((v) => v.id));
     await BaselineFile(p.join(root, path)).write(baseline);
     return baseline;

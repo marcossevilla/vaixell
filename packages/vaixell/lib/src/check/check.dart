@@ -62,7 +62,10 @@ class Check({
     final ids = baseline == null
         ? null
         : (await BaselineFile(p.join(root, baseline)).read()).ids;
-    final violations = await Engine(tree: _tree, packages: packages).run();
+    final violations = await const Engine().run(
+      tree: _tree,
+      packages: packages,
+    );
     if (gitDiff != null) {
       final diff = await _gitDiff(violations, packages, gitDiff);
       return Report.compared(
@@ -88,7 +91,10 @@ class Check({
   ) async {
     final base = GitSourceTree(git: _git, commit: await _git.mergeBase(ref));
     try {
-      final baseViolations = await Engine(tree: base, packages: packages).run();
+      final baseViolations = await const Engine().run(
+        tree: base,
+        packages: packages,
+      );
       return DiffResult.compare(
         base: baseViolations.map((v) => v.id),
         head: head,

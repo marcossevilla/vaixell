@@ -120,7 +120,10 @@ class CheckCommand({
       final baseline = baselinePath == null
           ? null
           : await BaselineFile(p.join(_root.path, baselinePath)).read();
-      final violations = await Engine(tree: tree, packages: packages).run();
+      final violations = await const Engine().run(
+        tree: tree,
+        packages: packages,
+      );
 
       final Report report;
       if (ref != null) {
@@ -193,7 +196,7 @@ class CheckCommand({
     String path, {
     required bool toStderr,
   }) async {
-    final violations = await Engine(tree: tree, packages: packages).run();
+    final violations = await const Engine().run(tree: tree, packages: packages);
     final baseline = Baseline(violations.map((v) => v.id));
     await BaselineFile(p.join(_root.path, path)).write(baseline);
     final count = baseline.ids.length;
@@ -218,7 +221,10 @@ class CheckCommand({
     final git = GitRunner(_root.path);
     final base = GitSourceTree(git: git, commit: await git.mergeBase(ref));
     try {
-      final baseViolations = await Engine(tree: base, packages: packages).run();
+      final baseViolations = await const Engine().run(
+        tree: base,
+        packages: packages,
+      );
       return DiffResult.compare(
         base: baseViolations.map((v) => v.id),
         head: head,
