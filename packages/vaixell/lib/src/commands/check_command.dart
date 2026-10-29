@@ -119,7 +119,7 @@ class CheckCommand({
       }
       final baseline = baselinePath == null
           ? null
-          : await BaselineFile(p.join(_root.path, baselinePath)).read();
+          : await const BaselineFile().read(p.join(_root.path, baselinePath));
       final violations = await const Engine().run(
         tree: tree,
         packages: packages,
@@ -198,7 +198,7 @@ class CheckCommand({
   }) async {
     final violations = await const Engine().run(tree: tree, packages: packages);
     final baseline = Baseline(violations.map((v) => v.id));
-    await BaselineFile(p.join(_root.path, path)).write(baseline);
+    await const BaselineFile().write(p.join(_root.path, path), baseline);
     final count = baseline.ids.length;
     final status =
         'Wrote $count violation id${count == 1 ? '' : 's'} to $path.';

@@ -38,7 +38,7 @@ class WriteBaseline({
       packages: packages,
     );
     final baseline = Baseline(violations.map((v) => v.id));
-    await BaselineFile(p.join(root, path)).write(baseline);
+    await const BaselineFile().write(p.join(root, path), baseline);
     return baseline;
   }
 }

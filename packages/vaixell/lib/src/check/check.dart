@@ -61,7 +61,7 @@ class Check({
     final packages = await resolver(paths);
     final ids = baseline == null
         ? null
-        : (await BaselineFile(p.join(root, baseline)).read()).ids;
+        : (await const BaselineFile().read(p.join(root, baseline))).ids;
     final violations = await const Engine().run(
       tree: _tree,
       packages: packages,

@@ -66,7 +66,7 @@ void main() {
     setUp(() => path = d.path('baseline.json'));
 
     test('writes deterministic, indented JSON and reads it back', () async {
-      await BaselineFile(path).write(Baseline(['b', 'a']));
+      await const BaselineFile().write(path, Baseline(['b', 'a']));
       expect(
         File(path).readAsStringSync(),
         equals(
@@ -79,7 +79,7 @@ void main() {
           '}\n',
         ),
       );
-      expect((await BaselineFile(path).read()).ids, equals({'a', 'b'}));
+      expect((await const BaselineFile().read(path)).ids, equals({'a', 'b'}));
     });
 
     Matcher baselineError(Object message) => throwsA(
@@ -92,7 +92,7 @@ void main() {
 
     test('throws when the file is missing', () async {
       await expectLater(
-        BaselineFile(path).read(),
+        const BaselineFile().read(path),
         baselineError('Baseline file `$path` not found.'),
       );
     });
@@ -109,7 +109,7 @@ void main() {
       test('throws for $name', () async {
         File(path).writeAsStringSync(content);
         await expectLater(
-          BaselineFile(path).read(),
+          const BaselineFile().read(path),
           baselineError(
             startsWith('Baseline file `$path` is malformed: $detail'),
           ),

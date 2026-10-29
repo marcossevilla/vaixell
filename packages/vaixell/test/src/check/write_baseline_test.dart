@@ -57,7 +57,7 @@ void main() {
       );
       expect(baseline.ids, equals({'top-level-function:lib/c.dart:c'}));
       expect(
-        (await BaselineFile(d.path('baseline.json')).read()).ids,
+        (await const BaselineFile().read(d.path('baseline.json'))).ids,
         equals(baseline.ids),
       );
     });

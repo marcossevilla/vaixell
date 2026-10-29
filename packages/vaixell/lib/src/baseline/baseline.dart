@@ -62,18 +62,15 @@ class const BaselineException(
   String toString() => message;
 }
 
-/// Reads and writes a [Baseline] at [path].
-class const BaselineFile(
-  /// The path of the baseline file.
-  final String path,
-) {
-  /// Creates a handle for the baseline file at [path].
+/// Reads and writes [Baseline] files.
+class const BaselineFile() {
+  /// Creates a handle for reading and writing baseline files.
   this;
 
-  /// Reads the baseline.
+  /// Reads the baseline at [path].
   ///
   /// Throws a [BaselineException] when the file is missing or malformed.
-  Future<Baseline> read() async {
+  Future<Baseline> read(String path) async {
     final file = File(path);
     if (!file.existsSync()) {
       throw BaselineException('Baseline file `$path` not found.');
@@ -90,8 +87,8 @@ class const BaselineFile(
     }
   }
 
-  /// Writes [baseline] as indented JSON with a trailing newline.
-  Future<void> write(Baseline baseline) => File(
+  /// Writes [baseline] to [path] as indented JSON with a trailing newline.
+  Future<void> write(String path, Baseline baseline) => File(
     path,
   ).writeAsString('${const JsonEncoder.withIndent('  ').convert(baseline)}\n');
 }
