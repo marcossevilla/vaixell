@@ -67,6 +67,8 @@ class const Check._({
   /// Checks the packages at [paths], relative to [root], or the discovered
   /// packages when [paths] is empty, and returns the [Report].
   ///
+  /// [paths] are not validated: each must be a directory inside [root].
+  ///
   /// With a [gitDiff] ref, the report is a [ReportMode.diff] comparison
   /// with the merge-base of [gitDiff] and `HEAD`, checking the same
   /// packages with the same configs on both sides, and the ids in

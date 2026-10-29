@@ -31,14 +31,18 @@ class CheckCommand({
   ///
   /// Checks the packages in [root] (the current directory by default) with
   /// [check], and writes baselines with [writeBaseline], both on [root] by
-  /// default. The report goes to stdout and diagnostics go to stderr, both
-  /// through the logger.
+  /// default. Given ones must check the same [root], which the paths are
+  /// validated against. The report goes to stdout and diagnostics go to
+  /// stderr, both through the logger.
   ///
   /// [reporters] maps each `--format` value to its [Reporter], and the first
-  /// one is the default. By default they're a [TextReporter], a [JsonReporter]
-  /// and a [GithubReporter] whose summary goes to `GITHUB_STEP_SUMMARY` from
-  /// [environment] (the process environment by default).
+  /// one is the default. It must not be empty. Formats other than a
+  /// [TextReporter] keep stdout for the report alone. By default they're a
+  /// [TextReporter], a [JsonReporter] and a [GithubReporter] whose summary
+  /// goes to `GITHUB_STEP_SUMMARY` from [environment] (the process
+  /// environment by default).
   this {
+    assert(_reporters.isNotEmpty, 'reporters must not be empty');
     argParser
       ..addOption(
         'format',
@@ -120,6 +124,8 @@ class CheckCommand({
     final invalidPath = results.rest.map(_invalidPath).nonNulls.firstOrNull;
     if (invalidPath != null) usageException(invalidPath);
 
+    // `allowed` limits --format to the keys of _reporters.
+    final reporter = _reporters[results.option('format')]!;
     try {
       if (writeBaselinePath != null) {
         final baseline = await _writeBaseline(
@@ -131,10 +137,10 @@ class CheckCommand({
             'Wrote $count violation id${count == 1 ? '' : 's'} to '
             '$writeBaselinePath.';
         // Keep stdout empty in machine-readable formats.
-        if (results.option('format') != 'text') {
-          _logger.warn(status, tag: '');
-        } else {
+        if (reporter is TextReporter) {
           _logger.info(status);
+        } else {
+          _logger.warn(status, tag: '');
         }
         return ExitCode.success.code;
       }
@@ -144,7 +150,7 @@ class CheckCommand({
         baseline: baselinePath,
       );
       final output = StringBuffer();
-      _reporters[results.option('format')]!.write(report, output);
+      reporter.write(report, output);
       _logger.write('$output');
       return _exitCode(report.failing);
     } on ConfigException catch (error) {

@@ -22,19 +22,6 @@ class const ConfigLoader(
   /// The path of the root config file.
   static const String defaultPath = 'analysis_options.yaml';
 
-  static const List<String> _keys = ['include', 'rules', 'exclude'];
-  static const Map<String, Severity?> _severities = {
-    'off': null,
-    'warning': Severity.warning,
-    'error': Severity.error,
-  };
-
-  /// The directory of [path], which the `exclude` globs are relative to.
-  String _root(String path) => switch (p.posix.dirname(path)) {
-    '.' => '',
-    final dir => dir,
-  };
-
   /// Returns the config at [path] in [tree], or [Config.recommended] when
   /// the file or its `vaixell:` key is missing.
   ///
@@ -50,19 +37,41 @@ class const ConfigLoader(
   /// `vaixell:` section is invalid.
   Future<Config?> loadIfPresent({String path = defaultPath}) async {
     if (!await tree.exists(path)) return null;
-    final root = _parse(await tree.read(path), path);
+    return _ConfigFile(path).parse(await tree.read(path));
+  }
+}
+
+/// The `vaixell:` section of one config file at [path].
+class const _ConfigFile(
+  /// The path of the file, for error locations and the exclude root.
+  final String path,
+) {
+  static const List<String> _keys = ['include', 'rules', 'exclude'];
+  static const Map<String, Severity?> _severities = {
+    'off': null,
+    'warning': Severity.warning,
+    'error': Severity.error,
+  };
+
+  /// The directory of [path], which the `exclude` globs are relative to.
+  String get _root => switch (p.posix.dirname(path)) {
+    '.' => '',
+    final dir => dir,
+  };
+
+  /// Returns the config in [content], or `null` when its `vaixell:` key is
+  /// missing.
+  Config? parse(String content) {
+    final root = _yaml(content);
     if (root is! YamlMap || !root.containsKey('vaixell')) return null;
     final section = root.nodes['vaixell']!;
     if (section.value == null) {
-      return Config(
-        severities: Config.recommended().severities,
-        root: _root(path),
-      );
+      return Config(severities: Config.recommended().severities, root: _root);
     }
-    return _section(section, path);
+    return _section(section);
   }
 
-  YamlNode _parse(String content, String path) {
+  YamlNode _yaml(String content) {
     try {
       return loadYamlNode(content, sourceUrl: Uri.file(path));
     } on YamlException catch (error) {
@@ -70,9 +79,9 @@ class const ConfigLoader(
     }
   }
 
-  Config _section(YamlNode section, String path) {
+  Config _section(YamlNode section) {
     if (section is! YamlMap) {
-      throw _error(section, '`vaixell` must be a map.', path);
+      throw _error(section, '`vaixell` must be a map.');
     }
     var presets = const [Presets.defaultPreset];
     var overrides = const <String, Severity?>{};
@@ -80,17 +89,16 @@ class const ConfigLoader(
     for (final MapEntry(:key, :value) in section.nodes.entries) {
       switch ((key as YamlNode).value) {
         case 'include':
-          presets = _include(value, path);
+          presets = _include(value);
         case 'rules':
-          overrides = _rules(value, path);
+          overrides = _rules(value);
         case 'exclude':
-          exclude = _exclude(value, path);
+          exclude = _exclude(value);
         case final name:
           throw _error(
             key,
             'Unknown key `$name` under `vaixell`. '
             'Expected one of: ${_keys.join(', ')}.',
-            path,
           );
       }
     }
@@ -107,10 +115,10 @@ class const ConfigLoader(
       }
     });
     severities.putIfAbsent(const ParseErrorRule().id, () => Severity.error);
-    return Config(severities: severities, exclude: exclude, root: _root(path));
+    return Config(severities: severities, exclude: exclude, root: _root);
   }
 
-  List<String> _include(YamlNode node, String path) {
+  List<String> _include(YamlNode node) {
     final items = node is YamlList ? node.nodes : [node];
     final available = const Presets().all.keys;
     return [
@@ -121,25 +129,19 @@ class const ConfigLoader(
             item,
             'Unknown preset `$name`. '
             'Available presets: ${available.join(', ')}.',
-            path,
           ),
           _ => throw _error(
             item,
             '`include` must be a preset name or a list of preset names.',
-            path,
           ),
         },
     ];
   }
 
-  Map<String, Severity?> _rules(YamlNode node, String path) {
+  Map<String, Severity?> _rules(YamlNode node) {
     if (node.value == null) return const {};
     if (node is! YamlMap) {
-      throw _error(
-        node,
-        '`rules` must be a map of rule ids to severities.',
-        path,
-      );
+      throw _error(node, '`rules` must be a map of rule ids to severities.');
     }
     final ids = [for (final rule in const RuleRegistry().all) rule.id];
     final result = <String, Severity?>{};
@@ -149,7 +151,6 @@ class const ConfigLoader(
         throw _error(
           key,
           'Unknown rule `$rule`. Available rules: ${ids.join(', ')}.',
-          path,
         );
       }
       final severity = value.value;
@@ -158,40 +159,39 @@ class const ConfigLoader(
           value,
           'Invalid severity `$severity` for `$rule`. '
           'Expected one of: ${_severities.keys.join(', ')}.',
-          path,
         );
       }
       if (severity == 'off' && rule == const ParseErrorRule().id) {
-        throw _error(value, "`$rule` can't be turned off.", path);
+        throw _error(value, "`$rule` can't be turned off.");
       }
       result[rule] = _severities[severity];
     }
     return result;
   }
 
-  List<Glob> _exclude(YamlNode node, String path) {
+  List<Glob> _exclude(YamlNode node) {
     if (node.value == null) return const [];
     if (node is! YamlList) {
-      throw _error(node, '`exclude` must be a list of globs.', path);
+      throw _error(node, '`exclude` must be a list of globs.');
     }
     return [
       for (final item in node.nodes)
         switch (item.value) {
-          final String pattern => _glob(item, pattern, path),
-          _ => throw _error(item, '`exclude` must be a list of globs.', path),
+          final String pattern => _glob(item, pattern),
+          _ => throw _error(item, '`exclude` must be a list of globs.'),
         },
     ];
   }
 
-  Glob _glob(YamlNode node, String pattern, String path) {
+  Glob _glob(YamlNode node, String pattern) {
     try {
       return Glob(pattern, context: p.posix);
     } on FormatException catch (error) {
-      throw _error(node, 'Invalid glob `$pattern`: ${error.message}', path);
+      throw _error(node, 'Invalid glob `$pattern`: ${error.message}');
     }
   }
 
-  ConfigException _error(YamlNode node, String message, String path) =>
+  ConfigException _error(YamlNode node, String message) =>
       ConfigException.at(node, message, path: path);
 }
 

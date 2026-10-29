@@ -50,6 +50,8 @@ class const WriteBaseline._({
   /// packages when [paths] is empty, and writes their violation ids to the
   /// baseline file at [path], relative to [root].
   ///
+  /// [paths] are not validated: each must be a directory inside [root].
+  ///
   /// Returns the written [Baseline].
   ///
   /// Throws a [ConfigException] when discovery or a config fails.

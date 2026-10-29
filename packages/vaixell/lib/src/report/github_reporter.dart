@@ -19,17 +19,16 @@ import 'package:vaixell/src/violation/violation.dart';
 class const GithubReporter({
   /// The step summary file, or `null` to skip the summary.
   final String? summaryPath,
-
-  /// Formats the plain violation and summary lines.
-  final TextReporter _text = const TextReporter(),
 }) implements Reporter {
   /// Creates a reporter that appends the Markdown summary to [summaryPath],
-  /// if set, and formats plain lines with `text`, a [TextReporter] by
-  /// default.
+  /// if set.
   this;
 
   /// The number of annotations of each severity GitHub shows per step.
   static const int maxAnnotations = 10;
+
+  /// Formats the plain violation and summary lines.
+  static const TextReporter _text = TextReporter();
 
   @override
   void write(Report report, StringSink out) {

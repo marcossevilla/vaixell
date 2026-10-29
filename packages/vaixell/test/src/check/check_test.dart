@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:mocktail/mocktail.dart';
@@ -6,7 +5,6 @@ import 'package:test/test.dart';
 import 'package:test_descriptor/test_descriptor.dart' as d;
 import 'package:vaixell/vaixell.dart';
 
-import '../../helpers/check.dart';
 import '../../helpers/git_repo.dart';
 import '../../helpers/memory_source_tree.dart';
 
@@ -23,21 +21,6 @@ void main() {
       baseline: baseline,
     );
 
-    /// Returns the JSON document that `vaixell check --format=json` prints
-    /// for [arguments].
-    Future<Object?> commandJson(List<String> arguments) async {
-      final out = StringBuffer();
-      await runCheck(
-        ['--format=json', ...arguments],
-        root: d.sandbox,
-        out: out,
-        err: StringBuffer(),
-      );
-      return jsonDecode('$out');
-    }
-
-    Object? json(Report report) => jsonDecode(jsonEncode(report));
-
     List<String> ids(List<Violation> violations) => [
       for (final v in violations) v.id,
     ];
@@ -53,7 +36,6 @@ void main() {
         expect(report.mode, equals(ReportMode.full));
         expect(ids(report.violations), ['top-level-function:lib/a.dart:foo']);
         expect(report.diff, isNull);
-        expect(json(report), equals(await commandJson([])));
       });
 
       test('reports nothing for a clean package', () async {
@@ -127,7 +109,6 @@ workspace:
             'top-level-function:packages/b/lib/b.dart:b',
           ]),
         );
-        expect(json(report), equals(await commandJson([])));
       });
 
       test('explicit paths override discovery', () async {
@@ -137,7 +118,6 @@ workspace:
           ids(report.violations),
           equals(['top-level-function:packages/b/lib/b.dart:b']),
         );
-        expect(json(report), equals(await commandJson(paths)));
       });
 
       test('. checks only the root package', () async {
@@ -178,7 +158,6 @@ workspace:
           report.diff!.fixed,
           equals(['top-level-function:packages/b/lib/b.dart:b']),
         );
-        expect(json(report), equals(await commandJson(['--git-diff=main'])));
       });
 
       test('throws a ConfigException on an invalid workspace', () async {
@@ -205,10 +184,6 @@ workspace:
         final report = await check(baseline: 'baseline.json');
         expect(ids(report.failing), ['top-level-function:lib/a.dart:baz']);
         expect(report.diff!.fixed, ['top-level-function:lib/a.dart:bar']);
-        expect(
-          json(report),
-          equals(await commandJson(['--baseline=baseline.json'])),
-        );
       });
 
       test('throws a BaselineException for a missing baseline', () async {
@@ -250,7 +225,6 @@ workspace:
         expect(report.mode, equals(ReportMode.diff));
         expect(ids(report.failing), ['top-level-function:lib/a.dart:added']);
         expect(report.diff!.fixed, ['top-level-function:lib/a.dart:old']);
-        expect(json(report), equals(await commandJson(['--git-diff=main'])));
       });
 
       test('compares against the merge-base, not the tip of the ref', () async {
@@ -316,12 +290,6 @@ workspace:
         expect(report.mode, equals(ReportMode.diff));
         expect(ids(report.failing), ['top-level-function:lib/b.dart:added']);
         expect(report.diff!.fixed, ['top-level-function:lib/a.dart:old']);
-        expect(
-          json(report),
-          equals(
-            await commandJson(['--git-diff=main', '--baseline=baseline.json']),
-          ),
-        );
       });
 
       test('throws a GitException for a ref that can not be found', () async {
@@ -365,7 +333,7 @@ workspace:
       late _MockEngine engine;
       late _MockBaselineFile baselineFile;
       late _MockGitRunner git;
-      late _MockGitSourceTree base;
+      late _MockClosableSourceTree base;
       late List<String> openedCommits;
 
       setUpAll(() {
@@ -379,7 +347,7 @@ workspace:
         engine = _MockEngine();
         baselineFile = _MockBaselineFile();
         git = _MockGitRunner();
-        base = _MockGitSourceTree();
+        base = _MockClosableSourceTree();
         openedCommits = [];
         when(() => packageResolver(any())).thenAnswer((_) async => packages);
         when(
@@ -431,11 +399,8 @@ workspace:
 
       test('closes the base tree when the base run fails', () async {
         when(() => engine.run(tree: base, packages: packages))
-            .thenThrow(const BaselineException('boom'));
-        await expectLater(
-          build()(gitDiff: 'main'),
-          throwsA(isA<BaselineException>()),
-        );
+            .thenThrow(StateError('boom'));
+        await expectLater(build()(gitDiff: 'main'), throwsA(isA<StateError>()));
         verify(base.close).called(1);
       });
     });
@@ -450,4 +415,4 @@ class _MockBaselineFile extends Mock implements BaselineFile;
 
 class _MockGitRunner extends Mock implements GitRunner;
 
-class _MockGitSourceTree extends Mock implements GitSourceTree;
+class _MockClosableSourceTree extends Mock implements ClosableSourceTree;

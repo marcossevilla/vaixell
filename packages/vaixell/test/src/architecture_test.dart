@@ -66,15 +66,23 @@ String? _target(String uri, {required String from}) {
   return p.posix.isWithin('.', resolved) ? resolved : null;
 }
 
-void main() {
-  test('lib/src imports only follow the allowed layering', () {
-    final violations = <String>[];
-    final files = Directory(_src)
+/// Returns the Dart files in [directory] and its subdirectories.
+Iterable<File> _dartFiles(String directory) =>
+    Directory(directory)
         .listSync(recursive: true)
         .whereType<File>()
         .where((file) => file.path.endsWith('.dart'));
 
-    for (final file in files) {
+/// Returns the URIs of the import, export and part directives in [file].
+Iterable<String> _uris(File file) =>
+    parseString(content: file.readAsStringSync()).unit.directives
+        .whereType<UriBasedDirective>()
+        .map((directive) => directive.uri.stringValue!);
+
+void main() {
+  test('lib/src imports only follow the allowed layering', () {
+    final violations = <String>[];
+    for (final file in _dartFiles(_src)) {
       final path = p.posix.joinAll(p.split(p.relative(file.path, from: _src)));
       final layer = _layer(path);
       final allowed = _allowedImports[layer];
@@ -83,9 +91,7 @@ void main() {
         continue;
       }
 
-      final unit = parseString(content: file.readAsStringSync()).unit;
-      for (final directive in unit.directives.whereType<UriBasedDirective>()) {
-        final uri = directive.uri.stringValue!;
+      for (final uri in _uris(file)) {
         final target = _target(uri, from: path);
         if (target == null) continue;
         final targetLayer = _layer(target);
@@ -103,14 +109,9 @@ void main() {
       r'^package:(args|mason_logger|io)/|reporter\.dart$',
     );
     final violations = [
-      for (final file in Directory(
-        p.join(_src, 'check'),
-      ).listSync().whereType<File>())
-        for (final directive in parseString(
-          content: file.readAsStringSync(),
-        ).unit.directives.whereType<UriBasedDirective>())
-          if (forbidden.hasMatch(directive.uri.stringValue!))
-            '${file.path}: ${directive.uri.stringValue}',
+      for (final file in _dartFiles(p.join(_src, 'check')))
+        for (final uri in _uris(file))
+          if (forbidden.hasMatch(uri)) '${file.path}: $uri',
     ];
 
     expect(violations, isEmpty);

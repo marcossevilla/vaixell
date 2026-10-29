@@ -4,8 +4,14 @@ import 'package:vaixell/src/git/cat_file_batch.dart';
 import 'package:vaixell/src/git/git_runner.dart';
 import 'package:vaixell/src/source/source_tree.dart';
 
-/// Returns a [GitSourceTree] that reads files at [commit].
-typedef OpenGitSourceTree = GitSourceTree Function(String commit);
+/// Returns a [ClosableSourceTree] that reads files at [commit].
+typedef OpenGitSourceTree = ClosableSourceTree Function(String commit);
+
+/// A [SourceTree] that holds resources until [close] is called.
+abstract interface class ClosableSourceTree implements SourceTree {
+  /// Releases the resources used to read files.
+  Future<void> close();
+}
 
 /// A [SourceTree] that reads files at a git commit.
 ///
@@ -18,7 +24,7 @@ class GitSourceTree({
 
   /// The commit to read.
   required final String commit,
-}) implements SourceTree {
+}) implements ClosableSourceTree {
   /// Creates a tree for [commit], using [git] to read it.
   this;
 
@@ -71,6 +77,7 @@ class GitSourceTree({
   }
 
   /// Stops the git process used to read files.
+  @override
   Future<void> close() async {
     final batch = _batch;
     if (batch != null) await (await batch).close();

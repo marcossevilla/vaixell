@@ -108,15 +108,27 @@ void main() {
     });
 
     test('defaults to the current directory', () async {
-      final runner = CommandRunner<int>('vaixell', '')
-        ..addCommand(
-          CheckCommand(
-            logger: bufferedLogger(out: out, err: err),
-          ),
-        );
+      await d.dir('lib', [d.file('a.dart', 'void foo() {}\n')]).create();
+      final code = await IOOverrides.runZoned(() {
+        final runner = CommandRunner<int>('vaixell', '')
+          ..addCommand(
+            CheckCommand(
+              logger: bufferedLogger(out: out, err: err),
+            ),
+          );
+        return runner.run([CheckCommand.commandName]);
+      }, getCurrentDirectory: () => Directory(d.sandbox));
+      expect(code, equals(1));
+      expect(out.toString(), startsWith('lib/a.dart:1:6: error: '));
+    });
+
+    test('requires at least one reporter', () {
       expect(
-        await runner.run([CheckCommand.commandName]),
-        equals(ExitCode.success.code),
+        () => CheckCommand(
+          logger: bufferedLogger(out: out, err: err),
+          reporters: {},
+        ),
+        throwsA(isA<AssertionError>()),
       );
     });
 
@@ -159,7 +171,10 @@ void main() {
         );
       });
 
-      Future<int?> runWith(List<String> arguments) {
+      Future<int?> runWith(
+        List<String> arguments, {
+        Map<String, Reporter>? reporters,
+      }) {
         final runner = CommandRunner<int>('vaixell', '')
           ..addCommand(
             CheckCommand(
@@ -167,7 +182,7 @@ void main() {
               root: Directory(d.sandbox),
               check: check,
               writeBaseline: writeBaseline,
-              reporters: {'custom': reporter},
+              reporters: reporters ?? {'custom': reporter},
             ),
           );
         return runner.run([CheckCommand.commandName, ...arguments]);
@@ -200,7 +215,22 @@ void main() {
             baseline: any(named: 'baseline'),
           ),
         );
+        expect(out.toString(), isEmpty);
         expect(err.toString(), equals('Wrote 2 violation ids to b.json.\n'));
+      });
+
+      test('writes the baseline status to stdout for a TextReporter', () async {
+        when(() => writeBaseline(any(), paths: any(named: 'paths')))
+            .thenAnswer((_) async => Baseline(['a']));
+        expect(
+          await runWith(
+            ['--write-baseline=b.json'],
+            reporters: {'plain': const TextReporter()},
+          ),
+          equals(ExitCode.success.code),
+        );
+        expect(out.toString(), equals('Wrote 1 violation id to b.json.\n'));
+        expect(err.toString(), isEmpty);
       });
 
       test('only allows the given formats', () async {

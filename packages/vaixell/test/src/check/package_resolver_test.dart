@@ -19,11 +19,8 @@ void main() {
       });
     });
 
-    Future<List<Package>> resolve(List<String> paths) => PackageResolver(
-      root: '/repo',
-      discovery: PackageDiscovery(tree),
-      configResolver: ConfigResolver(ConfigLoader(tree)),
-    )(paths);
+    Future<List<Package>> resolve(List<String> paths) =>
+        PackageResolver.fromTree(root: '/repo', tree: tree)(paths);
 
     test('discovers the packages when there are no paths', () async {
       final packages = await resolve([]);
