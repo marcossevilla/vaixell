@@ -18,6 +18,16 @@ const _allowedImports = <String, Set<String>>{
   'baseline': {},
   'discovery': {'config', 'source'},
   'git': {},
+  'check': {
+    'baseline',
+    'config',
+    'discovery',
+    'engine',
+    'git',
+    'report',
+    'source',
+    'violation',
+  },
   'version': {},
   'command_runner': {'commands', 'version'},
   'commands': {
