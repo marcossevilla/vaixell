@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:args/command_runner.dart';
 import 'package:io/io.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 import 'package:test_descriptor/test_descriptor.dart' as d;
 import 'package:vaixell/vaixell.dart';
@@ -116,5 +119,102 @@ void main() {
         equals(ExitCode.success.code),
       );
     });
+
+    group('collaborators', () {
+      const report = Report.full([
+        Violation(
+          id: 'top-level-function:lib/a.dart:foo',
+          rule: 'top-level-function',
+          severity: Severity.error,
+          path: 'lib/a.dart',
+          line: 1,
+          column: 6,
+          message: 'message',
+        ),
+      ]);
+
+      late _MockCheck check;
+      late _MockWriteBaseline writeBaseline;
+      late _MockReporter reporter;
+
+      setUpAll(() {
+        registerFallbackValue(report);
+        registerFallbackValue(StringBuffer());
+      });
+
+      setUp(() {
+        check = _MockCheck();
+        writeBaseline = _MockWriteBaseline();
+        reporter = _MockReporter();
+        when(
+          () => check(
+            paths: any(named: 'paths'),
+            gitDiff: any(named: 'gitDiff'),
+            baseline: any(named: 'baseline'),
+          ),
+        ).thenAnswer((_) async => report);
+        when(() => reporter.write(any(), any())).thenAnswer(
+          (invocation) => (invocation.positionalArguments[1] as StringSink)
+              .writeln('custom'),
+        );
+      });
+
+      Future<int?> runWith(List<String> arguments) {
+        final runner = CommandRunner<int>('vaixell', '')
+          ..addCommand(
+            CheckCommand(
+              logger: bufferedLogger(out: out, err: err),
+              root: Directory(d.sandbox),
+              check: check,
+              writeBaseline: writeBaseline,
+              reporters: {'custom': reporter},
+            ),
+          );
+        return runner.run([CheckCommand.commandName, ...arguments]);
+      }
+
+      test('checks with the given check and reporter', () async {
+        await d.dir('pkg').create();
+        expect(
+          await runWith(['--git-diff=main', '--baseline=b.json', 'pkg']),
+          equals(1),
+        );
+        verify(() => check(paths: ['pkg'], gitDiff: 'main', baseline: 'b.json'))
+            .called(1);
+        verify(() => reporter.write(report, any())).called(1);
+        expect(out.toString(), equals('custom\n'));
+      });
+
+      test('writes baselines with the given writer', () async {
+        when(() => writeBaseline(any(), paths: any(named: 'paths')))
+            .thenAnswer((_) async => Baseline(['a', 'b']));
+        expect(
+          await runWith(['--write-baseline=b.json']),
+          equals(ExitCode.success.code),
+        );
+        verify(() => writeBaseline('b.json', paths: [])).called(1);
+        verifyNever(
+          () => check(
+            paths: any(named: 'paths'),
+            gitDiff: any(named: 'gitDiff'),
+            baseline: any(named: 'baseline'),
+          ),
+        );
+        expect(err.toString(), equals('Wrote 2 violation ids to b.json.\n'));
+      });
+
+      test('only allows the given formats', () async {
+        await expectLater(
+          runWith(['--format=text']),
+          usageError(contains('"text" is not an allowed value')),
+        );
+      });
+    });
   });
 }
+
+class _MockCheck extends Mock implements Check;
+
+class _MockWriteBaseline extends Mock implements WriteBaseline;
+
+class _MockReporter extends Mock implements Reporter;
