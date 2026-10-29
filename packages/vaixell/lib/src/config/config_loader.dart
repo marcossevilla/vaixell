@@ -13,14 +13,14 @@ import 'package:yaml/yaml.dart';
 /// Only the `vaixell:` key is read. The analyzer's own top-level `include:`
 /// is never followed, so the target repo needs no `pub get`.
 class const ConfigLoader(
-  /// The tree that holds the config file.
-  final SourceTree tree, {
-
-  /// The path of the config file in [tree].
-  final String path = 'analysis_options.yaml',
-}) {
-  /// Creates a loader that reads the config at [path] in [tree].
+  /// The tree that holds the config files.
+  final SourceTree tree,
+) {
+  /// Creates a loader that reads configs from [tree].
   this;
+
+  /// The path of the root config file.
+  static const String defaultPath = 'analysis_options.yaml';
 
   static const List<String> _keys = ['include', 'rules', 'exclude'];
   static const Map<String, Severity?> _severities = {
@@ -30,35 +30,39 @@ class const ConfigLoader(
   };
 
   /// The directory of [path], which the `exclude` globs are relative to.
-  String get _root => switch (p.posix.dirname(path)) {
+  String _root(String path) => switch (p.posix.dirname(path)) {
     '.' => '',
     final dir => dir,
   };
 
-  /// Returns the config, or [Config.recommended] when the file or its
-  /// `vaixell:` key is missing.
+  /// Returns the config at [path] in [tree], or [Config.recommended] when
+  /// the file or its `vaixell:` key is missing.
   ///
   /// Throws a [ConfigException] when the file isn't valid YAML or the
   /// `vaixell:` section is invalid.
-  Future<Config> load() async => await loadIfPresent() ?? Config.recommended();
+  Future<Config> load({String path = defaultPath}) async =>
+      await loadIfPresent(path: path) ?? Config.recommended();
 
-  /// Returns the config, or `null` when the file or its `vaixell:` key is
-  /// missing. An empty `vaixell:` key counts as present.
+  /// Returns the config at [path] in [tree], or `null` when the file or its
+  /// `vaixell:` key is missing. An empty `vaixell:` key counts as present.
   ///
   /// Throws a [ConfigException] when the file isn't valid YAML or the
   /// `vaixell:` section is invalid.
-  Future<Config?> loadIfPresent() async {
+  Future<Config?> loadIfPresent({String path = defaultPath}) async {
     if (!await tree.exists(path)) return null;
-    final root = _parse(await tree.read(path));
+    final root = _parse(await tree.read(path), path);
     if (root is! YamlMap || !root.containsKey('vaixell')) return null;
     final section = root.nodes['vaixell']!;
     if (section.value == null) {
-      return Config(severities: Config.recommended().severities, root: _root);
+      return Config(
+        severities: Config.recommended().severities,
+        root: _root(path),
+      );
     }
-    return _section(section);
+    return _section(section, path);
   }
 
-  YamlNode _parse(String content) {
+  YamlNode _parse(String content, String path) {
     try {
       return loadYamlNode(content, sourceUrl: Uri.file(path));
     } on YamlException catch (error) {
@@ -66,9 +70,9 @@ class const ConfigLoader(
     }
   }
 
-  Config _section(YamlNode section) {
+  Config _section(YamlNode section, String path) {
     if (section is! YamlMap) {
-      throw _error(section, '`vaixell` must be a map.');
+      throw _error(section, '`vaixell` must be a map.', path);
     }
     var presets = const [Presets.defaultPreset];
     var overrides = const <String, Severity?>{};
@@ -76,16 +80,17 @@ class const ConfigLoader(
     for (final MapEntry(:key, :value) in section.nodes.entries) {
       switch ((key as YamlNode).value) {
         case 'include':
-          presets = _include(value);
+          presets = _include(value, path);
         case 'rules':
-          overrides = _rules(value);
+          overrides = _rules(value, path);
         case 'exclude':
-          exclude = _exclude(value);
+          exclude = _exclude(value, path);
         case final name:
           throw _error(
             key,
             'Unknown key `$name` under `vaixell`. '
             'Expected one of: ${_keys.join(', ')}.',
+            path,
           );
       }
     }
@@ -102,10 +107,10 @@ class const ConfigLoader(
       }
     });
     severities.putIfAbsent(const ParseErrorRule().id, () => Severity.error);
-    return Config(severities: severities, exclude: exclude, root: _root);
+    return Config(severities: severities, exclude: exclude, root: _root(path));
   }
 
-  List<String> _include(YamlNode node) {
+  List<String> _include(YamlNode node, String path) {
     final items = node is YamlList ? node.nodes : [node];
     final available = const Presets().all.keys;
     return [
@@ -116,19 +121,25 @@ class const ConfigLoader(
             item,
             'Unknown preset `$name`. '
             'Available presets: ${available.join(', ')}.',
+            path,
           ),
           _ => throw _error(
             item,
             '`include` must be a preset name or a list of preset names.',
+            path,
           ),
         },
     ];
   }
 
-  Map<String, Severity?> _rules(YamlNode node) {
+  Map<String, Severity?> _rules(YamlNode node, String path) {
     if (node.value == null) return const {};
     if (node is! YamlMap) {
-      throw _error(node, '`rules` must be a map of rule ids to severities.');
+      throw _error(
+        node,
+        '`rules` must be a map of rule ids to severities.',
+        path,
+      );
     }
     final ids = [for (final rule in const RuleRegistry().all) rule.id];
     final result = <String, Severity?>{};
@@ -138,6 +149,7 @@ class const ConfigLoader(
         throw _error(
           key,
           'Unknown rule `$rule`. Available rules: ${ids.join(', ')}.',
+          path,
         );
       }
       final severity = value.value;
@@ -146,66 +158,73 @@ class const ConfigLoader(
           value,
           'Invalid severity `$severity` for `$rule`. '
           'Expected one of: ${_severities.keys.join(', ')}.',
+          path,
         );
       }
       if (severity == 'off' && rule == const ParseErrorRule().id) {
-        throw _error(value, "`$rule` can't be turned off.");
+        throw _error(value, "`$rule` can't be turned off.", path);
       }
       result[rule] = _severities[severity];
     }
     return result;
   }
 
-  List<Glob> _exclude(YamlNode node) {
+  List<Glob> _exclude(YamlNode node, String path) {
     if (node.value == null) return const [];
     if (node is! YamlList) {
-      throw _error(node, '`exclude` must be a list of globs.');
+      throw _error(node, '`exclude` must be a list of globs.', path);
     }
     return [
       for (final item in node.nodes)
         switch (item.value) {
-          final String pattern => _glob(item, pattern),
-          _ => throw _error(item, '`exclude` must be a list of globs.'),
+          final String pattern => _glob(item, pattern, path),
+          _ => throw _error(item, '`exclude` must be a list of globs.', path),
         },
     ];
   }
 
-  Glob _glob(YamlNode node, String pattern) {
+  Glob _glob(YamlNode node, String pattern, String path) {
     try {
       return Glob(pattern, context: p.posix);
     } on FormatException catch (error) {
-      throw _error(node, 'Invalid glob `$pattern`: ${error.message}');
+      throw _error(node, 'Invalid glob `$pattern`: ${error.message}', path);
     }
   }
 
-  ConfigException _error(YamlNode node, String message) =>
+  ConfigException _error(YamlNode node, String message, String path) =>
       ConfigException.at(node, message, path: path);
 }
 
 /// Finds the config for each package: the nearest `analysis_options.yaml`
 /// with a `vaixell:` key, from the package directory up to the root.
 ///
-/// Configs are never merged. Each file is read at most once.
-class ConfigResolver(
-  /// The tree that holds the config files.
-  final SourceTree tree,
+/// Configs are never merged.
+class const ConfigResolver(
+  /// The loader that reads the config files.
+  final ConfigLoader loader,
 ) {
-  /// Creates a resolver that reads configs from [tree].
+  /// Creates a resolver that reads configs with [loader].
   this;
 
-  final Map<String, Future<Config?>> _cache = {};
-
-  /// Returns the config for the package at [package], relative to the root,
-  /// or [Config.recommended] when no file up to the root has a `vaixell:`
-  /// key.
+  /// Returns the config for each package in [packages], relative to the
+  /// root, in order, or [Config.recommended] when no file up to the root has
+  /// a `vaixell:` key. Each file is read at most once per call.
   ///
   /// Throws a [ConfigException] for the first invalid file on the way.
-  Future<Config> forPackage(String package) async {
+  Future<List<Config>> forPackages(List<String> packages) async {
+    final cache = <String, Future<Config?>>{};
+    return [for (final package in packages) await _forPackage(package, cache)];
+  }
+
+  Future<Config> _forPackage(
+    String package,
+    Map<String, Future<Config?>> cache,
+  ) async {
     for (var dir = package; ; dir = _parent(dir)) {
-      final path = p.posix.join(dir, 'analysis_options.yaml');
-      final config = await _cache.putIfAbsent(
+      final path = p.posix.join(dir, ConfigLoader.defaultPath);
+      final config = await cache.putIfAbsent(
         path,
-        () => ConfigLoader(tree, path: path).loadIfPresent(),
+        () => loader.loadIfPresent(path: path),
       );
       if (config != null) return config;
       if (dir.isEmpty) return Config.recommended();

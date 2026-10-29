@@ -25,10 +25,10 @@ class const PackageResolver({
     final dirs = paths.isEmpty
         ? await PackageDiscovery(tree).discover()
         : {for (final path in paths) _relative(path)}.toList();
-    final resolver = ConfigResolver(tree);
+    final configs = await ConfigResolver(ConfigLoader(tree)).forPackages(dirs);
     return [
-      for (final dir in dirs)
-        Package(path: dir, config: await resolver.forPackage(dir)),
+      for (final (i, dir) in dirs.indexed)
+        Package(path: dir, config: configs[i]),
     ];
   }
 
