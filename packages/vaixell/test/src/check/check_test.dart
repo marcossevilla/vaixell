@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 import 'package:test_descriptor/test_descriptor.dart' as d;
 import 'package:vaixell/vaixell.dart';
@@ -83,28 +84,6 @@ void main() {
         final tree = MemorySourceTree({'lib/c.dart': 'void c() {}\n'});
         final report = await Check(root: d.sandbox, tree: tree)();
         expect(ids(report.violations), ['top-level-function:lib/c.dart:c']);
-      });
-
-      test('resolves the packages with the given resolver', () async {
-        final tree = MemorySourceTree({
-          'lib/c.dart': 'void c() {}\n',
-          'other/lib/d.dart': 'void d() {}\n',
-        });
-        final resolver = _FakePackageResolver([
-          Package(path: 'other', config: Config.recommended()),
-        ]);
-        final report = await Check(
-          root: d.sandbox,
-          tree: tree,
-          packageResolver: resolver,
-        )(paths: ['x']);
-        expect(resolver.calls, [
-          ['x'],
-        ]);
-        expect(
-          ids(report.violations),
-          equals(['top-level-function:other/lib/d.dart:d']),
-        );
       });
     });
 
@@ -367,39 +346,108 @@ workspace:
           throwsA(isA<GitException>()),
         );
       });
+    });
 
-      test('runs git with the given runner', () async {
-        final calls = <List<String>>[];
-        final runner = GitRunner(
-          d.sandbox,
-          runGit: (args, {throwOnError = true, processWorkingDir}) async {
-            calls.add(args);
-            return ProcessResult(0, 1, '', 'fake failure');
-          },
-        );
+    group('collaborators', () {
+      final packages = [Package(path: '', config: Config.recommended())];
+      const violation = Violation(
+        id: 'top-level-function:lib/a.dart:foo',
+        rule: 'top-level-function',
+        severity: Severity.error,
+        path: 'lib/a.dart',
+        line: 1,
+        column: 6,
+        message: 'message',
+      );
+
+      late MemorySourceTree tree;
+      late _MockPackageResolver packageResolver;
+      late _MockEngine engine;
+      late _MockBaselineFile baselineFile;
+      late _MockGitRunner git;
+      late _MockGitSourceTree base;
+      late List<String> openedCommits;
+
+      setUpAll(() {
+        registerFallbackValue(MemorySourceTree({}));
+        registerFallbackValue(<Package>[]);
+      });
+
+      setUp(() {
+        tree = MemorySourceTree({});
+        packageResolver = _MockPackageResolver();
+        engine = _MockEngine();
+        baselineFile = _MockBaselineFile();
+        git = _MockGitRunner();
+        base = _MockGitSourceTree();
+        openedCommits = [];
+        when(() => packageResolver(any())).thenAnswer((_) async => packages);
+        when(
+          () => engine.run(
+            tree: any(named: 'tree'),
+            packages: any(named: 'packages'),
+          ),
+        ).thenAnswer((_) async => [violation]);
+        when(() => git.mergeBase(any())).thenAnswer((_) async => 'abc');
+        when(base.close).thenAnswer((_) async {});
+      });
+
+      Check build() => Check(
+        root: '/repo',
+        tree: tree,
+        git: git,
+        openGitSourceTree: (commit) {
+          openedCommits.add(commit);
+          return base;
+        },
+        packageResolver: packageResolver,
+        engine: engine,
+        baselineFile: baselineFile,
+      );
+
+      test('resolves the packages with the given resolver', () async {
+        await build()(paths: ['x']);
+        verify(() => packageResolver(['x'])).called(1);
+        verify(() => engine.run(tree: tree, packages: packages)).called(1);
+      });
+
+      test('reads the baseline with the given baseline file', () async {
+        when(() => baselineFile.read(any()))
+            .thenAnswer((_) async => Baseline([violation.id]));
+        final report = await build()(baseline: 'baseline.json');
+        expect(report.failing, isEmpty);
+        verify(() => baselineFile.read('/repo/baseline.json')).called(1);
+      });
+
+      test('runs the base side on the opened git tree', () async {
+        when(() => engine.run(tree: base, packages: packages))
+            .thenAnswer((_) async => []);
+        final report = await build()(gitDiff: 'main');
+        expect(ids(report.failing), [violation.id]);
+        verify(() => git.mergeBase('main')).called(1);
+        expect(openedCommits, ['abc']);
+        verify(base.close).called(1);
+      });
+
+      test('closes the base tree when the base run fails', () async {
+        when(() => engine.run(tree: base, packages: packages))
+            .thenThrow(const BaselineException('boom'));
         await expectLater(
-          Check(root: d.sandbox, git: runner)(gitDiff: 'main'),
-          throwsA(isA<GitException>()),
+          build()(gitDiff: 'main'),
+          throwsA(isA<BaselineException>()),
         );
-        expect(calls, [contains('main^{commit}')]);
+        verify(base.close).called(1);
       });
     });
   });
 }
 
-class _FakePackageResolver(final List<Package> packages)
-    implements PackageResolver {
-  final List<List<String>> calls = [];
+class _MockPackageResolver extends Mock implements PackageResolver;
 
-  @override
-  String get root => throw UnimplementedError();
+class _MockEngine extends Mock implements Engine;
 
-  @override
-  SourceTree get tree => throw UnimplementedError();
+class _MockBaselineFile extends Mock implements BaselineFile;
 
-  @override
-  Future<List<Package>> call(List<String> paths) async {
-    calls.add(paths);
-    return packages;
-  }
-}
+class _MockGitRunner extends Mock implements GitRunner;
+
+class _MockGitSourceTree extends Mock implements GitSourceTree;

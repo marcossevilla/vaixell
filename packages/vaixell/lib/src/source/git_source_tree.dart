@@ -4,6 +4,9 @@ import 'package:vaixell/src/git/cat_file_batch.dart';
 import 'package:vaixell/src/git/git_runner.dart';
 import 'package:vaixell/src/source/source_tree.dart';
 
+/// Returns a [GitSourceTree] that reads files at [commit].
+typedef OpenGitSourceTree = GitSourceTree Function(String commit);
+
 /// A [SourceTree] that reads files at a git commit.
 ///
 /// Paths are relative to the runner's working directory, so a package in a

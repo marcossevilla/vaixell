@@ -11,21 +11,34 @@ class const PackageResolver({
   /// The repository root directory.
   required final String root,
 
-  /// The files of [root].
-  required final SourceTree tree,
+  /// Finds the packages when no paths are given.
+  required final PackageDiscovery discovery,
+
+  /// Finds the config of each package.
+  required final ConfigResolver configResolver,
 }) {
-  /// Creates a resolver for the packages of [tree], rooted at [root].
+  /// Creates a resolver for the packages in [root] that finds them with
+  /// [discovery] and their configs with [configResolver].
   this;
 
+  /// Creates a resolver for the packages in [root] that discovers them and
+  /// reads their configs in [tree].
+  factory fromTree({required String root, required SourceTree tree}) =>
+      PackageResolver(
+        root: root,
+        discovery: PackageDiscovery(tree),
+        configResolver: ConfigResolver(ConfigLoader(tree)),
+      );
+
   /// Returns the packages at [paths], relative to [root], or the packages
-  /// found by [PackageDiscovery] when [paths] is empty.
+  /// found by [discovery] when [paths] is empty.
   ///
   /// Throws a [ConfigException] when discovery or a config fails.
   Future<List<Package>> call(List<String> paths) async {
     final dirs = paths.isEmpty
-        ? await PackageDiscovery(tree).discover()
+        ? await discovery.discover()
         : {for (final path in paths) _relative(path)}.toList();
-    final configs = await ConfigResolver(ConfigLoader(tree)).forPackages(dirs);
+    final configs = await configResolver.forPackages(dirs);
     return [
       for (final (i, dir) in dirs.indexed)
         Package(path: dir, config: configs[i]),

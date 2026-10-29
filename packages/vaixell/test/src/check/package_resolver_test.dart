@@ -1,3 +1,4 @@
+import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 import 'package:vaixell/vaixell.dart';
 
@@ -18,8 +19,11 @@ void main() {
       });
     });
 
-    Future<List<Package>> resolve(List<String> paths) =>
-        PackageResolver(root: '/repo', tree: tree)(paths);
+    Future<List<Package>> resolve(List<String> paths) => PackageResolver(
+      root: '/repo',
+      discovery: PackageDiscovery(tree),
+      configResolver: ConfigResolver(ConfigLoader(tree)),
+    )(paths);
 
     test('discovers the packages when there are no paths', () async {
       final packages = await resolve([]);
@@ -48,5 +52,42 @@ void main() {
       tree.files['pubspec.yaml'] = 'workspace:\n  - packages/c\n';
       await expectLater(resolve([]), throwsA(isA<ConfigException>()));
     });
+
+    test('uses the given discovery and config resolver', () async {
+      final discovery = _MockPackageDiscovery();
+      final configResolver = _MockConfigResolver();
+      final a = Config.recommended();
+      const b = Config(severities: {});
+      when(discovery.discover).thenAnswer((_) async => ['x', 'y']);
+      when(() => configResolver.forPackages(['x', 'y']))
+          .thenAnswer((_) async => [a, b]);
+
+      final packages = await PackageResolver(
+        root: '/repo',
+        discovery: discovery,
+        configResolver: configResolver,
+      )([]);
+
+      expect(packages.map((p) => (p.path, p.config)), [('x', a), ('y', b)]);
+    });
+
+    test('skips discovery when paths are given', () async {
+      final discovery = _MockPackageDiscovery();
+      final configResolver = _MockConfigResolver();
+      when(() => configResolver.forPackages(['x']))
+          .thenAnswer((_) async => [Config.recommended()]);
+
+      await PackageResolver(
+        root: '/repo',
+        discovery: discovery,
+        configResolver: configResolver,
+      )(['x']);
+
+      verifyNever(discovery.discover);
+    });
   });
 }
+
+class _MockPackageDiscovery extends Mock implements PackageDiscovery;
+
+class _MockConfigResolver extends Mock implements ConfigResolver;

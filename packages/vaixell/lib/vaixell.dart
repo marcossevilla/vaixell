@@ -20,7 +20,7 @@ export 'src/report/json_reporter.dart' show JsonReporter;
 export 'src/report/report.dart' show Report, ReportMode;
 export 'src/report/reporter.dart' show Reporter;
 export 'src/report/text_reporter.dart' show TextReporter;
-export 'src/source/git_source_tree.dart' show GitSourceTree;
+export 'src/source/git_source_tree.dart' show GitSourceTree, OpenGitSourceTree;
 export 'src/source/source_tree.dart' show FileSystemSourceTree, SourceTree;
 export 'src/version.dart' show packageVersion;
 export 'src/violation/violation.dart' show Severity, Violation;

@@ -1,3 +1,4 @@
+import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 import 'package:test_descriptor/test_descriptor.dart' as d;
 import 'package:vaixell/vaixell.dart';
@@ -70,5 +71,47 @@ void main() {
       );
       await d.nothing('baseline.json').validate();
     });
+
+    test('uses the given collaborators', () async {
+      registerFallbackValue(Baseline([]));
+      final tree = MemorySourceTree({});
+      final packages = [Package(path: 'p', config: Config.recommended())];
+      final packageResolver = _MockPackageResolver();
+      final engine = _MockEngine();
+      final baselineFile = _MockBaselineFile();
+      when(() => packageResolver(['p'])).thenAnswer((_) async => packages);
+      when(() => engine.run(tree: tree, packages: packages)).thenAnswer(
+        (_) async => [
+          const Violation(
+            id: 'top-level-function:p/lib/a.dart:foo',
+            rule: 'top-level-function',
+            severity: Severity.error,
+            path: 'p/lib/a.dart',
+            line: 1,
+            column: 6,
+            message: 'message',
+          ),
+        ],
+      );
+      when(() => baselineFile.write(any(), any())).thenAnswer((_) async {});
+
+      final baseline = await WriteBaseline(
+        root: '/repo',
+        tree: tree,
+        packageResolver: packageResolver,
+        engine: engine,
+        baselineFile: baselineFile,
+      )('baseline.json', paths: ['p']);
+
+      expect(baseline.ids, equals({'top-level-function:p/lib/a.dart:foo'}));
+      verify(() => baselineFile.write('/repo/baseline.json', baseline))
+          .called(1);
+    });
   });
 }
+
+class _MockPackageResolver extends Mock implements PackageResolver;
+
+class _MockEngine extends Mock implements Engine;
+
+class _MockBaselineFile extends Mock implements BaselineFile;
