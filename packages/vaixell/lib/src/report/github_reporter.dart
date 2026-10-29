@@ -16,24 +16,23 @@ import 'package:vaixell/src/violation/violation.dart';
 /// When [summaryPath] is set, usually from `$GITHUB_STEP_SUMMARY`, a
 /// Markdown summary with the counts and tables of new and fixed violations
 /// is appended to that file.
-class GithubReporter(
-  /// The sink that workflow commands are written to.
-  final StringSink out, {
-
+class const GithubReporter({
   /// The step summary file, or `null` to skip the summary.
   final String? summaryPath,
+
+  /// Formats the plain violation and summary lines.
+  final TextReporter _text = const TextReporter(),
 }) implements Reporter {
-  /// Creates a reporter that writes commands to [out] and appends the
-  /// Markdown summary to [summaryPath], if set.
+  /// Creates a reporter that appends the Markdown summary to [summaryPath],
+  /// if set, and formats plain lines with `text`, a [TextReporter] by
+  /// default.
   this;
 
   /// The number of annotations of each severity GitHub shows per step.
   static const int maxAnnotations = 10;
 
-  final TextReporter _text = TextReporter(out);
-
   @override
-  void write(Report report) {
+  void write(Report report, StringSink out) {
     final counts = <Severity, int>{};
     var skipped = 0;
     for (final v in report.failing) {

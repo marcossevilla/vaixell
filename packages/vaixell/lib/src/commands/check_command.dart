@@ -143,7 +143,7 @@ class CheckCommand({
         report = Report.full(violations);
       }
       final output = StringBuffer();
-      _reporter(results.option('format')!, output).write(report);
+      _reporter(results.option('format')!).write(report, output);
       _logger.write('$output');
       return _exitCode(report.failing);
     } on ConfigException catch (error) {
@@ -234,16 +234,15 @@ class CheckCommand({
     }
   }
 
-  Reporter _reporter(String format, StringSink output) => switch (format) {
-    'json' => JsonReporter(output),
+  Reporter _reporter(String format) => switch (format) {
+    'json' => const JsonReporter(),
     'github' => GithubReporter(
-      output,
       summaryPath: switch (_environment['GITHUB_STEP_SUMMARY']) {
         '' => null,
         final path => path,
       },
     ),
-    _ => TextReporter(output),
+    _ => const TextReporter(),
   };
 
   /// Returns [_violationsExitCode] if any of [violations] is an error, and 0

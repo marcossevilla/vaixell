@@ -19,12 +19,12 @@ void main() {
     setUp(() => out = StringBuffer());
 
     test('prints a summary when there are no violations', () {
-      TextReporter(out).write(const Report.full([]));
+      const TextReporter().write(const Report.full([]), out);
       expect(out.toString(), equals('No violations found.\n'));
     });
 
     test('prints one line per violation and a summary', () {
-      TextReporter(out).write(
+      const TextReporter().write(
         Report.full([
           _violation('top-level-function:lib/a.dart:foo'),
           _violation(
@@ -32,6 +32,7 @@ void main() {
             severity: Severity.warning,
           ),
         ]),
+        out,
       );
       expect(
         out.toString(),
@@ -45,13 +46,13 @@ void main() {
     });
 
     test('uses the singular for one violation', () {
-      TextReporter(out).write(Report.full([_violation('x')]));
+      const TextReporter().write(Report.full([_violation('x')]), out);
       expect(out.toString(), endsWith('\n1 violation found.\n'));
     });
 
     test('reports only new and fixed violations in a diff', () {
       final added = _violation('top-level-function:lib/a.dart:foo');
-      TextReporter(out).write(
+      const TextReporter().write(
         Report.compared(
           ReportMode.diff,
           [added, _violation('top-level-function:lib/a.dart:old')],
@@ -60,6 +61,7 @@ void main() {
             fixed: const ['top-level-function:lib/a.dart:bar'],
           ),
         ),
+        out,
       );
       expect(
         out.toString(),
@@ -72,12 +74,13 @@ void main() {
     });
 
     test('uses the plural in diff summaries', () {
-      TextReporter(out).write(
+      const TextReporter().write(
         const Report.compared(
           ReportMode.baseline,
           [],
           DiffResult(added: [], fixed: []),
         ),
+        out,
       );
       expect(out.toString(), equals('0 new violations, 0 fixed.\n'));
     });
