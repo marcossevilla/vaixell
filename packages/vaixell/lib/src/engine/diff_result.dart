@@ -1,4 +1,4 @@
-import 'package:vaixell/src/engine/violation.dart';
+import 'package:vaixell/src/violation/violation.dart';
 
 /// The violations added and fixed relative to a base set of ids.
 class const DiffResult({

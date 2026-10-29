@@ -10,7 +10,6 @@ import 'package:vaixell/src/discovery/package_discovery.dart';
 import 'package:vaixell/src/engine/diff_result.dart';
 import 'package:vaixell/src/engine/engine.dart';
 import 'package:vaixell/src/engine/package.dart';
-import 'package:vaixell/src/engine/violation.dart';
 import 'package:vaixell/src/git/git_runner.dart';
 import 'package:vaixell/src/report/github_reporter.dart';
 import 'package:vaixell/src/report/json_reporter.dart';
@@ -19,6 +18,7 @@ import 'package:vaixell/src/report/reporter.dart';
 import 'package:vaixell/src/report/text_reporter.dart';
 import 'package:vaixell/src/source/git_source_tree.dart';
 import 'package:vaixell/src/source/source_tree.dart';
+import 'package:vaixell/src/violation/violation.dart';
 
 /// {@template check_command}
 /// `vaixell check`: checks architecture rules in the given packages.

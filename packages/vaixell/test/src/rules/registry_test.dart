@@ -1,6 +1,6 @@
 import 'package:test/test.dart';
-import 'package:vaixell/src/engine/violation.dart';
 import 'package:vaixell/src/rules/registry.dart';
+import 'package:vaixell/src/violation/violation.dart';
 
 void main() {
   test('RuleRegistry lists every rule with a unique id', () {
