@@ -1,16 +1,26 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:test_descriptor/test_descriptor.dart' as d;
 import 'package:vaixell/vaixell.dart';
 
 import '../../helpers/check.dart';
+import '../../helpers/git_repo.dart';
 import '../../helpers/memory_source_tree.dart';
 
 void main() {
   group(Check, () {
-    Future<Report> check({List<String> paths = const [], String? baseline}) =>
-        Check(root: d.sandbox)(paths: paths, baseline: baseline);
+    Future<Report> check({
+      List<String> paths = const [],
+      String? gitDiff,
+      String? baseline,
+      String? root,
+    }) => Check(root: root ?? d.sandbox)(
+      paths: paths,
+      gitDiff: gitDiff,
+      baseline: baseline,
+    );
 
     /// Returns the JSON document that `vaixell check --format=json` prints
     /// for [arguments].
@@ -137,6 +147,39 @@ workspace:
         );
       });
 
+      test('compares workspace members with git-diff', () async {
+        await gitInit(d.sandbox);
+        await gitCommitAll(d.sandbox);
+        await d.dir('packages/b/lib', [
+          d.file('b.dart', 'final y = 1;\nvoid added() {}\n'),
+        ]).create();
+        await d.dir('packages/c', [
+          d.file('pubspec.yaml', 'name: c\n'),
+          d.dir('lib', [d.file('c.dart', 'void c() {}\n')]),
+        ]).create();
+        await d.file('pubspec.yaml', '''
+name: w
+workspace:
+  - packages/a
+  - packages/b
+  - packages/c
+''').create();
+
+        final report = await check(gitDiff: 'main');
+        expect(
+          ids(report.failing),
+          equals([
+            'top-level-function:packages/b/lib/b.dart:added',
+            'top-level-function:packages/c/lib/c.dart:c',
+          ]),
+        );
+        expect(
+          report.diff!.fixed,
+          equals(['top-level-function:packages/b/lib/b.dart:b']),
+        );
+        expect(json(report), equals(await commandJson(['--git-diff=main'])));
+      });
+
       test('throws a ConfigException on an invalid workspace', () async {
         await d.file('pubspec.yaml', 'workspace:\n  - packages/c\n').create();
         await expectLater(check(), throwsA(isA<ConfigException>()));
@@ -186,6 +229,137 @@ workspace:
           check(baseline: 'baseline.json'),
           throwsA(isA<BaselineException>()),
         );
+      });
+    });
+
+    group('git-diff', () {
+      setUp(() async {
+        await gitInit(d.sandbox);
+        await writeLib({'a.dart': 'void old() {}\nvoid kept() {}\n'});
+        await gitCommitAll(d.sandbox);
+        await git(d.sandbox, ['checkout', '-q', '-b', 'feature']);
+      });
+
+      test('reports added and fixed violations', () async {
+        await File(d.path('lib/a.dart'))
+            .writeAsString('// Moved down.\nvoid kept() {}\nvoid added() {}\n');
+        await gitCommitAll(d.sandbox);
+
+        final report = await check(gitDiff: 'main');
+        expect(report.mode, equals(ReportMode.diff));
+        expect(ids(report.failing), ['top-level-function:lib/a.dart:added']);
+        expect(report.diff!.fixed, ['top-level-function:lib/a.dart:old']);
+        expect(json(report), equals(await commandJson(['--git-diff=main'])));
+      });
+
+      test('compares against the merge-base, not the tip of the ref', () async {
+        await git(d.sandbox, ['checkout', '-q', 'main']);
+        await writeLib({'b.dart': 'void onMain() {}\n'});
+        await gitCommitAll(d.sandbox);
+        await git(d.sandbox, ['checkout', '-q', 'feature']);
+
+        final report = await check(gitDiff: 'main');
+        expect(report.failing, isEmpty);
+        expect(report.diff!.fixed, isEmpty);
+      });
+
+      test('counts uncommitted and untracked changes as head', () async {
+        await writeLib({'b.dart': 'void untracked() {}\n'});
+        final report = await check(gitDiff: 'main');
+        expect(
+          ids(report.failing),
+          equals(['top-level-function:lib/b.dart:untracked']),
+        );
+      });
+
+      test('uses the head config for both sides', () async {
+        await d
+            .file(
+              'analysis_options.yaml',
+              'vaixell:\n  rules:\n    top-level-function: off\n',
+            )
+            .create();
+        final report = await check(gitDiff: 'main');
+        expect(report.violations, isEmpty);
+        expect(report.diff!.fixed, isEmpty);
+      });
+
+      test('works for a package in a subdirectory', () async {
+        await d.dir('pkg', [
+          d.dir('lib', [d.file('a.dart', 'void old() {}\n')]),
+        ]).create();
+        await gitCommitAll(d.sandbox);
+        await d.dir('pkg/lib', [
+          d.file('a.dart', 'void added() {}\n'),
+        ]).create();
+
+        final report = await check(gitDiff: 'HEAD', root: d.path('pkg'));
+        expect(ids(report.failing), ['top-level-function:lib/a.dart:added']);
+        expect(report.diff!.fixed, ['top-level-function:lib/a.dart:old']);
+      });
+
+      test('suppresses the baseline ids', () async {
+        await writeLib({
+          'a.dart': 'void kept() {}\n',
+          'b.dart': 'void known() {}\nvoid added() {}\n',
+        });
+        await d
+            .file(
+              'baseline.json',
+              '{"schemaVersion": 1, "violations": '
+                  '["top-level-function:lib/b.dart:known"]}',
+            )
+            .create();
+
+        final report = await check(gitDiff: 'main', baseline: 'baseline.json');
+        expect(report.mode, equals(ReportMode.diff));
+        expect(ids(report.failing), ['top-level-function:lib/b.dart:added']);
+        expect(report.diff!.fixed, ['top-level-function:lib/a.dart:old']);
+        expect(
+          json(report),
+          equals(
+            await commandJson(['--git-diff=main', '--baseline=baseline.json']),
+          ),
+        );
+      });
+
+      test('throws a GitException for a ref that can not be found', () async {
+        await expectLater(
+          check(gitDiff: 'origin/main'),
+          throwsA(
+            isA<GitException>().having(
+              (e) => e.message,
+              'message',
+              startsWith('Could not find the git ref `origin/main`.'),
+            ),
+          ),
+        );
+      });
+
+      test('throws a GitException outside a git repository', () async {
+        // The sandbox is a repository, so use a directory outside it.
+        final plain = await Directory.systemTemp.createTemp('vaixell_');
+        addTearDown(() => plain.delete(recursive: true));
+        await expectLater(
+          check(gitDiff: 'main', root: plain.path),
+          throwsA(isA<GitException>()),
+        );
+      });
+
+      test('runs git with the given runner', () async {
+        final calls = <List<String>>[];
+        final runner = GitRunner(
+          d.sandbox,
+          runGit: (args, {throwOnError = true, processWorkingDir}) async {
+            calls.add(args);
+            return ProcessResult(0, 1, '', 'fake failure');
+          },
+        );
+        await expectLater(
+          Check(root: d.sandbox, git: runner)(gitDiff: 'main'),
+          throwsA(isA<GitException>()),
+        );
+        expect(calls, [contains('main^{commit}')]);
       });
     });
   });

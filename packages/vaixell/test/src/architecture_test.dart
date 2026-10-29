@@ -99,4 +99,22 @@ void main() {
 
     expect(violations, isEmpty);
   });
+
+  test('lib/src/check imports no CLI packages or reporters', () {
+    final forbidden = RegExp(
+      r'^package:(args|mason_logger|io)/|reporter\.dart$',
+    );
+    final violations = [
+      for (final file in Directory(
+        p.join(_src, 'check'),
+      ).listSync().whereType<File>())
+        for (final directive in parseString(
+          content: file.readAsStringSync(),
+        ).unit.directives.whereType<UriBasedDirective>())
+          if (forbidden.hasMatch(directive.uri.stringValue!))
+            '${file.path}: ${directive.uri.stringValue}',
+    ];
+
+    expect(violations, isEmpty);
+  });
 }
