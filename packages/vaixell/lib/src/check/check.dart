@@ -21,6 +21,7 @@ class Check({
   required final String root,
   SourceTree? tree,
   GitRunner? git,
+  PackageResolver? packageResolver,
 }) {
   /// {@macro check}
   ///
@@ -28,10 +29,14 @@ class Check({
   /// [root] by default. [tree] is the head side of a git-diff comparison.
   ///
   /// Runs git with [git], a [GitRunner] in [root] by default.
+  ///
+  /// Resolves the packages to check with [packageResolver], a
+  /// [PackageResolver] on [root] and [tree] by default.
   this;
 
   final SourceTree _tree = tree ?? FileSystemSourceTree(Directory(root));
   final GitRunner _git = git ?? GitRunner(root);
+  final PackageResolver? _packageResolver = packageResolver;
 
   /// Checks the packages at [paths], relative to [root], or the discovered
   /// packages when [paths] is empty, and returns the [Report].
@@ -51,7 +56,9 @@ class Check({
     String? gitDiff,
     String? baseline,
   }) async {
-    final packages = await PackageResolver(root: root, tree: _tree)(paths);
+    final resolver =
+        _packageResolver ?? PackageResolver(root: root, tree: _tree);
+    final packages = await resolver(paths);
     final ids = baseline == null
         ? null
         : (await BaselineFile(p.join(root, baseline)).read()).ids;

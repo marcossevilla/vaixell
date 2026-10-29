@@ -84,6 +84,28 @@ void main() {
         final report = await Check(root: d.sandbox, tree: tree)();
         expect(ids(report.violations), ['top-level-function:lib/c.dart:c']);
       });
+
+      test('resolves the packages with the given resolver', () async {
+        final tree = MemorySourceTree({
+          'lib/c.dart': 'void c() {}\n',
+          'other/lib/d.dart': 'void d() {}\n',
+        });
+        final resolver = _FakePackageResolver([
+          Package(path: 'other', config: Config.recommended()),
+        ]);
+        final report = await Check(
+          root: d.sandbox,
+          tree: tree,
+          packageResolver: resolver,
+        )(paths: ['x']);
+        expect(resolver.calls, [
+          ['x'],
+        ]);
+        expect(
+          ids(report.violations),
+          equals(['top-level-function:other/lib/d.dart:d']),
+        );
+      });
     });
 
     group('discovery', () {
@@ -363,4 +385,21 @@ workspace:
       });
     });
   });
+}
+
+class _FakePackageResolver(final List<Package> packages)
+    implements PackageResolver {
+  final List<List<String>> calls = [];
+
+  @override
+  String get root => throw UnimplementedError();
+
+  @override
+  SourceTree get tree => throw UnimplementedError();
+
+  @override
+  Future<List<Package>> call(List<String> paths) async {
+    calls.add(paths);
+    return packages;
+  }
 }

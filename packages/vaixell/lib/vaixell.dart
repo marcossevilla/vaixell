@@ -4,6 +4,7 @@ library;
 export 'src/baseline/baseline.dart'
     show Baseline, BaselineException, BaselineFile;
 export 'src/check/check.dart' show Check;
+export 'src/check/package_resolver.dart' show PackageResolver;
 export 'src/check/write_baseline.dart' show WriteBaseline;
 export 'src/command_runner.dart' show VaixellCommandRunner;
 export 'src/commands/commands.dart' show CheckCommand, UpdateCommand;

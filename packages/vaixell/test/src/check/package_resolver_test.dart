@@ -1,5 +1,4 @@
 import 'package:test/test.dart';
-import 'package:vaixell/src/check/package_resolver.dart';
 import 'package:vaixell/vaixell.dart';
 
 import '../../helpers/memory_source_tree.dart';
