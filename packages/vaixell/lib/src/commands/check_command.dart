@@ -7,7 +7,7 @@ import 'package:vaixell/src/baseline/baseline.dart';
 import 'package:vaixell/src/check/check.dart';
 import 'package:vaixell/src/check/write_baseline.dart';
 import 'package:vaixell/src/config/config.dart';
-import 'package:vaixell/src/git/git_runner.dart';
+import 'package:vaixell/src/git/git_runner.dart' show GitException;
 import 'package:vaixell/src/report/github_reporter.dart';
 import 'package:vaixell/src/report/json_reporter.dart';
 import 'package:vaixell/src/report/reporter.dart';

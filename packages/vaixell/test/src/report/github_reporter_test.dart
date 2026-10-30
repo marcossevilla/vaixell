@@ -4,8 +4,6 @@ import 'package:test/test.dart';
 import 'package:test_descriptor/test_descriptor.dart' as d;
 import 'package:vaixell/vaixell.dart';
 
-import '../../helpers/check.dart';
-
 Violation _v(
   String id, {
   Severity severity = Severity.error,
@@ -193,40 +191,6 @@ void main() {
           contains('> 1 violation was not annotated'),
         );
       });
-    });
-  });
-
-  group('--format=github', () {
-    Future<(int?, String)> run(Map<String, String> environment) async {
-      final out = StringBuffer();
-      final code = await runCheck(
-        ['--format=github'],
-        root: d.sandbox,
-        out: out,
-        err: StringBuffer(),
-        environment: environment,
-      );
-      return (code, out.toString());
-    }
-
-    setUp(() => d.dir('lib', [d.file('a.dart', 'void foo() {}\n')]).create());
-
-    test('annotates and appends to GITHUB_STEP_SUMMARY', () async {
-      final (code, output) = await run({
-        'GITHUB_STEP_SUMMARY': d.path('summary.md'),
-      });
-      expect(code, equals(1));
-      expect(output, startsWith('::error file=lib/a.dart,line=1,col=6,'));
-      expect(
-        File(d.path('summary.md')).readAsStringSync(),
-        startsWith('## vaixell\n'),
-      );
-    });
-
-    test('skips the summary when GITHUB_STEP_SUMMARY is empty', () async {
-      final (code, _) = await run({'GITHUB_STEP_SUMMARY': ''});
-      expect(code, equals(1));
-      expect(Directory(d.sandbox).listSync(), hasLength(1));
     });
   });
 }

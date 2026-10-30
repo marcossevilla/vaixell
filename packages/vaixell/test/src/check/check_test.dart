@@ -164,6 +164,24 @@ workspace:
         await d.file('pubspec.yaml', 'workspace:\n  - packages/c\n').create();
         await expectLater(check(), throwsA(isA<ConfigException>()));
       });
+
+      test('throws a ConfigException with the member config path', () async {
+        await d
+            .file('packages/b/analysis_options.yaml', 'vaixell:\n  bad: 1\n')
+            .create();
+        await expectLater(
+          check(),
+          throwsA(
+            isA<ConfigException>().having(
+              (e) => '$e',
+              'message',
+              startsWith(
+                'packages/b/analysis_options.yaml:2:3: Unknown key `bad`',
+              ),
+            ),
+          ),
+        );
+      });
     });
 
     group('baseline', () {
