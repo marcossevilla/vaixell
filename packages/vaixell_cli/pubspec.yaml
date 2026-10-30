@@ -1,5 +1,5 @@
 name: vaixell_cli
-description: Checks architecture rules in Dart and Flutter repositories without resolving types or running pub get.
+description: Command-line interface for vaixell. Checks architecture rules in Dart and Flutter repositories without resolving types or running pub get.
 version: 0.1.0
 repository: https://github.com/marcossevilla/vaixell/tree/main/packages/vaixell_cli
 issue_tracker: https://github.com/marcossevilla/vaixell/issues
