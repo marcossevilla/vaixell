@@ -1,0 +1,17 @@
+name: vaixell_cli_publish
+
+on:
+  push:
+    tags:
+      - "vaixell_cli-v[0-9]+.[0-9]+.[0-9]+*" # tag pattern on pub.dev: 'vaixell_cli-v{{version}}'
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    permissions:
+      id-token: write # Required for authentication using OIDC
+    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
+    with:
+      working-directory: packages/vaixell_cli
