@@ -23,6 +23,67 @@ void main() {
       );
     });
 
+    group('a workspace with glob members', () {
+      test('finds the directories with a pubspec.yaml', () async {
+        expect(
+          await _discover({
+            'pubspec.yaml': 'name: w\nworkspace:\n  - packages/*\n',
+            'packages/b/pubspec.yaml': 'name: b\n',
+            'packages/a/pubspec.yaml': 'name: a\n',
+            'packages/a/example/pubspec.yaml': 'name: e\n',
+            'packages/notes/README.md': '',
+            'packages/pubspec.yaml': 'name: p\n',
+          }),
+          equals(['', 'packages/a', 'packages/b']),
+        );
+      });
+
+      test('supports ** and braces', () async {
+        final files = {
+          'packages/a/pubspec.yaml': 'name: a\n',
+          'packages/deep/x/pubspec.yaml': 'name: x\n',
+          'apps/c/pubspec.yaml': 'name: c\n',
+          'apps/d/pubspec.yaml': 'name: d\n',
+        };
+        expect(
+          await _discover({
+            'pubspec.yaml': 'name: w\nworkspace:\n  - packages/**\n',
+            ...files,
+          }),
+          equals(['', 'packages/a', 'packages/deep/x']),
+        );
+        expect(
+          await _discover({
+            'pubspec.yaml': 'name: w\nworkspace:\n  - "apps/{c,e}"\n',
+            ...files,
+          }),
+          equals(['', 'apps/c']),
+        );
+      });
+
+      test('matches directories at the root but not the root', () async {
+        expect(
+          await _discover({
+            'pubspec.yaml': 'name: w\nworkspace:\n  - "*"\n',
+            'a/pubspec.yaml': 'name: a\n',
+            'b/README.md': '',
+          }),
+          equals(['', 'a']),
+        );
+      });
+
+      test('lists a package matched by several members once', () async {
+        expect(
+          await _discover({
+            'pubspec.yaml':
+                'name: w\nworkspace:\n  - packages/*\n  - packages/a\n',
+            'packages/a/pubspec.yaml': 'name: a\n',
+          }),
+          equals(['', 'packages/a']),
+        );
+      });
+    });
+
     test('a single package finds only the root', () async {
       expect(
         await _discover({
@@ -98,6 +159,16 @@ void main() {
           'pubspec.yaml:2:5: Workspace member `packages/missing` has no '
               'pubspec.yaml.',
         ),
+        'a glob member that matches nothing': (
+          'workspace:\n  - packages/*\n',
+          'pubspec.yaml:2:5: Workspace member `packages/*` matches no '
+              'directory with a pubspec.yaml.',
+        ),
+        'an invalid glob member': (
+          'workspace:\n  - packages/[a\n',
+          'pubspec.yaml:2:5: Workspace member `packages/[a` is not a valid '
+              'glob: ',
+        ),
       };
       for (final MapEntry(key: name, value: (pubspec, message))
           in cases.entries) {
@@ -119,7 +190,7 @@ void main() {
     test('works the same on a git tree', () async {
       await gitInit(d.sandbox);
       await d
-          .file('pubspec.yaml', 'name: w\nworkspace:\n  - packages/a\n')
+          .file('pubspec.yaml', 'name: w\nworkspace:\n  - packages/*\n')
           .create();
       await d.dir('packages/a', [d.file('pubspec.yaml', 'name: a\n')]).create();
       await gitCommitAll(d.sandbox);

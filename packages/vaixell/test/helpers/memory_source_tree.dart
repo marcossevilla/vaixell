@@ -5,7 +5,7 @@ class MemorySourceTree(final Map<String, String> files) implements SourceTree {
   @override
   Future<List<String>> listFiles(String directory) async => [
     for (final path in files.keys)
-      if (path.startsWith('$directory/')) path,
+      if (directory.isEmpty || path.startsWith('$directory/')) path,
   ]..sort();
 
   /// The paths passed to [read], in order.

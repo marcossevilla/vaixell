@@ -39,7 +39,7 @@ class GitSourceTree({
       '-z',
       commit,
       '--',
-      directory,
+      if (directory.isEmpty) '.' else directory,
     ]);
     return [
       for (final path in output.split('\x00'))

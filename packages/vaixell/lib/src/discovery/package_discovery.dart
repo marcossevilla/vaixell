@@ -1,3 +1,4 @@
+import 'package:glob/glob.dart';
 import 'package:path/path.dart' as p;
 import 'package:vaixell/src/config/config.dart';
 import 'package:vaixell/src/source/source_tree.dart';
@@ -8,7 +9,8 @@ import 'package:yaml/yaml.dart';
 /// Packages are directories relative to the root, where `''` is the root:
 ///
 /// 1. When the root `pubspec.yaml` has a `workspace:`, the root and every
-///    member.
+///    member. Members are globs, as in pub, so `packages/*` matches every
+///    directory in `packages` with a `pubspec.yaml`.
 /// 2. Otherwise, when there's a root `pubspec.yaml`, the root and any
 ///    `packages/*` or `pkgs/*` directory with a `pubspec.yaml`, as in an
 ///    app with local packages.
@@ -71,10 +73,12 @@ class const PackageDiscovery(
         path: _pubspec,
       );
     }
-    return [for (final item in workspace.nodes) await _member(item)];
+    return [for (final item in workspace.nodes) ...await _members(item)];
   }
 
-  Future<String> _member(YamlNode item) async {
+  /// Returns the package directories that the workspace member [item]
+  /// matches.
+  Future<List<String>> _members(YamlNode item) async {
     final value = item.value;
     if (value is! String) {
       throw ConfigException.at(
@@ -93,13 +97,47 @@ class const PackageDiscovery(
         path: _pubspec,
       );
     }
-    if (!await tree.exists(p.posix.join(member, _pubspec))) {
+    final Glob glob;
+    try {
+      glob = Glob(member, context: p.posix);
+    } on FormatException catch (error) {
       throw ConfigException.at(
         item,
-        'Workspace member `$value` has no pubspec.yaml.',
+        'Workspace member `$value` is not a valid glob: ${error.message}',
         path: _pubspec,
       );
     }
-    return member;
+    final matches = await _matching(glob);
+    if (matches.isEmpty) {
+      throw ConfigException.at(
+        item,
+        Glob.quote(member) == member
+            ? 'Workspace member `$value` has no pubspec.yaml.'
+            : 'Workspace member `$value` matches no directory with a '
+                  'pubspec.yaml.',
+        path: _pubspec,
+      );
+    }
+    return matches;
+  }
+
+  /// Returns the directories that match [glob] and have a `pubspec.yaml`.
+  ///
+  /// Only lists the files under the leading segments of [glob] without
+  /// wildcards.
+  Future<List<String>> _matching(Glob glob) async {
+    final segments = p.posix.split(glob.pattern);
+    final literal = segments.takeWhile((s) => Glob.quote(s) == s).toList();
+    if (literal.length == segments.length) {
+      final dir = glob.pattern;
+      return [if (await tree.exists(p.posix.join(dir, _pubspec))) dir];
+    }
+    return [
+      for (final path in await tree.listFiles(p.posix.joinAll(literal)))
+        if (p.posix.basename(path) == _pubspec &&
+            p.posix.dirname(path) != '.' &&
+            glob.matches(p.posix.dirname(path)))
+          p.posix.dirname(path),
+    ];
   }
 }
