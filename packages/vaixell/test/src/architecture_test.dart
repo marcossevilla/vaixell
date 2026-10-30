@@ -28,18 +28,6 @@ const _allowedImports = <String, Set<String>>{
     'source',
     'violation',
   },
-  'version': {},
-  'command_runner': {'commands', 'version'},
-  'commands': {
-    'baseline',
-    'check',
-    'command_runner',
-    'config',
-    'git',
-    'report',
-    'version',
-    'violation',
-  },
 };
 
 const _src = 'lib/src';

@@ -4,9 +4,7 @@ import 'package:mason_logger/mason_logger.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:pub_updater/pub_updater.dart';
 import 'package:test/test.dart';
-import 'package:vaixell/src/command_runner.dart';
-import 'package:vaixell/src/commands/commands.dart';
-import 'package:vaixell/src/version.dart';
+import 'package:vaixell_cli/vaixell_cli.dart';
 
 class _MockLogger extends Mock implements Logger;
 
@@ -33,7 +31,7 @@ void main() {
       );
 
       when(() => pubUpdater.getLatestVersion(any()))
-          .thenAnswer((_) async => packageVersion);
+          .thenAnswer((_) async => VaixellCommandRunner.packageVersion);
       when(
         () => pubUpdater.update(
           packageName: VaixellCommandRunner.packageName,
@@ -148,7 +146,7 @@ void main() {
 
     test('does not update when already on latest version', () async {
       when(() => pubUpdater.getLatestVersion(any()))
-          .thenAnswer((_) async => packageVersion);
+          .thenAnswer((_) async => VaixellCommandRunner.packageVersion);
       when(() => logger.progress(any())).thenReturn(_MockProgress());
       final result = await commandRunner.run(['update']);
       expect(result, equals(ExitCode.success.code));

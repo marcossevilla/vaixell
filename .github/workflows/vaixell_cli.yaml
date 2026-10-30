@@ -1,0 +1,44 @@
+name: vaixell_cli
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/vaixell_cli.yaml"
+      - "packages/vaixell/**"
+      - "packages/vaixell_cli/**"
+      - "pubspec.yaml"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/vaixell_cli.yaml"
+      - "packages/vaixell/**"
+      - "packages/vaixell_cli/**"
+      - "pubspec.yaml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build (${{ matrix.sdk }})
+    strategy:
+      fail-fast: false
+      matrix:
+        # `stable` plus the SDK lower bound from pubspec.yaml.
+        sdk: [stable, 3.13.0]
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/dart_package.yml@v2
+    with:
+      dart_sdk: ${{ matrix.sdk }}
+      working_directory: packages/vaixell_cli
+      analyze_directories: bin lib test
+      report_on: lib
+      min_coverage: 100
+      # Only run once per matrix; the score does not depend on the SDK.
+      run_cognitive_complexity: ${{ matrix.sdk == 'stable' }}
+      # Resolved from the repository root, not working_directory.
+      cognitive_complexity_targets: packages/vaixell_cli/lib

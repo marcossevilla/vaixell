@@ -3,16 +3,7 @@ import 'dart:io';
 import 'package:args/command_runner.dart';
 import 'package:mason_logger/mason_logger.dart';
 import 'package:path/path.dart' as p;
-import 'package:vaixell/src/baseline/baseline.dart';
-import 'package:vaixell/src/check/check.dart';
-import 'package:vaixell/src/check/write_baseline.dart';
-import 'package:vaixell/src/config/config.dart';
-import 'package:vaixell/src/git/git_runner.dart' show GitException;
-import 'package:vaixell/src/report/github_reporter.dart';
-import 'package:vaixell/src/report/json_reporter.dart';
-import 'package:vaixell/src/report/reporter.dart';
-import 'package:vaixell/src/report/text_reporter.dart';
-import 'package:vaixell/src/violation/violation.dart';
+import 'package:vaixell/vaixell.dart';
 
 /// {@template check_command}
 /// `vaixell check`: checks architecture rules in the given packages.

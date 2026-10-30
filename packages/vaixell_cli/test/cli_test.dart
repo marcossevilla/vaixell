@@ -8,7 +8,7 @@ import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 import 'package:test_descriptor/test_descriptor.dart' as d;
 import 'package:test_process/test_process.dart';
-import 'package:vaixell/vaixell.dart';
+import 'package:vaixell_cli/vaixell_cli.dart';
 
 import 'helpers/git_repo.dart';
 
@@ -44,7 +44,10 @@ void main() {
 
   test('--version prints the pubspec version', () async {
     final process = await _vaixell(['--version']);
-    expect(await process.stdout.next, equals(packageVersion));
+    expect(
+      await process.stdout.next,
+      equals(VaixellCommandRunner.packageVersion),
+    );
     await process.shouldExit(ExitCode.success.code);
   });
 
