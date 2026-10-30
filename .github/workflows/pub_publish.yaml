@@ -16,7 +16,6 @@ jobs:
       id-token: write # Required for authentication using OIDC
     uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
     with:
-      environment: pub.dev
       working-directory: packages/vaixell
 
   publish-vaixell-cli:
@@ -25,5 +24,4 @@ jobs:
       id-token: write # Required for authentication using OIDC
     uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
     with:
-      environment: pub.dev
       working-directory: packages/vaixell_cli

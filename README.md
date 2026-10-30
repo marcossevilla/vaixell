@@ -39,7 +39,6 @@ Before the first automated release, set up each package by hand:
    - Repository: `marcossevilla/vaixell`
    - Tag pattern: `vaixell-v{{version}}` for `vaixell`, and
      `vaixell_cli-v{{version}}` for `vaixell_cli`
-   - Require the `pub.dev` GitHub Actions environment.
 
 [release-please]: https://github.com/googleapis/release-please
 [workspace]: https://dart.dev/tools/pub/workspaces
