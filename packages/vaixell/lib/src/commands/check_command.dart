@@ -7,7 +7,7 @@ import 'package:vaixell/src/baseline/baseline.dart';
 import 'package:vaixell/src/check/check.dart';
 import 'package:vaixell/src/check/write_baseline.dart';
 import 'package:vaixell/src/config/config.dart';
-import 'package:vaixell/src/git/git_runner.dart';
+import 'package:vaixell/src/git/git_runner.dart' show GitException;
 import 'package:vaixell/src/report/github_reporter.dart';
 import 'package:vaixell/src/report/json_reporter.dart';
 import 'package:vaixell/src/report/reporter.dart';
@@ -128,31 +128,18 @@ class CheckCommand({
     final reporter = _reporters[results.option('format')]!;
     try {
       if (writeBaselinePath != null) {
-        final baseline = await _writeBaseline(
+        return await _runWriteBaseline(
           writeBaselinePath,
           paths: results.rest,
+          reporter: reporter,
         );
-        final count = baseline.ids.length;
-        final status =
-            'Wrote $count violation id${count == 1 ? '' : 's'} to '
-            '$writeBaselinePath.';
-        // Keep stdout empty in machine-readable formats.
-        if (reporter is TextReporter) {
-          _logger.info(status);
-        } else {
-          _logger.warn(status, tag: '');
-        }
-        return ExitCode.success.code;
       }
-      final report = await _check(
+      return await _runCheck(
         paths: results.rest,
         gitDiff: ref,
         baseline: baselinePath,
+        reporter: reporter,
       );
-      final output = StringBuffer();
-      reporter.write(report, output);
-      _logger.write('$output');
-      return _exitCode(report.failing);
     } on ConfigException catch (error) {
       _logger.err('$error');
       return ExitCode.config.code;
@@ -163,6 +150,43 @@ class CheckCommand({
       _logger.err('$error');
       return ExitCode.software.code;
     }
+  }
+
+  /// Writes the baseline of [paths] to [path] and logs the status, on stderr
+  /// unless [reporter] is a [TextReporter].
+  Future<int> _runWriteBaseline(
+    String path, {
+    required List<String> paths,
+    required Reporter reporter,
+  }) async {
+    final count = (await _writeBaseline(path, paths: paths)).ids.length;
+    final status =
+        'Wrote $count violation id${count == 1 ? '' : 's'} to $path.';
+    // Keep stdout empty in machine-readable formats.
+    if (reporter is TextReporter) {
+      _logger.info(status);
+    } else {
+      _logger.warn(status, tag: '');
+    }
+    return ExitCode.success.code;
+  }
+
+  /// Checks [paths] and writes the report with [reporter].
+  Future<int> _runCheck({
+    required List<String> paths,
+    required String? gitDiff,
+    required String? baseline,
+    required Reporter reporter,
+  }) async {
+    final report = await _check(
+      paths: paths,
+      gitDiff: gitDiff,
+      baseline: baseline,
+    );
+    final output = StringBuffer();
+    reporter.write(report, output);
+    _logger.write('$output');
+    return _exitCode(report.failing);
   }
 
   /// Returns why [path] can't be checked, or `null` if it can.

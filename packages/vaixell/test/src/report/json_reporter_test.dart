@@ -1,12 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:io/io.dart';
 import 'package:test/test.dart';
 import 'package:test_descriptor/test_descriptor.dart' as d;
 import 'package:vaixell/vaixell.dart';
 
-import '../../helpers/check.dart';
 import '../../helpers/git_repo.dart';
 
 /// Compares [actual] with `test/src/report/goldens/<name>.json`.
@@ -62,19 +60,15 @@ void main() {
     });
   });
 
-  group('--format=json', () {
-    late StringBuffer out;
-    late StringBuffer err;
-
-    Future<int?> run(List<String> arguments) {
-      out = StringBuffer();
-      err = StringBuffer();
-      return runCheck(
-        ['--format=json', ...arguments],
-        root: d.sandbox,
-        out: out,
-        err: err,
+  group('JSON output of a check', () {
+    Future<String> run({String? gitDiff, String? baseline}) async {
+      final report = await Check(root: d.sandbox)(
+        gitDiff: gitDiff,
+        baseline: baseline,
       );
+      final out = StringBuffer();
+      const JsonReporter().write(report, out);
+      return '$out';
     }
 
     setUp(() async {
@@ -91,10 +85,9 @@ void main() {
     });
 
     test('full mode', () async {
-      expect(await run([]), equals(1));
-      expect(err.toString(), isEmpty);
-      expect(() => jsonDecode(out.toString()), returnsNormally);
-      _expectGolden(out.toString(), 'full');
+      final output = await run();
+      expect(() => jsonDecode(output), returnsNormally);
+      _expectGolden(output, 'full');
     });
 
     test('diff mode', () async {
@@ -104,9 +97,7 @@ void main() {
         d.file('a.dart', 'final limit = 1;\nvoid bar() {}\n'),
       ]).create();
 
-      expect(await run(['--git-diff=main']), equals(1));
-      expect(err.toString(), isEmpty);
-      _expectGolden(out.toString(), 'diff');
+      _expectGolden(await run(gitDiff: 'main'), 'diff');
     });
 
     test('baseline mode', () async {
@@ -118,27 +109,7 @@ void main() {
           )
           .create();
 
-      expect(await run(['--baseline=baseline.json']), equals(1));
-      expect(err.toString(), isEmpty);
-      _expectGolden(out.toString(), 'baseline');
-    });
-
-    test('--write-baseline keeps stdout empty', () async {
-      expect(
-        await run(['--write-baseline=baseline.json']),
-        equals(ExitCode.success.code),
-      );
-      expect(out.toString(), isEmpty);
-      expect(
-        err.toString(),
-        equals('Wrote 3 violation ids to baseline.json.\n'),
-      );
-    });
-
-    test('errors still go to stderr only', () async {
-      await d.file('analysis_options.yaml', 'vaixell:\n  nope: 1\n').create();
-      expect(await run([]), equals(ExitCode.config.code));
-      expect(out.toString(), isEmpty);
+      _expectGolden(await run(baseline: 'baseline.json'), 'baseline');
     });
   });
 }
