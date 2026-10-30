@@ -10,50 +10,17 @@ Checks architecture rules in Dart and Flutter repositories without resolving typ
 
 ---
 
-## Getting Started 🚀
-
-If the CLI application is available on [pub](https://pub.dev), activate globally via:
-
-```sh
-dart pub global activate vaixell
-```
-
-Or locally via:
-
-```sh
-dart pub global activate --source=path <path to this package>
-```
-
 ## Usage
 
+This package is the `vaixell` library: it checks packages, compares them
+against a git ref or a baseline, and writes reports. The `vaixell` command
+lives in [`vaixell_cli`][vaixell_cli_link]:
+
 ```sh
-# Check the packages in the current directory: the workspace members,
-# packages/* and pkgs/*
-$ vaixell check
-
-# Check specific package directories
-$ vaixell check packages/a packages/b
-
-# Report only violations added or fixed since the merge-base with main
-$ vaixell check --git-diff=main
-
-# Write a baseline, then suppress the violations it lists
-$ vaixell check --write-baseline=vaixell_baseline.json
-$ vaixell check --baseline=vaixell_baseline.json
-
-# Machine-readable output: JSON, or GitHub Actions annotations
-$ vaixell check --format=json
-$ vaixell check --format=github
-
-# Update the CLI
-$ vaixell update
-
-# Show CLI version
-$ vaixell --version
-
-# Show usage help
-$ vaixell --help
+dart pub global activate vaixell_cli
 ```
+
+This installs the `vaixell` executable.
 
 See the [rules documentation][rules_link] for every supported rule and how to
 configure them.
@@ -82,6 +49,7 @@ $ open coverage/index.html
 ---
 
 [coverage_badge]: coverage_badge.svg
+[vaixell_cli_link]: https://github.com/marcossevilla/vaixell/tree/main/packages/vaixell_cli
 [rules_link]: https://github.com/marcossevilla/vaixell/tree/main/docs/rules
 [license_badge]: https://img.shields.io/badge/license-MIT-blue.svg
 [license_link]: https://opensource.org/licenses/MIT

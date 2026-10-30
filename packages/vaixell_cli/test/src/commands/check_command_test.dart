@@ -6,6 +6,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 import 'package:test_descriptor/test_descriptor.dart' as d;
 import 'package:vaixell/vaixell.dart';
+import 'package:vaixell_cli/vaixell_cli.dart';
 
 import '../../helpers/check.dart';
 

@@ -5,8 +5,8 @@ import 'package:args/command_runner.dart';
 import 'package:cli_completion/cli_completion.dart';
 import 'package:mason_logger/mason_logger.dart';
 import 'package:pub_updater/pub_updater.dart';
-import 'package:vaixell/src/commands/commands.dart';
-import 'package:vaixell/src/version.dart';
+import 'package:vaixell_cli/src/commands/commands.dart';
+import 'package:vaixell_cli/src/version.dart';
 
 /// {@template vaixell_command_runner}
 /// A [CommandRunner] for the CLI.
@@ -51,7 +51,7 @@ class VaixellCommandRunner extends CompletionCommandRunner<int> {
   }
 
   /// The name of the package on pub.dev, used to check for updates.
-  static const String packageName = 'vaixell';
+  static const String packageName = 'vaixell_cli';
 
   @override
   void printUsage() => _logger.info(usage);

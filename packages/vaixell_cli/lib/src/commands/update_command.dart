@@ -3,8 +3,8 @@ import 'dart:io';
 import 'package:args/command_runner.dart';
 import 'package:mason_logger/mason_logger.dart';
 import 'package:pub_updater/pub_updater.dart';
-import 'package:vaixell/src/command_runner.dart';
-import 'package:vaixell/src/version.dart';
+import 'package:vaixell_cli/src/command_runner.dart';
+import 'package:vaixell_cli/src/version.dart';
 
 /// {@template update_command}
 /// A command which updates the CLI.

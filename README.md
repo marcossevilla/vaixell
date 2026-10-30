@@ -6,9 +6,10 @@ types or running pub get.
 This repository is a [pub workspace][workspace]. Its packages live in
 `packages/`:
 
-| Package                        | Description                    |
-| ------------------------------ | ------------------------------ |
-| [`vaixell`](packages/vaixell/) | The `vaixell` CLI and library. |
+| Package                                | Description                              |
+| -------------------------------------- | ---------------------------------------- |
+| [`vaixell`](packages/vaixell/)         | The `vaixell` library.                   |
+| [`vaixell_cli`](packages/vaixell_cli/) | The `vaixell` CLI, built on the library. |
 
 Run `dart pub get` at the root to resolve every package.
 

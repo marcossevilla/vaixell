@@ -6,3 +6,4 @@ environment:
 
 workspace:
   - packages/vaixell
+  - packages/vaixell_cli
