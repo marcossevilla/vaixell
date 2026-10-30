@@ -13,7 +13,7 @@ This repository is a [pub workspace][workspace]. Its packages live in
 
 Run `dart pub get` at the root to resolve every package.
 
-See [`docs/rules`](docs/rules/) for the rules vaixell supports and how to
+See [`docs`](docs/) for the rules vaixell supports and how to
 configure them.
 
 ## Releasing

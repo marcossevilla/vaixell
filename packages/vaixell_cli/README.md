@@ -83,7 +83,7 @@ $ open coverage/index.html
 ---
 
 [coverage_badge]: coverage_badge.svg
-[rules_link]: https://github.com/marcossevilla/vaixell/tree/main/docs/rules
+[rules_link]: https://github.com/marcossevilla/vaixell/tree/main/docs
 [license_badge]: https://img.shields.io/badge/license-MIT-blue.svg
 [license_link]: https://opensource.org/licenses/MIT
 [very_good_analysis_badge]: https://img.shields.io/badge/style-very_good_analysis-B22C89.svg
