@@ -48,31 +48,23 @@ void main() {
       writeBaseline = _MockWriteBaseline();
     });
 
-    When<Future<Report>> whenCheck() => when(
-      () => check(
-        paths: any(named: 'paths'),
-        gitDiff: any(named: 'gitDiff'),
-        baseline: any(named: 'baseline'),
-      ),
+    Future<Report> anyCheck() => check(
+      paths: any(named: 'paths'),
+      gitDiff: any(named: 'gitDiff'),
+      baseline: any(named: 'baseline'),
     );
+
+    Future<Baseline> anyWriteBaseline() =>
+        writeBaseline(any(), paths: any(named: 'paths'));
 
     void stubCheck(Report report) =>
-        whenCheck().thenAnswer((_) async => report);
+        when(anyCheck).thenAnswer((_) async => report);
 
     void stubCheckThrows(Object error) =>
-        whenCheck().thenAnswer((_) => Future.error(error));
+        when(anyCheck).thenAnswer((_) => Future.error(error));
 
     void stubWriteBaseline(Baseline baseline) =>
-        when(() => writeBaseline(any(), paths: any(named: 'paths')))
-            .thenAnswer((_) async => baseline);
-
-    void verifyNoCheck() => verifyNever(
-      () => check(
-        paths: any(named: 'paths'),
-        gitDiff: any(named: 'gitDiff'),
-        baseline: any(named: 'baseline'),
-      ),
-    );
+        when(anyWriteBaseline).thenAnswer((_) async => baseline);
 
     Future<int?> run(
       List<String> arguments, {
@@ -135,7 +127,7 @@ void main() {
             run(['--write-baseline=b.json', other]),
             usageError(startsWith('--write-baseline can not be combined')),
           );
-          verifyNever(() => writeBaseline(any(), paths: any(named: 'paths')));
+          verifyNever(anyWriteBaseline);
         });
       }
 
@@ -164,7 +156,7 @@ void main() {
           equals(ExitCode.success.code),
         );
         verify(() => writeBaseline('b.json', paths: ['pkg'])).called(1);
-        verifyNoCheck();
+        verifyNever(anyCheck);
       });
     });
 
@@ -175,7 +167,7 @@ void main() {
           usageError(startsWith('Path `..` is outside `')),
         );
         expect(out.toString(), isEmpty);
-        verifyNoCheck();
+        verifyNever(anyCheck);
       });
 
       test('a path that is not a directory is a usage error', () async {
@@ -188,7 +180,7 @@ void main() {
           run(['pubspec.yaml']),
           usageError(equals('Path `pubspec.yaml` is not a directory.')),
         );
-        verifyNoCheck();
+        verifyNever(anyCheck);
       });
 
       test('a positional . is the root', () async {
@@ -280,8 +272,7 @@ void main() {
           line: 2,
           column: 3,
         );
-        when(() => writeBaseline(any(), paths: any(named: 'paths')))
-            .thenAnswer((_) => Future.error(error));
+        when(anyWriteBaseline).thenAnswer((_) => Future.error(error));
         expect(
           await run(['--write-baseline=b.json']),
           equals(ExitCode.config.code),
