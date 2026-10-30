@@ -47,6 +47,14 @@ void main() {
         await tree.listFiles(p.join('pkg', 'lib', 'src')),
         equals(['pkg/lib/src/a.dart']),
       );
+      expect(
+        await tree.listFiles(''),
+        equals([
+          'pkg/analysis_options.yaml',
+          'pkg/lib/b.dart',
+          'pkg/lib/src/a.dart',
+        ]),
+      );
     });
 
     test('lists immediate subdirectories at the commit', () async {

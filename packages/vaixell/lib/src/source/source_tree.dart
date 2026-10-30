@@ -8,7 +8,8 @@ import 'package:path/path.dart' as p;
 /// Paths are POSIX-style and relative to the root of the tree, for example
 /// `lib/src/foo.dart`.
 abstract interface class SourceTree {
-  /// Returns the sorted paths of every file under [directory], recursively.
+  /// Returns the sorted paths of every file under [directory], recursively,
+  /// where `''` is the root.
   ///
   /// Returns an empty list when [directory] doesn't exist.
   Future<List<String>> listFiles(String directory);

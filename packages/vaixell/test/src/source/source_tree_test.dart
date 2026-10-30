@@ -24,6 +24,13 @@ void main() {
       );
     });
 
+    test('lists files under the root', () async {
+      expect(
+        await tree.listFiles(''),
+        equals(['lib/b.dart', 'lib/src/a.dart', 'pubspec.yaml']),
+      );
+    });
+
     test('returns no files for a missing directory', () async {
       expect(await tree.listFiles('missing'), isEmpty);
     });
