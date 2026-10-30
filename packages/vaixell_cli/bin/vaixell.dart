@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:vaixell_cli/src/command_runner.dart';
+import 'package:vaixell_cli/vaixell_cli.dart';
 
 Future<void> main(List<String> args) async {
   await _flushThenExit(await VaixellCommandRunner().run(args));
