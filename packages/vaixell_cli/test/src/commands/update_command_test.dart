@@ -6,7 +6,6 @@ import 'package:pub_updater/pub_updater.dart';
 import 'package:test/test.dart';
 import 'package:vaixell_cli/src/command_runner.dart';
 import 'package:vaixell_cli/src/commands/commands.dart';
-import 'package:vaixell_cli/src/version.dart';
 
 class _MockLogger extends Mock implements Logger;
 
@@ -33,7 +32,7 @@ void main() {
       );
 
       when(() => pubUpdater.getLatestVersion(any()))
-          .thenAnswer((_) async => packageVersion);
+          .thenAnswer((_) async => VaixellCommandRunner.packageVersion);
       when(
         () => pubUpdater.update(
           packageName: VaixellCommandRunner.packageName,
@@ -148,7 +147,7 @@ void main() {
 
     test('does not update when already on latest version', () async {
       when(() => pubUpdater.getLatestVersion(any()))
-          .thenAnswer((_) async => packageVersion);
+          .thenAnswer((_) async => VaixellCommandRunner.packageVersion);
       when(() => logger.progress(any())).thenReturn(_MockProgress());
       final result = await commandRunner.run(['update']);
       expect(result, equals(ExitCode.success.code));

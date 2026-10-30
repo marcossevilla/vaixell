@@ -6,7 +6,6 @@ import 'package:cli_completion/cli_completion.dart';
 import 'package:mason_logger/mason_logger.dart';
 import 'package:pub_updater/pub_updater.dart';
 import 'package:vaixell_cli/src/commands/commands.dart';
-import 'package:vaixell_cli/src/version.dart';
 
 /// {@template vaixell_command_runner}
 /// A [CommandRunner] for the CLI.
@@ -52,6 +51,10 @@ class VaixellCommandRunner extends CompletionCommandRunner<int> {
 
   /// The name of the package on pub.dev, used to check for updates.
   static const String packageName = 'vaixell_cli';
+
+  /// The current version of the CLI, kept in sync with `pubspec.yaml` by
+  /// release-please.
+  static const String packageVersion = '0.1.0'; // x-release-please-version
 
   @override
   void printUsage() => _logger.info(usage);
@@ -158,9 +161,8 @@ class VaixellCommandRunner extends CompletionCommandRunner<int> {
     return ExitCode.success.code;
   }
 
-  /// Checks if the current version (set by the build runner on the
-  /// version.dart file) is the most recent one. If not, show a prompt to the
-  /// user.
+  /// Checks if [packageVersion] is the most recent one. If not, show a prompt
+  /// to the user.
   Future<void> _checkForUpdates() async {
     try {
       final latestVersion = await _pubUpdater.getLatestVersion(packageName);

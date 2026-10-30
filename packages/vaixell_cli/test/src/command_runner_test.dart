@@ -7,7 +7,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:pub_updater/pub_updater.dart';
 import 'package:test/test.dart';
 import 'package:vaixell_cli/src/command_runner.dart';
-import 'package:vaixell_cli/src/version.dart';
 
 class _MockLogger extends Mock implements Logger;
 
@@ -20,7 +19,7 @@ const latestVersion = '0.0.0';
 final updatePrompt =
     // We need to ignore this lint in order to match the exact message format.
     // ignore: leading_newlines_in_multiline_strings
-    '''${lightYellow.wrap('Update available!')} ${lightCyan.wrap(packageVersion)} \u2192 ${lightCyan.wrap(latestVersion)}
+    '''${lightYellow.wrap('Update available!')} ${lightCyan.wrap(VaixellCommandRunner.packageVersion)} \u2192 ${lightCyan.wrap(latestVersion)}
 Run ${lightCyan.wrap('vaixell update')} to update''';
 
 void main() {
@@ -33,7 +32,7 @@ void main() {
       pubUpdater = _MockPubUpdater();
 
       when(() => pubUpdater.getLatestVersion(any()))
-          .thenAnswer((_) async => packageVersion);
+          .thenAnswer((_) async => VaixellCommandRunner.packageVersion);
 
       logger = _MockLogger();
 
@@ -195,7 +194,17 @@ void main() {
       test('outputs current version', () async {
         final result = await commandRunner.run(['--version']);
         expect(result, equals(ExitCode.success.code));
-        verify(() => logger.info(packageVersion)).called(1);
+        verify(() => logger.info(VaixellCommandRunner.packageVersion))
+            .called(1);
+      });
+
+      test('matches the pubspec version', () {
+        final pubspec = File('pubspec.yaml').readAsStringSync();
+        final version = RegExp(
+          r'^version: (\S+)$',
+          multiLine: true,
+        ).firstMatch(pubspec)!.group(1);
+        expect(VaixellCommandRunner.packageVersion, equals(version));
       });
     });
 

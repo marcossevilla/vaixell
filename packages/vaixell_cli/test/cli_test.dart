@@ -44,7 +44,10 @@ void main() {
 
   test('--version prints the pubspec version', () async {
     final process = await _vaixell(['--version']);
-    expect(await process.stdout.next, equals(packageVersion));
+    expect(
+      await process.stdout.next,
+      equals(VaixellCommandRunner.packageVersion),
+    );
     await process.shouldExit(ExitCode.success.code);
   });
 

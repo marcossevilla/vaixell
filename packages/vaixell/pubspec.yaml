@@ -6,7 +6,6 @@ issue_tracker: https://github.com/marcossevilla/vaixell/issues
 topics:
   - architecture
   - lints
-  - cli
 
 resolution: workspace
 

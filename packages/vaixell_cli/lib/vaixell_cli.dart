@@ -8,4 +8,3 @@ library;
 
 export 'src/command_runner.dart' show VaixellCommandRunner;
 export 'src/commands/commands.dart' show CheckCommand, UpdateCommand;
-export 'src/version.dart' show packageVersion;

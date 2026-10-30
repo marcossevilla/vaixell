@@ -4,7 +4,6 @@ import 'package:args/command_runner.dart';
 import 'package:mason_logger/mason_logger.dart';
 import 'package:pub_updater/pub_updater.dart';
 import 'package:vaixell_cli/src/command_runner.dart';
-import 'package:vaixell_cli/src/version.dart';
 
 /// {@template update_command}
 /// A command which updates the CLI.
@@ -41,7 +40,7 @@ class UpdateCommand extends Command<int> {
     }
     updateCheckProgress.complete('Checked for updates');
 
-    final isUpToDate = packageVersion == latestVersion;
+    final isUpToDate = VaixellCommandRunner.packageVersion == latestVersion;
     if (isUpToDate) {
       _logger.info('CLI is already at the latest version.');
       return ExitCode.success.code;
