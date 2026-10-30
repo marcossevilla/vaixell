@@ -20,8 +20,8 @@ configure them.
 
 [release-please][release-please] versions `vaixell` and `vaixell_cli`
 independently. Merging a release PR tags the release as `vaixell-v<version>` or
-`vaixell_cli-v<version>`, and the `pub_publish` workflow publishes the matching
-package to pub.dev.
+`vaixell_cli-v<version>`. The `vaixell_publish` or `vaixell_cli_publish`
+workflow then publishes that package to pub.dev.
 
 When `vaixell_cli` needs a new `vaixell` release, the PR that needs it bumps the
 `vaixell` constraint in `packages/vaixell_cli/pubspec.yaml`.
