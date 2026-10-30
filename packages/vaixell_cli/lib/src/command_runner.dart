@@ -54,7 +54,9 @@ class VaixellCommandRunner extends CompletionCommandRunner<int> {
 
   /// The current version of the CLI, kept in sync with `pubspec.yaml` by
   /// release-please.
-  static const String packageVersion = '0.1.0'; // x-release-please-version
+  // x-release-please-start-version
+  static const String packageVersion = '0.1.0-dev.1';
+  // x-release-please-end
 
   @override
   void printUsage() => _logger.info(usage);

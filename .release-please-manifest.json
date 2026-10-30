@@ -1,4 +1,4 @@
 {
-  "packages/vaixell": "0.0.0",
-  "packages/vaixell_cli": "0.0.0"
+  "packages/vaixell": "0.1.0-dev.1",
+  "packages/vaixell_cli": "0.1.0-dev.1"
 }
