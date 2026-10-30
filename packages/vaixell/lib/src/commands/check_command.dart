@@ -4,20 +4,14 @@ import 'package:args/command_runner.dart';
 import 'package:mason_logger/mason_logger.dart';
 import 'package:path/path.dart' as p;
 import 'package:vaixell/src/baseline/baseline.dart';
+import 'package:vaixell/src/check/check.dart';
+import 'package:vaixell/src/check/write_baseline.dart';
 import 'package:vaixell/src/config/config.dart';
-import 'package:vaixell/src/config/config_loader.dart';
-import 'package:vaixell/src/discovery/package_discovery.dart';
-import 'package:vaixell/src/engine/diff_result.dart';
-import 'package:vaixell/src/engine/engine.dart';
-import 'package:vaixell/src/engine/package.dart';
 import 'package:vaixell/src/git/git_runner.dart';
 import 'package:vaixell/src/report/github_reporter.dart';
 import 'package:vaixell/src/report/json_reporter.dart';
-import 'package:vaixell/src/report/report.dart';
 import 'package:vaixell/src/report/reporter.dart';
 import 'package:vaixell/src/report/text_reporter.dart';
-import 'package:vaixell/src/source/git_source_tree.dart';
-import 'package:vaixell/src/source/source_tree.dart';
 import 'package:vaixell/src/violation/violation.dart';
 
 /// {@template check_command}
@@ -29,21 +23,31 @@ class CheckCommand({
   required final Logger _logger,
   Directory? root,
   Map<String, String>? environment,
+  Check? check,
+  WriteBaseline? writeBaseline,
+  Map<String, Reporter>? reporters,
 }) extends Command<int> {
   /// {@macro check_command}
   ///
-  /// Checks the packages in [root] (the current directory by default). The
-  /// report goes to stdout and diagnostics go to stderr, both through the
-  /// logger.
+  /// Checks the packages in [root] (the current directory by default) with
+  /// [check], and writes baselines with [writeBaseline], both on [root] by
+  /// default. Given ones must check the same [root], which the paths are
+  /// validated against. The report goes to stdout and diagnostics go to
+  /// stderr, both through the logger.
   ///
-  /// [environment] (the process environment by default) provides
-  /// `GITHUB_STEP_SUMMARY` for `--format=github`.
+  /// [reporters] maps each `--format` value to its [Reporter], and the first
+  /// one is the default. It must not be empty. Formats other than a
+  /// [TextReporter] keep stdout for the report alone. By default they're a
+  /// [TextReporter], a [JsonReporter] and a [GithubReporter] whose summary
+  /// goes to `GITHUB_STEP_SUMMARY` from [environment] (the process
+  /// environment by default).
   this {
+    assert(_reporters.isNotEmpty, 'reporters must not be empty');
     argParser
       ..addOption(
         'format',
-        allowed: ['text', 'json', 'github'],
-        defaultsTo: 'text',
+        allowed: _reporters.keys,
+        defaultsTo: _reporters.keys.first,
         help: 'The output format.',
       )
       ..addOption(
@@ -71,8 +75,23 @@ class CheckCommand({
   /// The exit code when any reported violation is an error.
   static const int _violationsExitCode = 1;
 
-  final Map<String, String> _environment = environment ?? Platform.environment;
   final Directory _root = root ?? Directory.current;
+  final Check _check = check ?? Check(root: (root ?? Directory.current).path);
+  final WriteBaseline _writeBaseline =
+      writeBaseline ?? WriteBaseline(root: (root ?? Directory.current).path);
+  final Map<String, Reporter> _reporters =
+      reporters ??
+      {
+        'text': const TextReporter(),
+        'json': const JsonReporter(),
+        'github': GithubReporter(
+          summaryPath: switch ((environment ??
+              Platform.environment)['GITHUB_STEP_SUMMARY']) {
+            '' => null,
+            final path => path,
+          },
+        ),
+      };
 
   @override
   String get name => commandName;
@@ -105,42 +124,33 @@ class CheckCommand({
     final invalidPath = results.rest.map(_invalidPath).nonNulls.firstOrNull;
     if (invalidPath != null) usageException(invalidPath);
 
-    final tree = FileSystemSourceTree(_root);
+    // `allowed` limits --format to the keys of _reporters.
+    final reporter = _reporters[results.option('format')]!;
     try {
-      final packages = await _packages(tree, results.rest);
       if (writeBaselinePath != null) {
-        return await _writeBaseline(
-          tree,
-          packages,
+        final baseline = await _writeBaseline(
           writeBaselinePath,
-          // Keep stdout empty in machine-readable formats.
-          toStderr: results.option('format') != 'text',
+          paths: results.rest,
         );
+        final count = baseline.ids.length;
+        final status =
+            'Wrote $count violation id${count == 1 ? '' : 's'} to '
+            '$writeBaselinePath.';
+        // Keep stdout empty in machine-readable formats.
+        if (reporter is TextReporter) {
+          _logger.info(status);
+        } else {
+          _logger.warn(status, tag: '');
+        }
+        return ExitCode.success.code;
       }
-      final baseline = baselinePath == null
-          ? null
-          : await BaselineFile(p.join(_root.path, baselinePath)).read();
-      final violations = await Engine(tree: tree, packages: packages).run();
-
-      final Report report;
-      if (ref != null) {
-        final diff = await _gitDiff(violations, packages, ref);
-        report = Report.compared(
-          ReportMode.diff,
-          violations,
-          diff.suppress(baseline?.ids ?? const {}),
-        );
-      } else if (baseline != null) {
-        report = Report.compared(
-          ReportMode.baseline,
-          violations,
-          DiffResult.compare(base: baseline.ids, head: violations),
-        );
-      } else {
-        report = Report.full(violations);
-      }
+      final report = await _check(
+        paths: results.rest,
+        gitDiff: ref,
+        baseline: baselinePath,
+      );
       final output = StringBuffer();
-      _reporter(results.option('format')!, output).write(report);
+      reporter.write(report, output);
       _logger.write('$output');
       return _exitCode(report.failing);
     } on ConfigException catch (error) {
@@ -155,90 +165,17 @@ class CheckCommand({
     }
   }
 
-  /// Returns the package directories from the positional [paths], or the
-  /// discovered ones when there are none, each with its nearest config.
-  Future<List<Package>> _packages(SourceTree tree, List<String> paths) async {
-    final dirs = paths.isEmpty
-        ? await PackageDiscovery(tree).discover()
-        : {for (final path in paths) _relative(path)}.toList();
-    final resolver = ConfigResolver(tree);
-    return [
-      for (final dir in dirs)
-        Package(path: dir, config: await resolver.forPackage(dir)),
-    ];
-  }
-
   /// Returns why [path] can't be checked, or `null` if it can.
   String? _invalidPath(String path) {
     final full = p.normalize(p.join(_root.path, path));
     if (!p.equals(full, _root.path) && !p.isWithin(_root.path, full)) {
       return 'Path `$path` is outside `${_root.path}`.';
     }
-    if (!Directory(full).existsSync()) {
+    if (!FileSystemEntity.isDirectorySync(full)) {
       return 'Path `$path` is not a directory.';
     }
     return null;
   }
-
-  /// Returns [path] relative to the root, in POSIX style, where `''` is the
-  /// root itself.
-  String _relative(String path) {
-    final relative = p.relative(p.join(_root.path, path), from: _root.path);
-    return relative == '.' ? '' : p.posix.joinAll(p.split(relative));
-  }
-
-  Future<int> _writeBaseline(
-    SourceTree tree,
-    List<Package> packages,
-    String path, {
-    required bool toStderr,
-  }) async {
-    final violations = await Engine(tree: tree, packages: packages).run();
-    final baseline = Baseline(violations.map((v) => v.id));
-    await BaselineFile(p.join(_root.path, path)).write(baseline);
-    final count = baseline.ids.length;
-    final status =
-        'Wrote $count violation id${count == 1 ? '' : 's'} to $path.';
-    if (toStderr) {
-      _logger.warn(status, tag: '');
-    } else {
-      _logger.info(status);
-    }
-    return ExitCode.success.code;
-  }
-
-  /// Compares the [head] violations of the working tree with the merge-base
-  /// of [ref] and `HEAD`, checking the same [packages], with the same
-  /// configs, on both sides.
-  Future<DiffResult> _gitDiff(
-    List<Violation> head,
-    List<Package> packages,
-    String ref,
-  ) async {
-    final git = GitRunner(_root.path);
-    final base = GitSourceTree(git: git, commit: await git.mergeBase(ref));
-    try {
-      final baseViolations = await Engine(tree: base, packages: packages).run();
-      return DiffResult.compare(
-        base: baseViolations.map((v) => v.id),
-        head: head,
-      );
-    } finally {
-      await base.close();
-    }
-  }
-
-  Reporter _reporter(String format, StringSink output) => switch (format) {
-    'json' => JsonReporter(output),
-    'github' => GithubReporter(
-      output,
-      summaryPath: switch (_environment['GITHUB_STEP_SUMMARY']) {
-        '' => null,
-        final path => path,
-      },
-    ),
-    _ => TextReporter(output),
-  };
 
   /// Returns [_violationsExitCode] if any of [violations] is an error, and 0
   /// otherwise.

@@ -12,6 +12,9 @@ Map<String, Severity> _recommendedWith(Map<String, Severity?> overrides) => {
     key: ?value,
 };
 
+ConfigResolver _resolver(Map<String, String> files) =>
+    ConfigResolver(ConfigLoader(MemorySourceTree(files)));
+
 Future<Config> _load(String? yaml) =>
     ConfigLoader(MemorySourceTree({'analysis_options.yaml': ?yaml})).load();
 
@@ -97,10 +100,8 @@ void main() {
         final tree = MemorySourceTree({
           'pkg/analysis_options.yaml': 'vaixell:\n',
         });
-        final config = await ConfigLoader(
-          tree,
-          path: 'pkg/analysis_options.yaml',
-        ).loadIfPresent();
+        final config = await ConfigLoader(tree)
+            .loadIfPresent(path: 'pkg/analysis_options.yaml');
         expect(config!.severities, equals(_recommended));
         expect(config.root, equals('pkg'));
       });
@@ -109,10 +110,8 @@ void main() {
         final tree = MemorySourceTree({
           'pkg/analysis_options.yaml': 'vaixell:\n  exclude: [lib/legacy/**]\n',
         });
-        final config = await ConfigLoader(
-          tree,
-          path: 'pkg/analysis_options.yaml',
-        ).load();
+        final config = await ConfigLoader(tree)
+            .load(path: 'pkg/analysis_options.yaml');
         expect(config.root, equals('pkg'));
         expect(config.excludes('pkg/lib/legacy/a.dart'), isTrue);
         expect(config.excludes('pkg/lib/a.dart'), isFalse);
@@ -133,10 +132,8 @@ void main() {
         final tree = MemorySourceTree({
           'pkg/analysis_options.yaml': 'vaixell:\n  include: []\n',
         });
-        final config = await ConfigLoader(
-          tree,
-          path: 'pkg/analysis_options.yaml',
-        ).load();
+        final config = await ConfigLoader(tree)
+            .load(path: 'pkg/analysis_options.yaml');
         expect(config.severities.keys, equals(['parse-error']));
       });
     });
@@ -233,7 +230,8 @@ void main() {
       Map<String, String> files,
       String package,
     ) async =>
-        (await ConfigResolver(MemorySourceTree(files)).forPackage(package))
+        (await _resolver(files).forPackages([package]))
+            .single
             .severities['top-level-function'];
 
     test('uses recommended without any config', () async {
@@ -263,8 +261,7 @@ void main() {
         'packages/analysis_options.yaml': warning,
         'packages/a/analysis_options.yaml': 'linter: {}\n',
       };
-      final config = await ConfigResolver(MemorySourceTree(files))
-          .forPackage('packages/a');
+      final [config] = await _resolver(files).forPackages(['packages/a']);
       expect(config.root, equals('packages'));
       expect(config.exclude, isEmpty);
       expect(config.severities['top-level-function'], equals(Severity.warning));
@@ -272,21 +269,32 @@ void main() {
 
     test('reads each file once', () async {
       final tree = MemorySourceTree({'analysis_options.yaml': warning});
-      final resolver = ConfigResolver(tree);
-      await resolver.forPackage('packages/a');
-      await resolver.forPackage('packages/b');
-      await resolver.forPackage('');
+      final resolver = ConfigResolver(ConfigLoader(tree));
+      final configs = await resolver.forPackages([
+        'packages/a',
+        'packages/b',
+        '',
+      ]);
+      expect(configs, hasLength(3));
       expect(tree.reads, equals(['analysis_options.yaml']));
     });
 
+    test('reads the files again on the next call', () async {
+      final tree = MemorySourceTree({'analysis_options.yaml': warning});
+      final resolver = ConfigResolver(ConfigLoader(tree));
+      await resolver.forPackages(['packages/a']);
+      tree.files['analysis_options.yaml'] = off;
+      final [config] = await resolver.forPackages(['packages/a']);
+      expect(config.severities, isNot(contains('top-level-function')));
+      expect(tree.reads, hasLength(2));
+    });
+
     test("reports errors from a member's file", () async {
-      final resolver = ConfigResolver(
-        MemorySourceTree({
-          'packages/a/analysis_options.yaml': 'vaixell:\n  nope: 1\n',
-        }),
-      );
+      final resolver = _resolver({
+        'packages/a/analysis_options.yaml': 'vaixell:\n  nope: 1\n',
+      });
       await expectLater(
-        resolver.forPackage('packages/a'),
+        resolver.forPackages(['packages/a']),
         throwsA(
           isA<ConfigException>().having(
             (e) => e.toString(),

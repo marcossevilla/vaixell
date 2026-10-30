@@ -31,11 +31,12 @@ void main() {
     List<String> lines() => out.toString().trimRight().split('\n');
 
     test('annotates every violation in a full run', () {
-      GithubReporter(out).write(
+      const GithubReporter().write(
         Report.full([
           _v('top-level-function:lib/a.dart:foo'),
           _v('top-level-variable:lib/a.dart:x', severity: Severity.warning),
         ]),
+        out,
       );
       const properties =
           'file=lib/a.dart,line=3,col=6,'
@@ -52,11 +53,12 @@ void main() {
 
     test('annotates only new violations in a diff', () {
       final added = _v('top-level-function:lib/a.dart:added');
-      GithubReporter(out).write(
+      const GithubReporter().write(
         Report.compared(ReportMode.diff, [
           added,
           _v('top-level-function:lib/a.dart:old'),
         ], DiffResult(added: [added], fixed: const ['gone'])),
+        out,
       );
       expect(lines(), hasLength(2));
       expect(lines().first, endsWith('[top-level-function:lib/a.dart:added]'));
@@ -64,7 +66,7 @@ void main() {
     });
 
     test('escapes messages and property values', () {
-      GithubReporter(out).write(
+      const GithubReporter().write(
         Report.full([
           _v(
             'id',
@@ -72,6 +74,7 @@ void main() {
             message: '100% sure:\r\nyes, really',
           ),
         ]),
+        out,
       );
       expect(
         lines().first,
@@ -83,12 +86,13 @@ void main() {
     });
 
     test('caps annotations per severity and prints the rest', () {
-      GithubReporter(out).write(
+      const GithubReporter().write(
         Report.full([
           for (var i = 0; i < 12; i++) _v('e$i', line: i + 1),
           for (var i = 0; i < 3; i++)
             _v('w$i', severity: Severity.warning, line: i + 1),
         ]),
+        out,
       );
       final output = lines();
       expect(output.where((l) => l.startsWith('::error ')), hasLength(10));
@@ -108,13 +112,13 @@ void main() {
       setUp(() => path = d.path('summary.md'));
 
       test('is not written without a path', () {
-        GithubReporter(out).write(Report.full([_v('x')]));
+        const GithubReporter().write(Report.full([_v('x')]), out);
         expect(File(path).existsSync(), isFalse);
       });
 
       test('is appended to, not overwritten', () {
         File(path).writeAsStringSync('previous step\n');
-        GithubReporter(out, summaryPath: path).write(const Report.full([]));
+        GithubReporter(summaryPath: path).write(const Report.full([]), out);
         expect(
           File(path).readAsStringSync(),
           equals(
@@ -132,10 +136,11 @@ void main() {
           'top-level-function:lib/a.dart:added',
           message: 'Pipes | and\nnew lines.',
         );
-        GithubReporter(out, summaryPath: path).write(
+        GithubReporter(summaryPath: path).write(
           Report.compared(ReportMode.baseline, [
             added,
           ], DiffResult(added: [added], fixed: const ['a', 'b'])),
+          out,
         );
         expect(
           File(path).readAsStringSync(),
@@ -162,10 +167,8 @@ void main() {
       });
 
       test('lists every violation and says how many were not annotated', () {
-        GithubReporter(
-          out,
-          summaryPath: path,
-        ).write(Report.full([for (var i = 0; i < 12; i++) _v('e$i')]));
+        GithubReporter(summaryPath: path)
+            .write(Report.full([for (var i = 0; i < 12; i++) _v('e$i')]), out);
         final summary = File(path).readAsStringSync();
         expect(summary, contains('### Violations\n'));
         expect(
@@ -183,10 +186,8 @@ void main() {
       });
 
       test('uses the singular for one violation left out', () {
-        GithubReporter(
-          out,
-          summaryPath: path,
-        ).write(Report.full([for (var i = 0; i < 11; i++) _v('e$i')]));
+        GithubReporter(summaryPath: path)
+            .write(Report.full([for (var i = 0; i < 11; i++) _v('e$i')]), out);
         expect(
           File(path).readAsStringSync(),
           contains('> 1 violation was not annotated'),

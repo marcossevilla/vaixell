@@ -24,7 +24,7 @@ void main() {
   group(JsonReporter, () {
     test('writes one indented document and a trailing newline', () {
       final out = StringBuffer();
-      JsonReporter(out).write(const Report.full([]));
+      const JsonReporter().write(const Report.full([]), out);
       expect(
         out.toString(),
         equals(

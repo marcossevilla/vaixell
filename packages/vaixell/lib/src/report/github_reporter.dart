@@ -16,23 +16,22 @@ import 'package:vaixell/src/violation/violation.dart';
 /// When [summaryPath] is set, usually from `$GITHUB_STEP_SUMMARY`, a
 /// Markdown summary with the counts and tables of new and fixed violations
 /// is appended to that file.
-class const GithubReporter(
-  /// The sink that workflow commands are written to.
-  final StringSink out, {
-
+class const GithubReporter({
   /// The step summary file, or `null` to skip the summary.
   final String? summaryPath,
 }) implements Reporter {
-  /// Creates a reporter that writes commands to [out] and appends the
-  /// Markdown summary to [summaryPath], if set.
+  /// Creates a reporter that appends the Markdown summary to [summaryPath],
+  /// if set.
   this;
 
   /// The number of annotations of each severity GitHub shows per step.
   static const int maxAnnotations = 10;
 
+  /// Formats the plain violation and summary lines.
+  static const TextReporter _text = TextReporter();
+
   @override
-  void write(Report report) {
-    final text = TextReporter(out);
+  void write(Report report, StringSink out) {
     final counts = <Severity, int>{};
     var skipped = 0;
     for (final v in report.failing) {
@@ -41,16 +40,14 @@ class const GithubReporter(
         out.writeln(_annotation(v));
       } else {
         skipped++;
-        out.writeln(text.describe(v));
+        out.writeln(_text.describe(v));
       }
     }
-    out.writeln(text.summary(report));
+    out.writeln(_text.summary(report));
     final summaryPath = this.summaryPath;
     if (summaryPath != null) {
-      File(summaryPath).writeAsStringSync(
-        _markdown(report, text, skipped),
-        mode: FileMode.append,
-      );
+      File(summaryPath)
+          .writeAsStringSync(_markdown(report, skipped), mode: FileMode.append);
     }
   }
 
@@ -70,11 +67,11 @@ class const GithubReporter(
   String _property(String value) =>
       _data(value).replaceAll(':', '%3A').replaceAll(',', '%2C');
 
-  String _markdown(Report report, TextReporter text, int skipped) {
+  String _markdown(Report report, int skipped) {
     final buffer = StringBuffer()
       ..writeln('## vaixell')
       ..writeln()
-      ..writeln('**${text.summary(report)}** (${report.mode.name} mode)')
+      ..writeln('**${_text.summary(report)}** (${report.mode.name} mode)')
       ..writeln();
     final failing = report.failing;
     if (failing.isNotEmpty) {

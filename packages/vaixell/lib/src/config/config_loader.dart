@@ -13,15 +13,39 @@ import 'package:yaml/yaml.dart';
 /// Only the `vaixell:` key is read. The analyzer's own top-level `include:`
 /// is never followed, so the target repo needs no `pub get`.
 class const ConfigLoader(
-  /// The tree that holds the config file.
-  final SourceTree tree, {
-
-  /// The path of the config file in [tree].
-  final String path = 'analysis_options.yaml',
-}) {
-  /// Creates a loader that reads the config at [path] in [tree].
+  /// The tree that holds the config files.
+  final SourceTree tree,
+) {
+  /// Creates a loader that reads configs from [tree].
   this;
 
+  /// The path of the root config file.
+  static const String defaultPath = 'analysis_options.yaml';
+
+  /// Returns the config at [path] in [tree], or [Config.recommended] when
+  /// the file or its `vaixell:` key is missing.
+  ///
+  /// Throws a [ConfigException] when the file isn't valid YAML or the
+  /// `vaixell:` section is invalid.
+  Future<Config> load({String path = defaultPath}) async =>
+      await loadIfPresent(path: path) ?? Config.recommended();
+
+  /// Returns the config at [path] in [tree], or `null` when the file or its
+  /// `vaixell:` key is missing. An empty `vaixell:` key counts as present.
+  ///
+  /// Throws a [ConfigException] when the file isn't valid YAML or the
+  /// `vaixell:` section is invalid.
+  Future<Config?> loadIfPresent({String path = defaultPath}) async {
+    if (!await tree.exists(path)) return null;
+    return _ConfigFile(path).parse(await tree.read(path));
+  }
+}
+
+/// The `vaixell:` section of one config file at [path].
+class const _ConfigFile(
+  /// The path of the file, for error locations and the exclude root.
+  final String path,
+) {
   static const List<String> _keys = ['include', 'rules', 'exclude'];
   static const Map<String, Severity?> _severities = {
     'off': null,
@@ -35,21 +59,10 @@ class const ConfigLoader(
     final dir => dir,
   };
 
-  /// Returns the config, or [Config.recommended] when the file or its
-  /// `vaixell:` key is missing.
-  ///
-  /// Throws a [ConfigException] when the file isn't valid YAML or the
-  /// `vaixell:` section is invalid.
-  Future<Config> load() async => await loadIfPresent() ?? Config.recommended();
-
-  /// Returns the config, or `null` when the file or its `vaixell:` key is
-  /// missing. An empty `vaixell:` key counts as present.
-  ///
-  /// Throws a [ConfigException] when the file isn't valid YAML or the
-  /// `vaixell:` section is invalid.
-  Future<Config?> loadIfPresent() async {
-    if (!await tree.exists(path)) return null;
-    final root = _parse(await tree.read(path));
+  /// Returns the config in [content], or `null` when its `vaixell:` key is
+  /// missing.
+  Config? parse(String content) {
+    final root = _yaml(content);
     if (root is! YamlMap || !root.containsKey('vaixell')) return null;
     final section = root.nodes['vaixell']!;
     if (section.value == null) {
@@ -58,7 +71,7 @@ class const ConfigLoader(
     return _section(section);
   }
 
-  YamlNode _parse(String content) {
+  YamlNode _yaml(String content) {
     try {
       return loadYamlNode(content, sourceUrl: Uri.file(path));
     } on YamlException catch (error) {
@@ -185,27 +198,33 @@ class const ConfigLoader(
 /// Finds the config for each package: the nearest `analysis_options.yaml`
 /// with a `vaixell:` key, from the package directory up to the root.
 ///
-/// Configs are never merged. Each file is read at most once.
-class ConfigResolver(
-  /// The tree that holds the config files.
-  final SourceTree tree,
+/// Configs are never merged.
+class const ConfigResolver(
+  /// The loader that reads the config files.
+  final ConfigLoader loader,
 ) {
-  /// Creates a resolver that reads configs from [tree].
+  /// Creates a resolver that reads configs with [loader].
   this;
 
-  final Map<String, Future<Config?>> _cache = {};
-
-  /// Returns the config for the package at [package], relative to the root,
-  /// or [Config.recommended] when no file up to the root has a `vaixell:`
-  /// key.
+  /// Returns the config for each package in [packages], relative to the
+  /// root, in order, or [Config.recommended] when no file up to the root has
+  /// a `vaixell:` key. Each file is read at most once per call.
   ///
   /// Throws a [ConfigException] for the first invalid file on the way.
-  Future<Config> forPackage(String package) async {
+  Future<List<Config>> forPackages(List<String> packages) async {
+    final cache = <String, Future<Config?>>{};
+    return [for (final package in packages) await _forPackage(package, cache)];
+  }
+
+  Future<Config> _forPackage(
+    String package,
+    Map<String, Future<Config?>> cache,
+  ) async {
     for (var dir = package; ; dir = _parent(dir)) {
-      final path = p.posix.join(dir, 'analysis_options.yaml');
-      final config = await _cache.putIfAbsent(
+      final path = p.posix.join(dir, ConfigLoader.defaultPath);
+      final config = await cache.putIfAbsent(
         path,
-        () => ConfigLoader(tree, path: path).loadIfPresent(),
+        () => loader.loadIfPresent(path: path),
       );
       if (config != null) return config;
       if (dir.isEmpty) return Config.recommended();

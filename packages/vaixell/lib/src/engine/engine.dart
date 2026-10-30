@@ -9,21 +9,19 @@ import 'package:vaixell/src/source/source_tree.dart';
 import 'package:vaixell/src/violation/violation.dart';
 
 /// Runs rules over the Dart files of packages.
-class Engine({
-  /// The files to check.
-  required final SourceTree tree,
-
-  /// The packages to check.
-  required final List<Package> packages,
-}) {
-  /// Creates an engine that reads files from [tree] and checks each of the
-  /// [packages] with the rules enabled in its config.
+class const Engine() {
+  /// Creates an engine.
   this;
 
-  /// Checks every Dart file under each package's `lib/` that isn't
-  /// generated or excluded by its config, and returns the violations,
-  /// sorted by path, line and column.
-  Future<List<Violation>> run() async {
+  /// Reads files from [tree] and checks every Dart file under each of the
+  /// [packages]' `lib/` that isn't generated or excluded by its config, with
+  /// the rules enabled in that config.
+  ///
+  /// Returns the violations, sorted by path, line and column.
+  Future<List<Violation>> run({
+    required SourceTree tree,
+    required List<Package> packages,
+  }) async {
     final violations = <Violation>[];
     for (final package in packages) {
       final rules = [
@@ -31,14 +29,14 @@ class Engine({
           if (package.config.severities[rule.id] case final severity?)
             (rule, severity),
       ];
-      for (final path in await _dartFiles(package)) {
+      for (final path in await _dartFiles(tree, package)) {
         violations.addAll(_check(path, await tree.read(path), rules));
       }
     }
     return violations..sort(_compare);
   }
 
-  Future<List<String>> _dartFiles(Package package) async {
+  Future<List<String>> _dartFiles(SourceTree tree, Package package) async {
     const generated = GeneratedFiles();
     return [
       for (final path in await tree.listFiles(
