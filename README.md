@@ -26,19 +26,5 @@ workflow then publishes that package to pub.dev.
 When `vaixell_cli` needs a new `vaixell` release, the PR that needs it bumps the
 `vaixell` constraint in `packages/vaixell_cli/pubspec.yaml`.
 
-Before the first automated release, set up each package by hand:
-
-1. Publish a pre-release by hand so the package exists on pub.dev. Without
-   committing, set `version: 0.1.0-dev.1` in both `pubspec.yaml` files and the CLI's
-   `vaixell` constraint to `^0.1.0-dev.1`. Then run `dart pub publish` in
-   `packages/vaixell`, then in `packages/vaixell_cli`, and discard the changes.
-   Don't commit pre-release versions: release-please's Dart updater reads the
-   suffix as a build number.
-2. On pub.dev, open each package's **Admin** tab and enable **Automated
-   publishing** from GitHub Actions:
-   - Repository: `marcossevilla/vaixell`
-   - Tag pattern: `vaixell-v{{version}}` for `vaixell`, and
-     `vaixell_cli-v{{version}}` for `vaixell_cli`
-
 [release-please]: https://github.com/googleapis/release-please
 [workspace]: https://dart.dev/tools/pub/workspaces
