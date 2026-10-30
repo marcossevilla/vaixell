@@ -48,13 +48,19 @@ void main() {
       writeBaseline = _MockWriteBaseline();
     });
 
-    void stubCheck(Future<Report> Function() answer) => when(
+    When<Future<Report>> whenCheck() => when(
       () => check(
         paths: any(named: 'paths'),
         gitDiff: any(named: 'gitDiff'),
         baseline: any(named: 'baseline'),
       ),
-    ).thenAnswer((_) => answer());
+    );
+
+    void stubCheck(Report report) =>
+        whenCheck().thenAnswer((_) async => report);
+
+    void stubCheckThrows(Object error) =>
+        whenCheck().thenAnswer((_) => Future.error(error));
 
     void stubWriteBaseline(Baseline baseline) =>
         when(() => writeBaseline(any(), paths: any(named: 'paths')))
@@ -134,15 +140,18 @@ void main() {
       }
 
       test('passes the paths and options to check', () async {
-        stubCheck(() async => const Report.full([]));
+        stubCheck(const Report.full([]));
         await d.dir('pkg').create();
-        await run(['--git-diff=main', '--baseline=b.json', 'pkg']);
+        expect(
+          await run(['--git-diff=main', '--baseline=b.json', 'pkg']),
+          equals(ExitCode.success.code),
+        );
         verify(() => check(paths: ['pkg'], gitDiff: 'main', baseline: 'b.json'))
             .called(1);
       });
 
       test('checks the discovered packages without paths', () async {
-        stubCheck(() async => const Report.full([]));
+        stubCheck(const Report.full([]));
         await run([]);
         verify(() => check(paths: [])).called(1);
       });
@@ -150,7 +159,10 @@ void main() {
       test('passes the paths and file to writeBaseline', () async {
         stubWriteBaseline(Baseline(const []));
         await d.dir('pkg').create();
-        await run(['--write-baseline=b.json', 'pkg']);
+        expect(
+          await run(['--write-baseline=b.json', 'pkg']),
+          equals(ExitCode.success.code),
+        );
         verify(() => writeBaseline('b.json', paths: ['pkg'])).called(1);
         verifyNoCheck();
       });
@@ -180,7 +192,7 @@ void main() {
       });
 
       test('a positional . is the root', () async {
-        stubCheck(() async => const Report.full([]));
+        stubCheck(const Report.full([]));
         expect(await run(['.']), equals(ExitCode.success.code));
         verify(() => check(paths: ['.'])).called(1);
       });
@@ -188,23 +200,23 @@ void main() {
 
     group('exit codes', () {
       test('exits 1 when a violation is an error', () async {
-        stubCheck(() async => const Report.full([_error, _warning]));
+        stubCheck(const Report.full([_error, _warning]));
         expect(await run([]), equals(1));
       });
 
       test('exits 0 without violations', () async {
-        stubCheck(() async => const Report.full([]));
+        stubCheck(const Report.full([]));
         expect(await run([]), equals(ExitCode.success.code));
       });
 
       test('exits 0 when every violation is a warning', () async {
-        stubCheck(() async => const Report.full([_warning]));
+        stubCheck(const Report.full([_warning]));
         expect(await run([]), equals(ExitCode.success.code));
       });
 
       test('exits 0 when violations are only fixed', () async {
         stubCheck(
-          () async => const Report.compared(ReportMode.diff, [
+          const Report.compared(ReportMode.diff, [
             _error,
           ], DiffResult(added: [], fixed: ['top-level-function:lib/a.dart:x'])),
         );
@@ -213,7 +225,7 @@ void main() {
 
       test('exits 1 when a new violation is an error', () async {
         stubCheck(
-          () async => const Report.compared(ReportMode.baseline, [
+          const Report.compared(ReportMode.baseline, [
             _error,
             _warning,
           ], DiffResult(added: [_error], fixed: [])),
@@ -223,7 +235,7 @@ void main() {
 
       test('exits 0 when every new violation is a warning', () async {
         stubCheck(
-          () async => const Report.compared(ReportMode.diff, [
+          const Report.compared(ReportMode.diff, [
             _error,
             _warning,
           ], DiffResult(added: [_warning], fixed: [])),
@@ -251,19 +263,14 @@ void main() {
         ),
       };
       for (final MapEntry(key: name, value: (error, code)) in errors.entries) {
-        test('exits $code on a $name, on stderr only', () async {
-          stubCheck(() async => throw error);
-          expect(await run([]), equals(code));
-          expect(err.toString(), equals('$error\n'));
-          expect(out.toString(), isEmpty);
-        });
-
-        test('exits $code on a $name with --format=json', () async {
-          stubCheck(() async => throw error);
-          expect(await run(['--format=json']), equals(code));
-          expect(err.toString(), equals('$error\n'));
-          expect(out.toString(), isEmpty);
-        });
+        for (final format in ['text', 'json']) {
+          test('exits $code on a $name, on stderr only, in $format', () async {
+            stubCheckThrows(error);
+            expect(await run(['--format=$format']), equals(code));
+            expect(err.toString(), equals('$error\n'));
+            expect(out.toString(), isEmpty);
+          });
+        }
       }
 
       test('exits 78 when writing a baseline fails on a config', () async {
@@ -274,7 +281,7 @@ void main() {
           column: 3,
         );
         when(() => writeBaseline(any(), paths: any(named: 'paths')))
-            .thenAnswer((_) async => throw error);
+            .thenAnswer((_) => Future.error(error));
         expect(
           await run(['--write-baseline=b.json']),
           equals(ExitCode.config.code),
@@ -286,7 +293,7 @@ void main() {
 
     group('output', () {
       test('writes the text report to stdout by default', () async {
-        stubCheck(() async => const Report.full([_error]));
+        stubCheck(const Report.full([_error]));
         await run([]);
         expect(
           out.toString(),
@@ -300,7 +307,7 @@ void main() {
       });
 
       test('--format=json writes the JSON document to stdout', () async {
-        stubCheck(() async => const Report.full([_error]));
+        stubCheck(const Report.full([_error]));
         await run(['--format=json']);
         final output = StringBuffer();
         const JsonReporter().write(const Report.full([_error]), output);
@@ -311,7 +318,7 @@ void main() {
       test(
         '--format=github annotates and appends to GITHUB_STEP_SUMMARY',
         () async {
-          stubCheck(() async => const Report.full([_error]));
+          stubCheck(const Report.full([_error]));
           expect(
             await run(
               ['--format=github'],
@@ -331,7 +338,7 @@ void main() {
       );
 
       test('--format=github skips an empty GITHUB_STEP_SUMMARY', () async {
-        stubCheck(() async => const Report.full([_error]));
+        stubCheck(const Report.full([_error]));
         expect(
           await run(
             ['--format=github'],
@@ -343,7 +350,7 @@ void main() {
       });
 
       test('--format=github skips a missing GITHUB_STEP_SUMMARY', () async {
-        stubCheck(() async => const Report.full([_error]));
+        stubCheck(const Report.full([_error]));
         expect(await run(['--format=github']), equals(1));
         expect(Directory(d.sandbox).listSync(), isEmpty);
       });
@@ -389,7 +396,7 @@ void main() {
       });
 
       test('writes the report with the given reporter', () async {
-        stubCheck(() async => const Report.full([_error]));
+        stubCheck(const Report.full([_error]));
         expect(await run([], reporters: {'custom': reporter}), equals(1));
         verify(() => reporter.write(const Report.full([_error]), any()))
             .called(1);
