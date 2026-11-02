@@ -8,6 +8,16 @@ import 'package:vaixell/vaixell.dart';
 import '../../helpers/git_repo.dart';
 import '../../helpers/memory_source_tree.dart';
 
+class _MockPackageResolver extends Mock implements PackageResolver;
+
+class _MockEngine extends Mock implements Engine;
+
+class _MockBaselineFile extends Mock implements BaselineFile;
+
+class _MockGitRunner extends Mock implements GitRunner;
+
+class _MockClosableSourceTree extends Mock implements ClosableSourceTree;
+
 void main() {
   group(Check, () {
     Future<Report> check({
@@ -55,7 +65,7 @@ void main() {
         expect(violation.severity, equals(Severity.warning));
       });
 
-      test('throws a ConfigException on an invalid config', () async {
+      test('throws a $ConfigException on an invalid config', () async {
         await d
             .file('analysis_options.yaml', 'vaixell:\n  rulez: {}\n')
             .create();
@@ -160,12 +170,12 @@ workspace:
         );
       });
 
-      test('throws a ConfigException on an invalid workspace', () async {
+      test('throws a $ConfigException on an invalid workspace', () async {
         await d.file('pubspec.yaml', 'workspace:\n  - packages/c\n').create();
         await expectLater(check(), throwsA(isA<ConfigException>()));
       });
 
-      test('throws a ConfigException with the member config path', () async {
+      test('throws a $ConfigException with the member config path', () async {
         await d
             .file('packages/b/analysis_options.yaml', 'vaixell:\n  bad: 1\n')
             .create();
@@ -204,7 +214,7 @@ workspace:
         expect(report.diff!.fixed, ['top-level-function:lib/a.dart:bar']);
       });
 
-      test('throws a BaselineException for a missing baseline', () async {
+      test('throws a $BaselineException for a missing baseline', () async {
         await expectLater(
           check(baseline: 'missing.json'),
           throwsA(
@@ -217,7 +227,7 @@ workspace:
         );
       });
 
-      test('throws a BaselineException for a malformed baseline', () async {
+      test('throws a $BaselineException for a malformed baseline', () async {
         await d.file('baseline.json', '{"violations": []}').create();
         await expectLater(
           check(baseline: 'baseline.json'),
@@ -310,7 +320,7 @@ workspace:
         expect(report.diff!.fixed, ['top-level-function:lib/a.dart:old']);
       });
 
-      test('throws a GitException for a ref that can not be found', () async {
+      test('throws a $GitException for a ref that can not be found', () async {
         await expectLater(
           check(gitDiff: 'origin/main'),
           throwsA(
@@ -323,7 +333,7 @@ workspace:
         );
       });
 
-      test('throws a GitException outside a git repository', () async {
+      test('throws a $GitException outside a git repository', () async {
         // The sandbox is a repository, so use a directory outside it.
         final plain = await Directory.systemTemp.createTemp('vaixell_');
         addTearDown(() => plain.delete(recursive: true));
@@ -424,13 +434,3 @@ workspace:
     });
   });
 }
-
-class _MockPackageResolver extends Mock implements PackageResolver;
-
-class _MockEngine extends Mock implements Engine;
-
-class _MockBaselineFile extends Mock implements BaselineFile;
-
-class _MockGitRunner extends Mock implements GitRunner;
-
-class _MockClosableSourceTree extends Mock implements ClosableSourceTree;

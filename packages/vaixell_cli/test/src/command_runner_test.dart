@@ -15,16 +15,16 @@ class _MockProgress extends Mock implements Progress;
 
 class _MockPubUpdater extends Mock implements PubUpdater;
 
-const latestVersion = '0.0.0';
+const _latestVersion = '0.0.0';
 
-final updatePrompt =
+final _updatePrompt =
     // We need to ignore this lint in order to match the exact message format.
     // ignore: leading_newlines_in_multiline_strings
-    '''${lightYellow.wrap('Update available!')} ${lightCyan.wrap(VaixellCommandRunner.packageVersion)} \u2192 ${lightCyan.wrap(latestVersion)}
+    '''${lightYellow.wrap('Update available!')} ${lightCyan.wrap(VaixellCommandRunner.packageVersion)} \u2192 ${lightCyan.wrap(_latestVersion)}
 Run ${lightCyan.wrap('vaixell update')} to update''';
 
 void main() {
-  group('VaixellCommandRunner', () {
+  group(VaixellCommandRunner, () {
     late PubUpdater pubUpdater;
     late Logger logger;
     late VaixellCommandRunner commandRunner;
@@ -46,11 +46,11 @@ void main() {
 
     test('shows update message when newer version exists', () async {
       when(() => pubUpdater.getLatestVersion(any()))
-          .thenAnswer((_) async => latestVersion);
+          .thenAnswer((_) async => _latestVersion);
 
       final result = await commandRunner.run(['--version']);
       expect(result, equals(ExitCode.success.code));
-      verify(() => logger.info(updatePrompt)).called(1);
+      verify(() => logger.info(_updatePrompt)).called(1);
     });
 
     test('shows error message when failed to check for updates', () async {
@@ -61,19 +61,19 @@ void main() {
       verify(() => logger.err('Failed to check for updates.')).called(1);
     });
 
-    test('Does not show update message when the shell calls the '
+    test('does not show update message when the shell calls the '
         'completion command', () async {
       when(() => pubUpdater.getLatestVersion(any()))
-          .thenAnswer((_) async => latestVersion);
+          .thenAnswer((_) async => _latestVersion);
 
       final result = await commandRunner.run(['completion']);
       expect(result, equals(ExitCode.success.code));
-      verifyNever(() => logger.info(updatePrompt));
+      verifyNever(() => logger.info(_updatePrompt));
     });
 
     test('does not show update message when using update command', () async {
       when(() => pubUpdater.getLatestVersion(any()))
-          .thenAnswer((_) async => latestVersion);
+          .thenAnswer((_) async => _latestVersion);
       when(
         () => pubUpdater.update(
           packageName: VaixellCommandRunner.packageName,
@@ -99,17 +99,17 @@ void main() {
 
       final result = await commandRunner.run(['update']);
       expect(result, equals(ExitCode.success.code));
-      verifyNever(() => logger.info(updatePrompt));
+      verifyNever(() => logger.info(_updatePrompt));
     });
 
     test('does not show update message for machine-readable '
         'check output', () async {
       when(() => pubUpdater.getLatestVersion(any()))
-          .thenAnswer((_) async => latestVersion);
+          .thenAnswer((_) async => _latestVersion);
 
       await commandRunner.run(['check', '--format=json']);
       verifyNever(() => pubUpdater.getLatestVersion(any()));
-      verifyNever(() => logger.info(updatePrompt));
+      verifyNever(() => logger.info(_updatePrompt));
     });
 
     test('does not auto-install completion files for machine-readable '
@@ -145,10 +145,10 @@ void main() {
 
     test('shows update message after a text check', () async {
       when(() => pubUpdater.getLatestVersion(any()))
-          .thenAnswer((_) async => latestVersion);
+          .thenAnswer((_) async => _latestVersion);
 
       await commandRunner.run(['check']);
-      verify(() => logger.info(updatePrompt)).called(1);
+      verify(() => logger.info(_updatePrompt)).called(1);
     });
 
     test(
@@ -160,7 +160,7 @@ void main() {
       },
     );
 
-    test('handles FormatException', () async {
+    test('handles $FormatException', () async {
       const exception = FormatException('oops!');
       var isFirstInvocation = true;
       when(() => logger.info(any())).thenAnswer((_) {
@@ -176,7 +176,7 @@ void main() {
       verify(() => logger.info(commandRunner.usage)).called(1);
     });
 
-    test('handles UsageException', () async {
+    test('handles $UsageException', () async {
       final exception = UsageException('oops!', 'exception usage');
       var isFirstInvocation = true;
       when(() => logger.info(any())).thenAnswer((_) {

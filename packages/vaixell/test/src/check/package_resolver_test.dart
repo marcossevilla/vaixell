@@ -4,6 +4,10 @@ import 'package:vaixell/vaixell.dart';
 
 import '../../helpers/memory_source_tree.dart';
 
+class _MockPackageDiscovery extends Mock implements PackageDiscovery;
+
+class _MockConfigResolver extends Mock implements ConfigResolver;
+
 void main() {
   group(PackageResolver, () {
     late MemorySourceTree tree;
@@ -45,7 +49,7 @@ void main() {
       expect(packages.map((p) => p.path), equals(['packages/a', '']));
     });
 
-    test('throws a ConfigException for an invalid workspace', () async {
+    test('throws a $ConfigException for an invalid workspace', () async {
       tree.files['pubspec.yaml'] = 'workspace:\n  - packages/c\n';
       await expectLater(resolve([]), throwsA(isA<ConfigException>()));
     });
@@ -84,7 +88,3 @@ void main() {
     });
   });
 }
-
-class _MockPackageDiscovery extends Mock implements PackageDiscovery;
-
-class _MockConfigResolver extends Mock implements ConfigResolver;

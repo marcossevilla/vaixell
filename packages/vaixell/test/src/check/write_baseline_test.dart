@@ -5,6 +5,12 @@ import 'package:vaixell/vaixell.dart';
 
 import '../../helpers/memory_source_tree.dart';
 
+class _MockPackageResolver extends Mock implements PackageResolver;
+
+class _MockEngine extends Mock implements Engine;
+
+class _MockBaselineFile extends Mock implements BaselineFile;
+
 void main() {
   group(WriteBaseline, () {
     setUp(
@@ -63,7 +69,7 @@ void main() {
       );
     });
 
-    test('throws a ConfigException on an invalid config', () async {
+    test('throws a $ConfigException on an invalid config', () async {
       await d.file('analysis_options.yaml', 'vaixell:\n  rulez: {}\n').create();
       await expectLater(
         WriteBaseline(root: d.sandbox)('baseline.json'),
@@ -109,9 +115,3 @@ void main() {
     });
   });
 }
-
-class _MockPackageResolver extends Mock implements PackageResolver;
-
-class _MockEngine extends Mock implements Engine;
-
-class _MockBaselineFile extends Mock implements BaselineFile;
