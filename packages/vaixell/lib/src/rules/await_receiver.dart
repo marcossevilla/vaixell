@@ -14,7 +14,9 @@ import 'package:vaixell/src/violation/violation.dart';
 /// Awaits in conditions, arguments, initializers and `return` or `=>`
 /// positions are allowed, as long as their result isn't dereferenced there.
 ///
-/// Ids use the enclosing declaration, such as `ApiClient.getUser`.
+/// Ids use the enclosing declaration and the name of the awaited call or
+/// getter, such as `ApiClient.getUser@_fetch`, so adding or removing a
+/// finding that awaits something else doesn't change them.
 final class const AwaitReceiverRule() extends Rule {
   /// Creates the rule.
   this;
@@ -45,12 +47,34 @@ class _AwaitReceiverVisitor extends RecursiveAstVisitor<void> {
           message:
               '`await` result is used as a receiver. '
               'Assign it to a local variable first.',
-          symbol: const EnclosingDeclaration().symbolOf(node),
+          symbol: _symbolOf(node),
         ),
       );
     }
     super.visitAwaitExpression(node);
   }
+
+  /// Returns the enclosing declaration of [node], followed by `@` and the
+  /// name of what it awaits when it has one.
+  String? _symbolOf(AwaitExpression node) {
+    final enclosing = const EnclosingDeclaration().symbolOf(node);
+    return switch (_nameOf(node.expression)) {
+      final name? => '${enclosing ?? ''}@$name',
+      null => enclosing,
+    };
+  }
+
+  /// Returns the name of the method, function, getter or variable that
+  /// [expression] calls or reads, or `null` when it has none.
+  String? _nameOf(Expression expression) =>
+      switch (expression.unParenthesized) {
+        MethodInvocation(:final methodName) => methodName.name,
+        FunctionExpressionInvocation(:final function) => _nameOf(function),
+        PropertyAccess(:final propertyName) => propertyName.name,
+        PrefixedIdentifier(:final identifier) => identifier.name,
+        SimpleIdentifier(:final name) => name,
+        _ => null,
+      };
 
   /// Returns the outermost expression around [node] that only wraps it in
   /// parentheses or `as` casts.

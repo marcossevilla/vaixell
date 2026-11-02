@@ -80,8 +80,8 @@ class Foo {
 ''',
       });
       expect(violations.map((v) => v.id), [
-        'await-receiver:lib/a.dart:Foo.bar',
-        'await-receiver:lib/a.dart:Foo.bar#2',
+        'await-receiver:lib/a.dart:Foo.bar@f',
+        'await-receiver:lib/a.dart:Foo.bar@g',
       ]);
       expect(violations.map((v) => v.severity), everyElement(Severity.warning));
       expect((violations.first.line, violations.first.column), equals((3, 6)));

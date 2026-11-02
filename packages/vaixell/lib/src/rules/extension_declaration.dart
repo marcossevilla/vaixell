@@ -1,13 +1,11 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:vaixell/src/rules/enclosing_declaration.dart';
 import 'package:vaixell/src/rules/rule.dart';
 
 /// Reports extensions, named or unnamed, and extension types.
 final class const ExtensionDeclarationRule() extends Rule {
   /// Creates the rule.
   this;
-
-  /// The symbol used in ids for an extension without a name.
-  static const String unnamed = '<unnamed>';
 
   @override
   String get id => 'extension-declaration';
@@ -25,7 +23,7 @@ final class const ExtensionDeclarationRule() extends Rule {
         ),
         ExtensionDeclaration(:final extensionKeyword) => Finding(
           offset: extensionKeyword.offset,
-          symbol: unnamed,
+          symbol: EnclosingDeclaration.unnamed,
           message: 'Unnamed extensions are not allowed. Use a class instead.',
         ),
         ExtensionTypeDeclaration(namePart: ClassNamePart(:final typeName)) =>

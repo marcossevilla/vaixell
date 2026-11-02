@@ -1,8 +1,8 @@
 # Rules
 
 vaixell checks Dart files by parsing them, without resolving types or running
-`pub get`. Every rule below is part of the `recommended` preset, at its
-default severity, which runs when a package has no `vaixell:` config.
+`pub get`. The `recommended` preset, which runs when a package has no
+`vaixell:` config, enables every rule below at its default severity.
 
 Files with a generated suffix, such as `.g.dart`, `.freezed.dart` or
 `.mocks.dart`, are never checked.

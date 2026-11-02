@@ -13,13 +13,6 @@ void main() {
           rule.id: rule.defaultSeverity,
       }),
     );
-    expect(recommended['await-receiver'], equals(Severity.warning));
-    expect(
-      recommended.entries
-          .where((e) => e.key != 'await-receiver')
-          .map((e) => e.value),
-      everyElement(Severity.error),
-    );
   });
 
   test('Config.recommended uses the recommended preset', () {

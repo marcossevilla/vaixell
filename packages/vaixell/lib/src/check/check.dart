@@ -85,10 +85,10 @@ class const Check._({
     String? baseline,
   }) async {
     final packages = await _packageResolver(paths);
-    final saved = baseline == null
+    final savedBaseline = baseline == null
         ? null
         : await _baselineFile.read(p.join(root, baseline));
-    final ids = saved?.ids;
+    final ids = savedBaseline?.ids;
     final violations = await _engine.run(tree: _tree, packages: packages);
     if (gitDiff != null) {
       final diff = await _gitDiff(violations, packages, gitDiff);

@@ -25,18 +25,17 @@ void main() {
     });
 
     test('flags an await used as a receiver', () {
-      final findings = rule.check(
-        parse('''
+      const source = '''
 class Foo {
   Future<void> bar() async {
     (await f).x;
   }
 }
-'''),
-      );
+''';
+      final findings = rule.check(parse(source));
       expect(findings, hasLength(1));
-      expect(findings.single.offset, equals(46));
-      expect(findings.single.symbol, equals('Foo.bar'));
+      expect(findings.single.offset, equals(source.indexOf('await')));
+      expect(findings.single.symbol, equals('Foo.bar@f'));
       expect(
         findings.single.message,
         equals(
@@ -60,9 +59,12 @@ class Foo {
       '(await f)<int>();',
       '((await f)).x;',
       '((await f) as T).x;',
+      '(await f as T).x;',
       '((await f)! as T).x;',
       'x = (await f).y;',
       'g((await f).x);',
+      'a && (await f).x;',
+      'a ?? (await f).x;',
     ]) {
       test('flags `$source` once, at the await keyword', () {
         expect(offsets(source), equals([source.indexOf('await')]));
@@ -103,6 +105,11 @@ class Foo {
       '(await f) != null;',
       'await f.x;',
       'await f.m();',
+      'x[await f];',
+      'x?[await f];',
+      'x.m(await f);',
+      'x..m(await f);',
+      'x..y = await f;',
     ]) {
       test('allows `$source`', () {
         expect(offsets(source), isEmpty);
@@ -136,7 +143,38 @@ class C {
 '''),
             )
             .map((f) => f.symbol),
-        equals(['f', 'f', 'C.m']),
+        equals(['f@a', 'f@b', 'C.m@c']),
+      );
+    });
+
+    test('qualifies findings with the name of what is awaited', () {
+      expect(
+        rule
+            .check(
+              parse('''
+Future<void> f() async {
+  (await a()).x;
+  (await o.b()).x;
+  (await o.c).x;
+  (await o.p.d).x;
+  (await e()()).x;
+  (await (g)).x;
+  (await (1 + 2)).x;
+}
+'''),
+            )
+            .map((f) => f.symbol),
+        equals(['f@a', 'f@b', 'f@c', 'f@d', 'f@e', 'f@g', 'f']),
+      );
+    });
+
+    test('qualifies findings outside any declaration', () {
+      expect(
+        rule
+            .check(parse('@A(() async => (await a).x)\nlibrary;\n'))
+            .single
+            .symbol,
+        equals('@a'),
       );
     });
   });

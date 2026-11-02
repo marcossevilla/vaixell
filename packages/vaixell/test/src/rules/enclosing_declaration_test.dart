@@ -36,6 +36,8 @@ class C {
     void local() => '';
     final x = () => '';
   }
+  String get property => '';
+  set property(String v) { ''; }
 }
 mixin M { void m() => ''; }
 enum E { a; void m() => ''; }
@@ -49,6 +51,8 @@ extension type T(int v) { void m() => ''; }
           'C.field',
           'C.method',
           'C.method',
+          'C.property',
+          'C.property=',
           'M.m',
           'E.m',
           'X.m',
@@ -63,8 +67,10 @@ extension type T(int v) { void m() => ''; }
         symbols('''
 final top = '';
 void function() => '';
+String get getter => '';
+set setter(String v) { ''; }
 '''),
-        equals(['top', 'function']),
+        equals(['top', 'function', 'getter', 'setter=']),
       );
     });
 

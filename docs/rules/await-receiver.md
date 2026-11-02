@@ -16,7 +16,10 @@ bottom. This rule reports an `await` used as the receiver of:
 - A cascade: `(await f)..a()`, `(await f)?..a()`.
 - A call: `(await f)()`.
 - A null check: `(await f)!`, wherever it's written, including
-  `final v = (await f)!;`.
+  `final v = (await f)!;`. Like a member access, `!` acts on the awaited
+  value, so it belongs on the named variable: `final v = await f;` then `v!`.
+  A cast only states the type the value is named with, so
+  `final v = await f as T;` is allowed.
 
 Parentheses and `as` casts are looked through, so `((await f)).x` and
 `((await f) as T).x` are reported too. Each `await` is reported once, at the

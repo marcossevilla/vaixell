@@ -19,21 +19,14 @@ void main() {
     );
   });
 
-  test('every rule but await-receiver defaults to error', () {
-    expect(
-      {
-        for (final rule in const RuleRegistry().all)
-          rule.id: rule.defaultSeverity,
-      },
-      equals({
-        'parse-error': Severity.error,
-        'top-level-function': Severity.error,
-        'top-level-variable': Severity.error,
-        'extension-declaration': Severity.error,
-        'static-method': Severity.error,
-        'raw-json': Severity.error,
-        'await-receiver': Severity.warning,
-      }),
-    );
+  test('each rule has the expected default severity', () {
+    const warnings = {'await-receiver'};
+    for (final rule in const RuleRegistry().all) {
+      expect(
+        rule.defaultSeverity,
+        equals(warnings.contains(rule.id) ? Severity.warning : Severity.error),
+        reason: rule.id,
+      );
+    }
   });
 }
