@@ -119,7 +119,7 @@ void main() {
         await gitInit(d.sandbox);
         await gitCommitAll(d.sandbox);
         await git(d.sandbox, ['checkout', '-q', '--orphan', 'other']);
-        await gitCommitAll(d.sandbox);
+        await gitCommitAll(d.sandbox, message: 'other');
         await expectLater(
           runner.mergeBase('main'),
           _gitError('`main` and HEAD have no common ancestor.'),
@@ -131,9 +131,9 @@ void main() {
         await gitCommitAll(d.sandbox);
         final fork = (await git(d.sandbox, ['rev-parse', 'HEAD'])).trim();
         await git(d.sandbox, ['checkout', '-q', '-b', 'feature']);
-        await gitCommitAll(d.sandbox);
+        await gitCommitAll(d.sandbox, message: 'feature');
         await git(d.sandbox, ['checkout', '-q', 'main']);
-        await gitCommitAll(d.sandbox);
+        await gitCommitAll(d.sandbox, message: 'main');
         await git(d.sandbox, ['checkout', '-q', 'feature']);
         expect(await runner.mergeBase('main'), equals(fork));
       });

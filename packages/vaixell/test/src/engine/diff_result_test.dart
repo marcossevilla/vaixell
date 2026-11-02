@@ -1,7 +1,7 @@
 import 'package:test/test.dart';
 import 'package:vaixell/vaixell.dart';
 
-Violation _v(String id, {int line = 1}) => Violation(
+Violation _violation(String id, {int line = 1}) => Violation(
   id: id,
   rule: 'r',
   severity: Severity.error,
@@ -16,20 +16,23 @@ void main() {
     test('compares by id, ignoring locations', () {
       final diff = DiffResult.compare(
         base: ['removed-b', 'kept', 'removed-a', 'kept'],
-        head: [_v('kept', line: 9), _v('added')],
+        head: [_violation('kept', line: 9), _violation('added')],
       );
       expect(diff.added.map((v) => v.id), equals(['added']));
       expect(diff.fixed, equals(['removed-a', 'removed-b']));
     });
 
     test('is empty when nothing changed', () {
-      final diff = DiffResult.compare(base: ['a'], head: [_v('a')]);
+      final diff = DiffResult.compare(base: ['a'], head: [_violation('a')]);
       expect(diff.added, isEmpty);
       expect(diff.fixed, isEmpty);
     });
 
     test('suppress drops added ids and keeps fixed ones', () {
-      final diff = DiffResult(added: [_v('a'), _v('b')], fixed: const ['c']);
+      final diff = DiffResult(
+        added: [_violation('a'), _violation('b')],
+        fixed: const ['c'],
+      );
       final suppressed = diff.suppress({'a', 'c'});
       expect(suppressed.added.map((v) => v.id), equals(['b']));
       expect(suppressed.fixed, equals(['c']));

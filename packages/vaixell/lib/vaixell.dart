@@ -12,7 +12,8 @@ export 'src/discovery/package_discovery.dart' show PackageDiscovery;
 export 'src/engine/diff_result.dart' show DiffResult;
 export 'src/engine/engine.dart' show Engine;
 export 'src/engine/package.dart' show Package;
-export 'src/git/git_runner.dart' show GitException, GitRunner;
+export 'src/git/git_runner.dart'
+    show GitException, GitRunner, RunGit, StartProcess;
 export 'src/report/github_reporter.dart' show GithubReporter;
 export 'src/report/json_reporter.dart' show JsonReporter;
 export 'src/report/report.dart' show Report, ReportMode;
