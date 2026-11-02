@@ -10,6 +10,10 @@ import 'package:vaixell/src/violation/violation.dart';
 /// class is annotated with `@JsonSerializable` and its body only returns
 /// `_$<Class>FromJson(json, …)` or `_$<Class>ToJson(this, …)`. A `fromJson`
 /// method is always reported, since json_serializable expects a constructor.
+///
+/// Any `fromJson` or `toJson` in an enum is reported, since `@JsonEnum` and
+/// `@JsonValue` replace them. Mixins, extensions and extension types aren't
+/// checked, since they can't be annotated with `@JsonSerializable`.
 final class const GeneratedJsonRule() extends Rule {
   /// Creates the rule.
   this;
@@ -23,14 +27,38 @@ final class const GeneratedJsonRule() extends Rule {
   @override
   List<Finding> check(ParsedFile file) => [
     for (final declaration in file.unit.declarations)
-      if (declaration case ClassDeclaration(
-        :final namePart,
-        :final metadata,
-        :final body,
-      ))
-        for (final member in body.members)
-          ?_check(namePart.typeName.lexeme, _isAnnotated(metadata), member),
+      ...switch (declaration) {
+        ClassDeclaration(:final namePart, :final metadata, :final body) => [
+          for (final member in body.members)
+            ?_check(namePart.typeName.lexeme, _isAnnotated(metadata), member),
+        ],
+        EnumDeclaration(:final namePart, :final body) => [
+          for (final member in body.members)
+            if (_jsonName(member) case final name?)
+              _enum(namePart.typeName.lexeme, name),
+        ],
+        _ => const <Finding>[],
+      },
   ];
+
+  /// Returns the name token of [member] if it's a `fromJson` constructor or
+  /// a `fromJson` or `toJson` method.
+  Token? _jsonName(ClassMember member) => switch (member) {
+    ConstructorDeclaration(name: final name?) when name.lexeme == 'fromJson' =>
+      name,
+    MethodDeclaration(:final name, isGetter: false, isSetter: false)
+        when name.lexeme == 'fromJson' || name.lexeme == 'toJson' =>
+      name,
+    _ => null,
+  };
+
+  Finding _enum(String enumName, Token name) => Finding(
+    offset: name.offset,
+    symbol: '$enumName.${name.lexeme}',
+    message:
+        '`$enumName.${name.lexeme}` is written by hand. Annotate `$enumName` '
+        'with `@JsonEnum()` and its values with `@JsonValue` instead.',
+  );
 
   Finding? _check(String className, bool annotated, ClassMember member) {
     switch (member) {

@@ -244,6 +244,53 @@ class User {
       });
     });
 
+    test('flags fromJson and toJson in enums, even when they delegate', () {
+      final findings = rule.check(
+        parse(r'''
+@JsonEnum()
+enum Status {
+  active;
+  factory Status.fromJson(String json) => _$StatusFromJson(json);
+  static Status fromJson(String json) => active;
+  String toJson() => _$StatusToJson(this);
+  String get toJson => name;
+}
+'''),
+      );
+      expect(
+        findings.map((f) => f.symbol),
+        equals(['Status.fromJson', 'Status.fromJson', 'Status.toJson']),
+      );
+      expect(
+        findings.first.message,
+        equals(
+          '`Status.fromJson` is written by hand. Annotate `Status` with '
+          '`@JsonEnum()` and its values with `@JsonValue` instead.',
+        ),
+      );
+    });
+
+    test('ignores mixins, extensions and extension types', () {
+      expect(
+        symbols('''
+mixin M {
+  Map<String, dynamic> toJson() => {};
+}
+extension X on int {
+  Map<String, dynamic> toJson() => {};
+}
+extension on int {
+  Map<String, dynamic> toJson() => {};
+}
+extension type Id(int v) {
+  factory Id.fromJson(Object? json) => Id(json! as int);
+  int toJson() => v;
+}
+'''),
+        isEmpty,
+      );
+    });
+
     test('ignores top-level functions and type aliases', () {
       expect(
         symbols('''
