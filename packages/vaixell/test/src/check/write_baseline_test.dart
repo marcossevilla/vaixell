@@ -63,7 +63,7 @@ void main() {
       );
     });
 
-    test('throws a ConfigException on an invalid config', () async {
+    test('throws a $ConfigException on an invalid config', () async {
       await d.file('analysis_options.yaml', 'vaixell:\n  rulez: {}\n').create();
       await expectLater(
         WriteBaseline(root: d.sandbox)('baseline.json'),

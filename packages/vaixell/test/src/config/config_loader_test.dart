@@ -3,7 +3,7 @@ import 'package:vaixell/vaixell.dart';
 
 import '../../helpers/memory_source_tree.dart';
 
-final Map<String, Severity> _recommended = Config.recommended().severities;
+Map<String, Severity> get _recommended => Config.recommended().severities;
 
 /// Returns [_recommended] with [overrides] applied, where `null` turns a rule
 /// off.

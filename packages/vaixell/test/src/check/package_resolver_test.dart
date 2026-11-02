@@ -45,7 +45,7 @@ void main() {
       expect(packages.map((p) => p.path), equals(['packages/a', '']));
     });
 
-    test('throws a ConfigException for an invalid workspace', () async {
+    test('throws a $ConfigException for an invalid workspace', () async {
       tree.files['pubspec.yaml'] = 'workspace:\n  - packages/c\n';
       await expectLater(resolve([]), throwsA(isA<ConfigException>()));
     });

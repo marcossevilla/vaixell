@@ -395,15 +395,18 @@ void main() {
         expect(out.toString(), equals('custom\n'));
       });
 
-      test('writes the baseline status to stdout for a TextReporter', () async {
-        stubWriteBaseline(Baseline(const ['a']));
-        await run(
-          ['--write-baseline=b.json'],
-          reporters: {'plain': const TextReporter()},
-        );
-        expect(out.toString(), equals('Wrote 1 violation id to b.json.\n'));
-        expect(err.toString(), isEmpty);
-      });
+      test(
+        'writes the baseline status to stdout for a $TextReporter',
+        () async {
+          stubWriteBaseline(Baseline(const ['a']));
+          await run(
+            ['--write-baseline=b.json'],
+            reporters: {'plain': const TextReporter()},
+          );
+          expect(out.toString(), equals('Wrote 1 violation id to b.json.\n'));
+          expect(err.toString(), isEmpty);
+        },
+      );
 
       test('only allows the given formats', () async {
         await expectLater(

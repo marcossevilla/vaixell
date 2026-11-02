@@ -30,8 +30,6 @@ Future<String> git(String directory, List<String> arguments) async {
 Future<void> gitInit(String directory) =>
     git(directory, ['init', '-q', '-b', 'main']);
 
-var _commits = 0;
-
 /// Stages everything in [directory] and commits it.
 ///
 /// Every commit gets a unique message, so commits made in the same second
@@ -43,6 +41,6 @@ Future<void> gitCommitAll(String directory) async {
     '-q',
     '--allow-empty',
     '-m',
-    'c${_commits++}',
+    'c${DateTime.now().microsecondsSinceEpoch}',
   ]);
 }
