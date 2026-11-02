@@ -11,6 +11,11 @@ import 'package:vaixell/src/violation/violation.dart';
 /// `((await f) as T).x` and `(await f)!.x` are flagged too. Each `await` is
 /// reported once, at the `await` keyword.
 ///
+/// A null check on its own, as in `return (await f)!;`, is flagged unless
+/// it is directly a variable initializer or the right side of an
+/// assignment, so `final v = (await f)!;` is allowed. Awaits in conditions,
+/// arguments and `return` or `=>` positions are allowed too.
+///
 /// Ids use the enclosing declaration, such as `ApiClient.getUser`.
 final class const AwaitReceiverRule() extends Rule {
   /// Creates the rule.
@@ -35,7 +40,9 @@ class _AwaitReceiverVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitAwaitExpression(AwaitExpression node) {
-    if (_isReceiver(_outermost(node))) {
+    final (outermost, :nullChecked) = _outermost(node);
+    if (_isReceiver(outermost) ||
+        (nullChecked && !_isDeclarationOrAssignment(outermost))) {
       findings.add(
         Finding(
           offset: node.awaitKeyword.offset,
@@ -50,9 +57,10 @@ class _AwaitReceiverVisitor extends RecursiveAstVisitor<void> {
   }
 
   /// Returns the outermost expression around [node] that only wraps it in
-  /// parentheses, `as` casts or `!`.
-  Expression _outermost(Expression node) {
+  /// parentheses, `as` casts or `!`, and whether a `!` was among them.
+  (Expression, {bool nullChecked}) _outermost(Expression node) {
     var current = node;
+    var nullChecked = false;
     while (true) {
       switch (current.parent) {
         case final ParenthesizedExpression parent:
@@ -61,11 +69,20 @@ class _AwaitReceiverVisitor extends RecursiveAstVisitor<void> {
           current = parent;
         case final PostfixExpression parent when parent.operator.lexeme == '!':
           current = parent;
+          nullChecked = true;
         default:
-          return current;
+          return (current, nullChecked: nullChecked);
       }
     }
   }
+
+  /// Whether [node] is directly a variable initializer or the right side of
+  /// an assignment.
+  bool _isDeclarationOrAssignment(Expression node) => switch (node.parent) {
+    VariableDeclaration(:final initializer) => initializer == node,
+    AssignmentExpression(:final rightHandSide) => rightHandSide == node,
+    _ => false,
+  };
 
   /// Whether [node] is the receiver of a member access, index, cascade or
   /// call.

@@ -69,6 +69,50 @@ class Foo {
       });
     }
 
+    for (final source in [
+      'return (await f)!;',
+      'g((await f)!);',
+      '(await f)!;',
+      'final v = (await f)! + 1;',
+    ]) {
+      test('flags `$source`, where `!` is not a declaration or assignment', () {
+        expect(offsets(source), equals([source.indexOf('await')]));
+      });
+    }
+
+    test('flags `=> (await f)!`', () {
+      expect(
+        rule.check(parse('Future<int> f() async => (await g)!;\n')),
+        hasLength(1),
+      );
+    });
+
+    for (final source in [
+      'final v = (await f)!;',
+      'final v = ((await f)!);',
+      'final v = (await f)! as T;',
+      'v = (await f)!;',
+      'v ??= (await f)!;',
+      'final v = await f as T;',
+      '(await f) as T;',
+      'if (await f) {}',
+      '!await f;',
+      'g(await f);',
+      'expect(await f, x);',
+      'return await f;',
+      '(await f) != null;',
+      'await f.x;',
+      'await f.m();',
+    ]) {
+      test('allows `$source`', () {
+        expect(offsets(source), isEmpty);
+      });
+    }
+
+    test('allows `=> await f`', () {
+      expect(rule.check(parse('Future<int> f() async => await g;\n')), isEmpty);
+    });
+
     test('flags nested awaits once each', () {
       const source = '(await (await f).g()).h;';
       expect(
