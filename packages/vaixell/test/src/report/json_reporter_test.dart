@@ -6,6 +6,7 @@ import 'package:test_descriptor/test_descriptor.dart' as d;
 import 'package:vaixell/vaixell.dart';
 
 import '../../helpers/git_repo.dart';
+import '../../helpers/test_tag.dart';
 
 /// Compares [actual] with `test/src/report/goldens/<name>.json`.
 ///
@@ -40,7 +41,7 @@ void main() {
       );
     });
 
-    group('output of a $Check', () {
+    group('output of a $Check', tags: TestTag.golden, () {
       Future<String> run({String? gitDiff, String? baseline}) async {
         final report = await Check(root: d.sandbox)(
           gitDiff: gitDiff,
