@@ -15,6 +15,7 @@ Files with a generated suffix, such as `.g.dart`, `.freezed.dart` or
 | [`extension-declaration`](rules/extension-declaration.md) | error   | Don't declare extensions or extension types.           |
 | [`static-method`](rules/static-method.md)                 | error   | Don't declare static methods, getters or setters.      |
 | [`raw-json`](rules/raw-json.md)                           | error   | Keep raw JSON handling inside model classes.           |
+| [`generated-json`](rules/generated-json.md)               | warning | Use json_serializable for `fromJson` and `toJson`.     |
 
 ## Configuration
 
