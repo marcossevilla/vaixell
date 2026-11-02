@@ -1,4 +1,4 @@
-@Tags([TestTag.e2e])
+@Tags(['e2e'])
 library;
 
 import 'dart:convert';
@@ -11,7 +11,6 @@ import 'package:test_process/test_process.dart';
 import 'package:vaixell_cli/vaixell_cli.dart';
 
 import 'helpers/git_repo.dart';
-import 'helpers/test_tag.dart';
 
 final String _script = p.absolute('bin', 'vaixell.dart');
 
