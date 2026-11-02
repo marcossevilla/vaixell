@@ -74,8 +74,13 @@ class Foo {
       'g((await f)!);',
       '(await f)!;',
       'final v = (await f)! + 1;',
+      'final v = (await f)!;',
+      'final v = ((await f)!);',
+      'final v = (await f)! as T;',
+      'v = (await f)!;',
+      'v ??= (await f)!;',
     ]) {
-      test('flags `$source`, where `!` is not a declaration or assignment', () {
+      test('flags the null check in `$source`', () {
         expect(offsets(source), equals([source.indexOf('await')]));
       });
     }
@@ -88,11 +93,6 @@ class Foo {
     });
 
     for (final source in [
-      'final v = (await f)!;',
-      'final v = ((await f)!);',
-      'final v = (await f)! as T;',
-      'v = (await f)!;',
-      'v ??= (await f)!;',
       'final v = await f as T;',
       '(await f) as T;',
       'if (await f) {}',

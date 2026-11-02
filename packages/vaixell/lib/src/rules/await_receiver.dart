@@ -6,15 +6,13 @@ import 'package:vaixell/src/violation/violation.dart';
 
 /// Reports an `await` whose result is used as a receiver.
 ///
-/// Flags `(await f).x`, `(await f)?.m()`, `(await f)[i]`, `(await f)..a()`
-/// and `(await f)()`, looking through parentheses, `as` casts and `!`, so
-/// `((await f) as T).x` and `(await f)!.x` are flagged too. Each `await` is
-/// reported once, at the `await` keyword.
+/// Flags `(await f).x`, `(await f)?.m()`, `(await f)[i]`, `(await f)..a()`,
+/// `(await f)()` and `(await f)!`, looking through parentheses and `as`
+/// casts, so `((await f) as T).x` is flagged too. Each `await` is reported
+/// once, at the `await` keyword.
 ///
-/// A null check on its own, as in `return (await f)!;`, is flagged unless
-/// it is directly a variable initializer or the right side of an
-/// assignment, so `final v = (await f)!;` is allowed. Awaits in conditions,
-/// arguments and `return` or `=>` positions are allowed too.
+/// Awaits in conditions, arguments, initializers and `return` or `=>`
+/// positions are allowed, as long as their result isn't dereferenced there.
 ///
 /// Ids use the enclosing declaration, such as `ApiClient.getUser`.
 final class const AwaitReceiverRule() extends Rule {
@@ -40,9 +38,7 @@ class _AwaitReceiverVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitAwaitExpression(AwaitExpression node) {
-    final (outermost, :nullChecked) = _outermost(node);
-    if (_isReceiver(outermost) ||
-        (nullChecked && !_isDeclarationOrAssignment(outermost))) {
+    if (_isReceiver(_outermost(node))) {
       findings.add(
         Finding(
           offset: node.awaitKeyword.offset,
@@ -57,41 +53,30 @@ class _AwaitReceiverVisitor extends RecursiveAstVisitor<void> {
   }
 
   /// Returns the outermost expression around [node] that only wraps it in
-  /// parentheses, `as` casts or `!`, and whether a `!` was among them.
-  (Expression, {bool nullChecked}) _outermost(Expression node) {
+  /// parentheses or `as` casts.
+  Expression _outermost(Expression node) {
     var current = node;
-    var nullChecked = false;
     while (true) {
       switch (current.parent) {
         case final ParenthesizedExpression parent:
           current = parent;
         case final AsExpression parent when parent.expression == current:
           current = parent;
-        case final PostfixExpression parent when parent.operator.lexeme == '!':
-          current = parent;
-          nullChecked = true;
         default:
-          return (current, nullChecked: nullChecked);
+          return current;
       }
     }
   }
 
-  /// Whether [node] is directly a variable initializer or the right side of
-  /// an assignment.
-  bool _isDeclarationOrAssignment(Expression node) => switch (node.parent) {
-    VariableDeclaration(:final initializer) => initializer == node,
-    AssignmentExpression(:final rightHandSide) => rightHandSide == node,
-    _ => false,
-  };
-
-  /// Whether [node] is the receiver of a member access, index, cascade or
-  /// call.
+  /// Whether [node] is the receiver of a member access, index, cascade,
+  /// call or null check.
   bool _isReceiver(Expression node) => switch (node.parent) {
     PropertyAccess(:final Expression? target) ||
     MethodInvocation(:final Expression? target) ||
     IndexExpression(:final Expression? target) ||
     CascadeExpression(:final Expression? target) => target == node,
     FunctionExpressionInvocation(:final function) => function == node,
+    PostfixExpression(:final operator) => operator.lexeme == '!',
     _ => false,
   };
 }

@@ -15,21 +15,21 @@ bottom. This rule reports an `await` used as the receiver of:
 - An index: `(await f)[i]`, `(await f)?[i]`.
 - A cascade: `(await f)..a()`, `(await f)?..a()`.
 - A call: `(await f)()`.
-- A null check: `(await f)!`, unless it's directly a variable initializer or
-  the right side of an assignment.
+- A null check: `(await f)!`, wherever it's written, including
+  `final v = (await f)!;`.
 
-Parentheses, `as` casts and `!` are looked through, so `((await f)).x`,
-`((await f) as T).x` and `(await f)!.x` are reported too. Each `await` is
-reported once, at the `await` keyword.
+Parentheses and `as` casts are looked through, so `((await f)).x` and
+`((await f) as T).x` are reported too. Each `await` is reported once, at the
+`await` keyword, so `(await f)!.x` is a single finding.
 
 These are allowed:
 
-- `final v = (await f)!;`, `v = (await f)!;` and `final v = await f as T;`.
+- Initializers and assignments: `final v = await f;`, `v = await f;` and
+  `final v = await f as T;`.
 - A cast with no receiver: `(await f) as T`.
 - Conditions and operands: `if (await f)`, `!await f`, `(await f) != null`.
 - Arguments: `g(await f)`, `expect(await f, x)`.
-- `return await f;` and `=> await f`. A null check there is still reported:
-  `return (await f)!;`.
+- `return await f;` and `=> await f`.
 
 There is no auto-fix. In a short-circuit expression such as
 `a && (await f).x` or `a ?? (await f).x`, the `await` only runs when the left
@@ -57,7 +57,7 @@ class ApiClient {
     return (await _getUser()).name;
   }
 
-  Future<int> getCount() async => (await _get('/count'))!.length;
+  Future<int> getCount() async => (await _getCount())!;
 }
 ```
 
@@ -71,8 +71,8 @@ class ApiClient {
   }
 
   Future<int> getCount() async {
-    final body = (await _get('/count'))!;
-    return body.length;
+    final count = await _getCount();
+    return count!;
   }
 }
 ```
