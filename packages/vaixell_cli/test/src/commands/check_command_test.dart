@@ -8,7 +8,13 @@ import 'package:test_descriptor/test_descriptor.dart' as d;
 import 'package:vaixell/vaixell.dart';
 import 'package:vaixell_cli/vaixell_cli.dart';
 
-import '../../helpers/check.dart';
+import '../../helpers/buffered_logger.dart';
+
+class _MockCheck extends Mock implements Check;
+
+class _MockWriteBaseline extends Mock implements WriteBaseline;
+
+class _MockReporter extends Mock implements Reporter;
 
 const _error = Violation(
   id: 'top-level-function:lib/a.dart:foo',
@@ -395,15 +401,18 @@ void main() {
         expect(out.toString(), equals('custom\n'));
       });
 
-      test('writes the baseline status to stdout for a TextReporter', () async {
-        stubWriteBaseline(Baseline(const ['a']));
-        await run(
-          ['--write-baseline=b.json'],
-          reporters: {'plain': const TextReporter()},
-        );
-        expect(out.toString(), equals('Wrote 1 violation id to b.json.\n'));
-        expect(err.toString(), isEmpty);
-      });
+      test(
+        'writes the baseline status to stdout for a $TextReporter',
+        () async {
+          stubWriteBaseline(Baseline(const ['a']));
+          await run(
+            ['--write-baseline=b.json'],
+            reporters: {'plain': const TextReporter()},
+          );
+          expect(out.toString(), equals('Wrote 1 violation id to b.json.\n'));
+          expect(err.toString(), isEmpty);
+        },
+      );
 
       test('only allows the given formats', () async {
         await expectLater(
@@ -439,9 +448,3 @@ void main() {
     });
   });
 }
-
-class _MockCheck extends Mock implements Check;
-
-class _MockWriteBaseline extends Mock implements WriteBaseline;
-
-class _MockReporter extends Mock implements Reporter;

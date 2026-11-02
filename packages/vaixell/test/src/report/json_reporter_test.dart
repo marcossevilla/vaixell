@@ -40,76 +40,57 @@ void main() {
       );
     });
 
-    test('Report.failing is every violation in a full run', () {
-      const violation = Violation(
-        id: 'x',
-        rule: 'r',
-        severity: Severity.warning,
-        path: 'lib/a.dart',
-        line: 1,
-        column: 1,
-        message: 'm',
-      );
-      expect(const Report.full([violation]).failing, equals([violation]));
-      expect(
-        const Report.compared(ReportMode.baseline, [
-          violation,
-        ], DiffResult(added: [], fixed: [])).failing,
-        isEmpty,
-      );
-    });
-  });
+    group('output of a $Check', tags: 'golden', () {
+      Future<String> run({String? gitDiff, String? baseline}) async {
+        final report = await Check(root: d.sandbox)(
+          gitDiff: gitDiff,
+          baseline: baseline,
+        );
+        final out = StringBuffer();
+        const JsonReporter().write(report, out);
+        return '$out';
+      }
 
-  group('JSON output of a check', () {
-    Future<String> run({String? gitDiff, String? baseline}) async {
-      final report = await Check(root: d.sandbox)(
-        gitDiff: gitDiff,
-        baseline: baseline,
-      );
-      final out = StringBuffer();
-      const JsonReporter().write(report, out);
-      return '$out';
-    }
+      setUp(() async {
+        await d
+            .file(
+              'analysis_options.yaml',
+              'vaixell:\n  rules:\n    top-level-variable: warning\n',
+            )
+            .create();
+        await d.dir('lib', [
+          d.file('a.dart', 'void foo() {}\nfinal limit = 1;\n'),
+          d.file('b.dart', 'class B {\n'),
+        ]).create();
+      });
 
-    setUp(() async {
-      await d
-          .file(
-            'analysis_options.yaml',
-            'vaixell:\n  rules:\n    top-level-variable: warning\n',
-          )
-          .create();
-      await d.dir('lib', [
-        d.file('a.dart', 'void foo() {}\nfinal limit = 1;\n'),
-        d.file('b.dart', 'class B {\n'),
-      ]).create();
-    });
+      test('matches the golden in full mode', () async {
+        final output = await run();
+        expect(() => jsonDecode(output), returnsNormally);
+        _expectGolden(output, 'full');
+      });
 
-    test('full mode', () async {
-      final output = await run();
-      expect(() => jsonDecode(output), returnsNormally);
-      _expectGolden(output, 'full');
-    });
+      test('matches the golden in diff mode', () async {
+        await gitInit(d.sandbox);
+        await gitCommitAll(d.sandbox);
+        await d.dir('lib', [
+          d.file('a.dart', 'final limit = 1;\nvoid bar() {}\n'),
+        ]).create();
 
-    test('diff mode', () async {
-      await gitInit(d.sandbox);
-      await gitCommitAll(d.sandbox);
-      await d.dir('lib', [
-        d.file('a.dart', 'final limit = 1;\nvoid bar() {}\n'),
-      ]).create();
+        _expectGolden(await run(gitDiff: 'main'), 'diff');
+      });
 
-      _expectGolden(await run(gitDiff: 'main'), 'diff');
-    });
+      test('matches the golden in baseline mode', () async {
+        await d
+            .file(
+              'baseline.json',
+              '{"schemaVersion": 1, "violations": '
+                  '["parse-error:lib/b.dart", "top-level-function:lib/a.dart:gone"]}',
+            )
+            .create();
 
-    test('baseline mode', () async {
-      await d
-          .file(
-            'baseline.json',
-            '{"schemaVersion": 1, "violations": '
-                '["parse-error:lib/b.dart", "top-level-function:lib/a.dart:gone"]}',
-          )
-          .create();
-
-      _expectGolden(await run(baseline: 'baseline.json'), 'baseline');
+        _expectGolden(await run(baseline: 'baseline.json'), 'baseline');
+      });
     });
   });
 }

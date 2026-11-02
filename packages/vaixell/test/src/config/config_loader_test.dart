@@ -3,7 +3,8 @@ import 'package:vaixell/vaixell.dart';
 
 import '../../helpers/memory_source_tree.dart';
 
-final Map<String, Severity> _recommended = Config.recommended().severities;
+/// The recommended severities, as a getter so each case gets its own map.
+Map<String, Severity> get _recommended => Config.recommended().severities;
 
 /// Returns [_recommended] with [overrides] applied, where `null` turns a rule
 /// off.
@@ -82,28 +83,30 @@ void main() {
         expect(config.excludes('lib/src/a.dart'), isFalse);
       });
 
-      test('loadIfPresent returns null without a vaixell key', () async {
-        for (final files in [
-          <String, String>{},
-          {'analysis_options.yaml': ''},
-          {'analysis_options.yaml': 'linter: {}\n'},
-        ]) {
-          expect(
-            await ConfigLoader(MemorySourceTree(files)).loadIfPresent(),
-            isNull,
-            reason: '$files',
-          );
-        }
-      });
-
-      test('an empty vaixell key counts as present', () async {
-        final tree = MemorySourceTree({
-          'pkg/analysis_options.yaml': 'vaixell:\n',
+      group('loadIfPresent', () {
+        test('returns null without a vaixell key', () async {
+          for (final files in [
+            <String, String>{},
+            {'analysis_options.yaml': ''},
+            {'analysis_options.yaml': 'linter: {}\n'},
+          ]) {
+            expect(
+              await ConfigLoader(MemorySourceTree(files)).loadIfPresent(),
+              isNull,
+              reason: '$files',
+            );
+          }
         });
-        final config = await ConfigLoader(tree)
-            .loadIfPresent(path: 'pkg/analysis_options.yaml');
-        expect(config!.severities, equals(_recommended));
-        expect(config.root, equals('pkg'));
+
+        test('counts an empty vaixell key as present', () async {
+          final tree = MemorySourceTree({
+            'pkg/analysis_options.yaml': 'vaixell:\n',
+          });
+          final config = await ConfigLoader(tree)
+              .loadIfPresent(path: 'pkg/analysis_options.yaml');
+          expect(config!.severities, equals(_recommended));
+          expect(config.root, equals('pkg'));
+        });
       });
 
       test('exclude globs are relative to the config file', () async {
