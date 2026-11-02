@@ -110,7 +110,8 @@ class const GitRunner(
       );
     }
     try {
-      return (await run(['merge-base', commit.trim(), 'HEAD'])).trim();
+      final base = await run(['merge-base', commit.trim(), 'HEAD']);
+      return base.trim();
     } on GitException {
       throw GitException('`$ref` and HEAD have no common ancestor.');
     }
