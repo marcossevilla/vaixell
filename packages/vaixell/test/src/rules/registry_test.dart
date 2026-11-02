@@ -14,13 +14,26 @@ void main() {
         'extension-declaration',
         'static-method',
         'raw-json',
+        'generated-json',
       ]),
     );
   });
 
-  test('every rule defaults to error', () {
-    for (final rule in const RuleRegistry().all) {
-      expect(rule.defaultSeverity, equals(Severity.error), reason: rule.id);
-    }
+  test('generated-json defaults to warning and every other rule to error', () {
+    expect(
+      {
+        for (final rule in const RuleRegistry().all)
+          rule.id: rule.defaultSeverity,
+      },
+      equals({
+        'parse-error': Severity.error,
+        'top-level-function': Severity.error,
+        'top-level-variable': Severity.error,
+        'extension-declaration': Severity.error,
+        'static-method': Severity.error,
+        'raw-json': Severity.error,
+        'generated-json': Severity.warning,
+      }),
+    );
   });
 }
