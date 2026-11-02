@@ -15,13 +15,21 @@ void main() {
           'extension-declaration',
           'static-method',
           'raw-json',
+          'await-receiver',
         ]),
       );
     });
 
-    test('defaults every rule to error', () {
+    test('each rule has the expected default severity', () {
+      const warnings = {'await-receiver'};
       for (final rule in const RuleRegistry().all) {
-        expect(rule.defaultSeverity, equals(Severity.error), reason: rule.id);
+        expect(
+          rule.defaultSeverity,
+          equals(
+            warnings.contains(rule.id) ? Severity.warning : Severity.error,
+          ),
+          reason: rule.id,
+        );
       }
     });
   });

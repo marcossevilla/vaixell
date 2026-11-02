@@ -150,7 +150,8 @@ class CheckCommand({
     required List<String> paths,
     required Reporter reporter,
   }) async {
-    final count = (await _writeBaseline(path, paths: paths)).ids.length;
+    final baseline = await _writeBaseline(path, paths: paths);
+    final count = baseline.ids.length;
     final status =
         'Wrote $count violation id${count == 1 ? '' : 's'} to $path.';
     // Keep stdout empty in machine-readable formats.

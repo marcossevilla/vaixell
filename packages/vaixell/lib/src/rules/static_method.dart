@@ -1,5 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:vaixell/src/rules/extension_declaration.dart';
+import 'package:vaixell/src/rules/enclosing_declaration.dart';
 import 'package:vaixell/src/rules/rule.dart';
 
 /// Reports static methods, getters and setters, public or private, in
@@ -38,7 +38,7 @@ final class const StaticMethodRule() extends Rule {
           body.members,
         ),
         ExtensionDeclaration(:final name, :final body) => (
-          name?.lexeme ?? ExtensionDeclarationRule.unnamed,
+          name?.lexeme ?? EnclosingDeclaration.unnamed,
           body.members,
         ),
         ExtensionTypeDeclaration(:final namePart, :final body) => (

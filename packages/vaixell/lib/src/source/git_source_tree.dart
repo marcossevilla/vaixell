@@ -79,8 +79,8 @@ class GitSourceTree({
   /// Stops the git process used to read files.
   @override
   Future<void> close() async {
-    final batch = _batch;
-    if (batch != null) await (await batch).close();
+    final batch = await _batch;
+    await batch?.close();
   }
 
   Future<GitObject?> _blob(String path) async {
