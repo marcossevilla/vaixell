@@ -70,6 +70,43 @@ class User {
           isEmpty,
         );
       });
+
+      test('ignores abstract members', () {
+        expect(
+          symbols('''
+abstract class Block {
+  Map<String, dynamic> toJson();
+  Block fromJson(Map<String, dynamic> json);
+}
+'''),
+          isEmpty,
+        );
+      });
+
+      test('explains that delegating members need the annotation', () {
+        final findings = rule.check(
+          parse(r'''
+@freezed
+abstract class User with _$User {
+  factory User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);
+  Map<String, dynamic> toJson() => _$UserToJson(this);
+}
+'''),
+        );
+        expect(
+          findings.first.message,
+          equals(
+            r'`User.fromJson` delegates to `_$UserFromJson`, but `User` '
+            "isn't annotated with `@JsonSerializable()`. vaixell only "
+            'recognizes json_serializable. Set `generated-json: off` if you '
+            'use another generator, such as freezed.',
+          ),
+        );
+        expect(
+          findings.last.message,
+          startsWith(r'`User.toJson` delegates to `_$UserToJson`, but'),
+        );
+      });
     });
 
     group('on a class with @JsonSerializable', () {

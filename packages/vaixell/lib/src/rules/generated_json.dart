@@ -62,6 +62,8 @@ final class const GeneratedJsonRule() extends Rule {
 
   Finding? _check(String className, bool annotated, ClassMember member) {
     switch (member) {
+      case MethodDeclaration(body: EmptyFunctionBody()):
+        return null;
       case MethodDeclaration(:final name, isGetter: false, isSetter: false)
           when name.lexeme == 'fromJson':
         return Finding(
@@ -101,7 +103,33 @@ final class const GeneratedJsonRule() extends Rule {
   ) {
     final suffix = name.lexeme == 'fromJson' ? 'FromJson' : 'ToJson';
     final generated = '_\$$className$suffix';
-    if (!annotated) return _unannotated(className, name, generated);
+    final delegates = _delegates(body, generated, input);
+    if (annotated && delegates) return null;
+    final member = '$className.${name.lexeme}';
+    return Finding(
+      offset: name.offset,
+      symbol: member,
+      message: switch ((annotated, delegates)) {
+        (false, true) =>
+          "`$member` delegates to `$generated`, but `$className` isn't "
+              'annotated with `@JsonSerializable()`. vaixell only recognizes '
+              'json_serializable. Set `generated-json: off` if you use '
+              'another generator, such as freezed.',
+        (false, false) =>
+          '`$member` is written by hand. Annotate `$className` with '
+              '`@JsonSerializable()` and delegate to `$generated`. Use a '
+              '`JsonConverter` for fields that need custom parsing.',
+        _ =>
+          '`$member` is written by hand. Return `$generated($input)` '
+              'instead. Use a `JsonConverter` for fields that need custom '
+              'parsing.',
+      },
+    );
+  }
+
+  /// Whether [body] only returns a call to [generated] with [input] as its
+  /// first argument.
+  bool _delegates(FunctionBody body, String generated, String input) {
     final call = switch (body) {
       ExpressionFunctionBody(:final expression) => expression,
       BlockFunctionBody(
@@ -110,23 +138,15 @@ final class const GeneratedJsonRule() extends Rule {
         expression,
       _ => null,
     };
-    if (call
-        case MethodInvocation(
-          target: null,
-          :final methodName,
-          argumentList: ArgumentList(arguments: [final Expression first, ...]),
-        )
-        when methodName.name == generated && _isInput(first, input)) {
-      return null;
-    }
-    return Finding(
-      offset: name.offset,
-      symbol: '$className.${name.lexeme}',
-      message:
-          '`$className.${name.lexeme}` is written by hand. Return '
-          '`$generated($input)` instead. Use a `JsonConverter` for fields '
-          'that need custom parsing.',
-    );
+    return switch (call) {
+      MethodInvocation(
+        target: null,
+        :final methodName,
+        argumentList: ArgumentList(arguments: [final Expression first, ...]),
+      ) =>
+        methodName.name == generated && _isInput(first, input),
+      _ => false,
+    };
   }
 
   bool _isInput(Expression argument, String input) => switch (argument) {
@@ -145,15 +165,4 @@ final class const GeneratedJsonRule() extends Rule {
       _ => false,
     },
   );
-
-  Finding _unannotated(String className, Token name, String generated) =>
-      Finding(
-        offset: name.offset,
-        symbol: '$className.${name.lexeme}',
-        message:
-            '`$className.${name.lexeme}` is written by hand. Annotate '
-            '`$className` with `@JsonSerializable()` and delegate to '
-            '`$generated`. Use a `JsonConverter` for fields that need custom '
-            'parsing.',
-      );
 }

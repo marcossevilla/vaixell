@@ -28,8 +28,10 @@ import prefix such as `@js.JsonSerializable()`. Generic classes that use
 as in `_$PageFromJson<T>(json, fromJsonT)`. Fields that need custom parsing
 should use a `JsonConverter` instead of a hand-written body.
 
-Mixins, extensions and extension types aren't checked, since they can't be
-annotated with `@JsonSerializable`. Unlike `raw-json`, files under a `models`
+Abstract members, such as `Map<String, dynamic> toJson();` in a base class,
+have no body to generate, so they aren't reported. Mixins, extensions and
+extension types aren't checked, since they can't be annotated with
+`@JsonSerializable`. Unlike `raw-json`, files under a `models`
 directory are checked too. Generated files are never checked.
 
 vaixell only parses files, so it doesn't check that json_serializable is a
