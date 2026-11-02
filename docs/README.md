@@ -37,3 +37,14 @@ vaixell:
 - `exclude`: globs, relative to the package, for files that aren't checked.
 
 Unknown keys, rules and presets are errors. `parse-error` can't be turned off.
+
+## Baselines
+
+To adopt a rule in an existing repository without fixing every finding at
+once, write a baseline and check against it. Findings in the baseline are
+hidden, so only new ones are reported:
+
+```sh
+vaixell check --write-baseline=vaixell_baseline.json
+vaixell check --baseline=vaixell_baseline.json
+```

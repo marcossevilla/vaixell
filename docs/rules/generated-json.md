@@ -10,17 +10,20 @@ Hand-written `fromJson` and `toJson` bodies repeat map access and casts for
 every field, and they drift from the fields they parse. json_serializable
 generates that code from the class itself. This rule reports:
 
-- A `fromJson` factory constructor or `toJson` method in a class that isn't
+- A `fromJson` constructor or `toJson` method in a class that isn't
   annotated with `@JsonSerializable`.
-- A `fromJson` factory constructor or `toJson` method in an annotated class
-  whose body does anything other than return the generated function.
-  `fromJson` must return `_$<Class>FromJson(json, …)`, passing its first
-  parameter, and `toJson` must return `_$<Class>ToJson(this, …)`. Both
-  `=>` and `{ return …; }` bodies work.
+- A `fromJson` constructor or `toJson` method in an annotated class whose
+  body does anything other than return the generated function. `fromJson`
+  must return `_$<Class>FromJson(json, …)`, passing its first parameter, and
+  `toJson` must return `_$<Class>ToJson(this, …)`. `<Class>` drops leading
+  underscores, as json_serializable does, so `_User` uses `_$UserFromJson`.
+  Both `=>` and `{ return …; }` bodies work, and the parameter can be
+  null-checked or cast, as in `_$UserFromJson(json! as Map<String, dynamic>)`.
 - A static `fromJson` method, since json_serializable expects a factory
-  constructor.
-- Any `fromJson` or `toJson` in an enum, whatever its body. Annotate the enum
-  with `@JsonEnum()` and its values with `@JsonValue` instead.
+  constructor. `static-method` reports it too. Make it a factory
+  constructor rather than an instance method, which neither rule checks.
+- The same members in an enum, whatever their body. Annotate the enum with
+  `@JsonEnum()` and its values with `@JsonValue` instead.
 
 `@JsonSerializable` and `@JsonSerializable()` both count, with or without an
 import prefix such as `@js.JsonSerializable()`. Generic classes that use
@@ -28,46 +31,30 @@ import prefix such as `@js.JsonSerializable()`. Generic classes that use
 as in `_$PageFromJson<T>(json, fromJsonT)`. Fields that need custom parsing
 should use a `JsonConverter` instead of a hand-written body.
 
-Some members aren't reported:
-
-- Abstract members, such as `Map<String, dynamic> toJson();` in a base
-  class, since they have no body to generate.
-- Helpers that convert another value rather than the class itself: instance
-  `fromJson` methods, and `toJson` methods that take a value to convert.
-  HydratedBloc's `fromJson(json)`/`toJson(state)` and a `JsonConverter`'s
-  `fromJson`/`toJson` are examples. A `toJson` whose only parameters are
-  functions, as with `genericArgumentFactories`, is still checked.
-
-Mixins, extensions and extension types aren't checked, since they can't be
-annotated with `@JsonSerializable`. Unlike `raw-json`, files under a `models`
-directory are checked too. Generated files are never checked.
+Abstract and external members aren't reported, such as
+`Map<String, dynamic> toJson();` in a base class. Neither are helpers that
+convert another value rather than the type itself: instance `fromJson`
+methods, and `toJson` methods whose first positional parameter is a value.
+HydratedBloc's `fromJson(json)`/`toJson(state)` and a `JsonConverter`'s
+`fromJson`/`toJson` are examples. Mixins, extensions and extension types
+aren't checked, since they can't be annotated with `@JsonSerializable`.
+Unlike `raw-json`, files under a `models` directory are checked too.
 
 vaixell only parses files, so it doesn't check that json_serializable is a
 dependency or that the `.g.dart` part exists. `build_runner` and the analyzer
-already report those.
+already report those. For the same reason, some cases are reported or
+skipped imperfectly:
 
-### freezed and dart_mappable
-
-vaixell recommends a single serializer, json_serializable. Models written
-with `@freezed` or `@MappableClass` are reported by design, even though their
-`fromJson` is generated. If your repository uses freezed or dart_mappable,
-turn the rule off:
-
-```yaml
-vaixell:
-  rules:
-    generated-json: off
-```
-
-### Existing repositories
-
-The rule is a warning, so it doesn't fail the run. To hide the existing
-findings and only see new ones, write a baseline and check against it:
-
-```sh
-vaixell check --write-baseline=vaixell_baseline.json
-vaixell check --baseline=vaixell_baseline.json
-```
+- Only a literal `JsonSerializable` annotation counts. An alias such as
+  `const jsonSerializable = JsonSerializable(...)` isn't recognized.
+- A `toJson` parameter typed with a function typedef, such as
+  `ToJsonT<T> toJsonT`, looks like a value, so the method isn't checked.
+- Models written with freezed or dart_mappable are reported by design, since
+  vaixell recommends a single serializer. Set `generated-json: off` in those
+  repositories.
+- A `fromJson` on a sealed or abstract class that dispatches on a type field
+  is reported, though json_serializable can't generate it. Use a
+  [baseline](../README.md#baselines) for those.
 
 **BAD:**
 
@@ -128,5 +115,5 @@ enum Status {
 ```yaml
 vaixell:
   rules:
-    generated-json: error # or off
+    generated-json: error # default: warning; or off
 ```
