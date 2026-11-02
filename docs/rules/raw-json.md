@@ -51,17 +51,19 @@ class ApiClient {
   Future<void> createUser(User user) => _post('/users', jsonEncode(user));
 }
 
+@JsonSerializable()
 class User {
   const User({required this.name});
 
-  factory User.fromJson(Map<String, dynamic> json) =>
-      User(name: json['name'] as String);
+  factory User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);
 
   final String name;
 
-  Map<String, dynamic> toJson() => {'name': name};
+  Map<String, dynamic> toJson() => _$UserToJson(this);
 }
 ```
+
+See also: [`generated-json`](generated-json.md).
 
 ## Usage
 

@@ -15,6 +15,7 @@ Files with a generated suffix, such as `.g.dart`, `.freezed.dart` or
 | [`extension-declaration`](rules/extension-declaration.md) | error   | Don't declare extensions or extension types.           |
 | [`static-method`](rules/static-method.md)                 | error   | Don't declare static methods, getters or setters.      |
 | [`raw-json`](rules/raw-json.md)                           | error   | Keep raw JSON handling inside model classes.           |
+| [`generated-json`](rules/generated-json.md)               | warning | Use json_serializable for `fromJson` and `toJson`.     |
 | [`await-receiver`](rules/await-receiver.md)               | warning | Name an awaited value before using it.                 |
 
 ## Configuration
@@ -37,3 +38,14 @@ vaixell:
 - `exclude`: globs, relative to the package, for files that aren't checked.
 
 Unknown keys, rules and presets are errors. `parse-error` can't be turned off.
+
+## Baselines
+
+To adopt a rule in an existing repository without fixing every finding at
+once, write a baseline and check against it. Findings in the baseline are
+hidden, so only new ones are reported:
+
+```sh
+vaixell check --write-baseline=vaixell_baseline.json
+vaixell check --baseline=vaixell_baseline.json
+```

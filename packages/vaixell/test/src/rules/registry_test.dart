@@ -15,13 +15,14 @@ void main() {
           'extension-declaration',
           'static-method',
           'raw-json',
+          'generated-json',
           'await-receiver',
         ]),
       );
     });
 
     test('each rule has the expected default severity', () {
-      const warnings = {'await-receiver'};
+      const warnings = {'generated-json', 'await-receiver'};
       for (final rule in const RuleRegistry().all) {
         expect(
           rule.defaultSeverity,
