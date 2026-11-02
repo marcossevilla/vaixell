@@ -36,23 +36,27 @@ final class const GeneratedJsonRule() extends Rule {
   List<Finding> check(ParsedFile file) => [
     for (final declaration in file.unit.declarations)
       ...switch (declaration) {
-        ClassDeclaration(:final namePart, :final metadata, :final body) => [
-          for (final member in body.members)
-            if (_jsonName(member) case final name?)
-              ?_check(
-                namePart.typeName.lexeme,
-                _annotation(metadata),
-                member,
-                name,
-              ),
-        ],
-        EnumDeclaration(:final namePart, :final body) => [
-          for (final member in body.members)
-            if (_jsonName(member) case final name?)
-              _enum(namePart.typeName.lexeme, name),
-        ],
+        final ClassDeclaration declaration => _classFindings(declaration),
+        final EnumDeclaration declaration => _enumFindings(declaration),
         _ => const <Finding>[],
       },
+  ];
+
+  List<Finding> _classFindings(ClassDeclaration declaration) => [
+    for (final member in declaration.body.members)
+      if (_jsonName(member) case final name?)
+        ?_check(
+          declaration.namePart.typeName.lexeme,
+          _annotation(declaration.metadata),
+          member,
+          name,
+        ),
+  ];
+
+  List<Finding> _enumFindings(EnumDeclaration declaration) => [
+    for (final member in declaration.body.members)
+      if (_jsonName(member) case final name?)
+        _enum(declaration.namePart.typeName.lexeme, name),
   ];
 
   /// Returns the name token of [member] if it's a `fromJson` constructor, a
