@@ -17,8 +17,8 @@ generates that code from the class itself. This rule reports:
   `fromJson` must return `_$<Class>FromJson(json, …)`, passing its first
   parameter, and `toJson` must return `_$<Class>ToJson(this, …)`. Both
   `=>` and `{ return …; }` bodies work.
-- A `fromJson` method, static or not, since json_serializable expects a
-  factory constructor.
+- A static `fromJson` method, since json_serializable expects a factory
+  constructor.
 - Any `fromJson` or `toJson` in an enum, whatever its body. Annotate the enum
   with `@JsonEnum()` and its values with `@JsonValue` instead.
 
@@ -28,10 +28,18 @@ import prefix such as `@js.JsonSerializable()`. Generic classes that use
 as in `_$PageFromJson<T>(json, fromJsonT)`. Fields that need custom parsing
 should use a `JsonConverter` instead of a hand-written body.
 
-Abstract members, such as `Map<String, dynamic> toJson();` in a base class,
-have no body to generate, so they aren't reported. Mixins, extensions and
-extension types aren't checked, since they can't be annotated with
-`@JsonSerializable`. Unlike `raw-json`, files under a `models`
+Some members aren't reported:
+
+- Abstract members, such as `Map<String, dynamic> toJson();` in a base
+  class, since they have no body to generate.
+- Helpers that convert another value rather than the class itself: instance
+  `fromJson` methods, and `toJson` methods that take a value to convert.
+  HydratedBloc's `fromJson(json)`/`toJson(state)` and a `JsonConverter`'s
+  `fromJson`/`toJson` are examples. A `toJson` whose only parameters are
+  functions, as with `genericArgumentFactories`, is still checked.
+
+Mixins, extensions and extension types aren't checked, since they can't be
+annotated with `@JsonSerializable`. Unlike `raw-json`, files under a `models`
 directory are checked too. Generated files are never checked.
 
 vaixell only parses files, so it doesn't check that json_serializable is a

@@ -247,7 +247,7 @@ class User {
       );
     });
 
-    group('fromJson methods', () {
+    group('static fromJson methods', () {
       test('are flagged on unannotated classes', () {
         final findings = rule.check(
           parse('''
@@ -273,10 +273,75 @@ class User {
 @JsonSerializable()
 class User {
   static User fromJson(Map<String, dynamic> json) => _$UserFromJson(json);
-  User fromJson(Map<String, dynamic> json) => _$UserFromJson(json);
 }
 '''),
-          equals(['User.fromJson', 'User.fromJson']),
+          equals(['User.fromJson']),
+        );
+      });
+    });
+
+    group('helpers that convert another value', () {
+      test('ignore HydratedBloc overrides', () {
+        expect(
+          symbols('''
+class ThemeModeBloc extends HydratedBloc<ThemeModeEvent, ThemeMode> {
+  @override
+  ThemeMode fromJson(Map<String, dynamic> json) =>
+      ThemeMode.values[json['theme_mode'] as int];
+
+  @override
+  Map<String, int> toJson(ThemeMode state) => {'theme_mode': state.index};
+}
+'''),
+          isEmpty,
+        );
+      });
+
+      test('ignore JsonConverter implementations', () {
+        expect(
+          symbols('''
+class ActionConverter implements JsonConverter<Action?, Object?> {
+  const ActionConverter();
+
+  @override
+  Action? fromJson(Object? json) => Action.fromJson(json);
+
+  @override
+  Object? toJson(Action? action) => action?.toJson();
+}
+'''),
+          isEmpty,
+        );
+      });
+
+      test('ignore toJson with an untyped or optional value parameter', () {
+        expect(
+          symbols('''
+class A {
+  Object? toJson(value) => value;
+}
+class B {
+  Object? toJson([Object? value]) => value;
+}
+'''),
+          isEmpty,
+        );
+      });
+
+      test('do not include toJson with only function parameters', () {
+        expect(
+          symbols('''
+class A<T> {
+  Map<String, dynamic> toJson(Object? Function(T) toJsonT) => {};
+}
+class B<T> {
+  Map<String, dynamic> toJson(Object? toJsonT(T value)) => {};
+}
+class C<T> {
+  Map<String, dynamic> toJson({Object? Function(T)? toJsonT}) => {};
+}
+'''),
+          equals(['A.toJson', 'B.toJson', 'C.toJson']),
         );
       });
     });

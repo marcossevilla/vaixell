@@ -8,8 +8,14 @@ import 'package:vaixell/src/violation/violation.dart';
 ///
 /// A `fromJson` factory constructor or `toJson` method passes when its
 /// class is annotated with `@JsonSerializable` and its body only returns
-/// `_$<Class>FromJson(json, …)` or `_$<Class>ToJson(this, …)`. A `fromJson`
-/// method is always reported, since json_serializable expects a constructor.
+/// `_$<Class>FromJson(json, …)` or `_$<Class>ToJson(this, …)`. A static
+/// `fromJson` method is always reported, since json_serializable expects a
+/// constructor.
+///
+/// Abstract members aren't reported. Neither are instance `fromJson`
+/// methods or `toJson` methods that take a value to convert, such as
+/// HydratedBloc overrides and `JsonConverter` implementations, since they
+/// convert another value rather than the class itself.
 ///
 /// Any `fromJson` or `toJson` in an enum is reported, since `@JsonEnum` and
 /// `@JsonValue` replace them. Mixins, extensions and extension types aren't
@@ -64,7 +70,12 @@ final class const GeneratedJsonRule() extends Rule {
     switch (member) {
       case MethodDeclaration(body: EmptyFunctionBody()):
         return null;
-      case MethodDeclaration(:final name, isGetter: false, isSetter: false)
+      case MethodDeclaration(
+            :final name,
+            isStatic: true,
+            isGetter: false,
+            isSetter: false,
+          )
           when name.lexeme == 'fromJson':
         return Finding(
           offset: name.offset,
@@ -81,15 +92,26 @@ final class const GeneratedJsonRule() extends Rule {
       case MethodDeclaration(
             :final name,
             :final body,
+            parameters: final parameters?,
             isGetter: false,
             isSetter: false,
           )
-          when name.lexeme == 'toJson':
+          when name.lexeme == 'toJson' && _onlyFunctions(parameters):
         return _member(className, annotated, name, body, 'this');
       default:
         return null;
     }
   }
+
+  /// Whether every parameter in [parameters] is a function, as with
+  /// `genericArgumentFactories`. A `toJson` that takes a value to convert,
+  /// as in HydratedBloc or a `JsonConverter`, isn't a model's `toJson`.
+  bool _onlyFunctions(FormalParameterList parameters) =>
+      parameters.parameters.every(
+        (parameter) =>
+            parameter.functionTypedSuffix != null ||
+            parameter.type is GenericFunctionType,
+      );
 
   /// Returns a finding for the `fromJson` or `toJson` member [name] with
   /// [body], unless [className] is [annotated] and [body] returns a call to
