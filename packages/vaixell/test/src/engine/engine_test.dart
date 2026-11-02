@@ -68,6 +68,25 @@ class Foo { static void bar() {} }
       ]);
     });
 
+    test('reports await-receiver as a warning', () async {
+      final violations = await _run({
+        'lib/a.dart': '''
+class Foo {
+  Future<void> bar() async {
+    (await f).x;
+    (await g).y;
+  }
+}
+''',
+      });
+      expect(violations.map((v) => v.id), [
+        'await-receiver:lib/a.dart:Foo.bar',
+        'await-receiver:lib/a.dart:Foo.bar#2',
+      ]);
+      expect(violations.map((v) => v.severity), everyElement(Severity.warning));
+      expect((violations.first.line, violations.first.column), equals((3, 6)));
+    });
+
     test('scans only non-generated Dart files under lib/', () async {
       final violations = await _run({
         'bin/main.dart': 'void foo() {}\n',

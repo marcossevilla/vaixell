@@ -4,13 +4,22 @@ import 'package:vaixell/src/rules/registry.dart';
 import 'package:vaixell/vaixell.dart';
 
 void main() {
-  test('recommended enables every rule as an error', () {
+  test('recommended enables every rule at its default severity', () {
     final recommended = const Presets().all['recommended']!;
     expect(
-      recommended.keys,
-      equals([for (final rule in const RuleRegistry().all) rule.id]),
+      recommended,
+      equals({
+        for (final rule in const RuleRegistry().all)
+          rule.id: rule.defaultSeverity,
+      }),
     );
-    expect(recommended.values, everyElement(Severity.error));
+    expect(recommended['await-receiver'], equals(Severity.warning));
+    expect(
+      recommended.entries
+          .where((e) => e.key != 'await-receiver')
+          .map((e) => e.value),
+      everyElement(Severity.error),
+    );
   });
 
   test('Config.recommended uses the recommended preset', () {
