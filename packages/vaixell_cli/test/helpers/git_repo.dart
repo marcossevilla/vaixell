@@ -1,3 +1,5 @@
+// Keep in sync with packages/vaixell/test/helpers/git_repo.dart.
+
 import 'dart:io';
 
 /// Runs git in [directory] with a fixed identity and no signing, and
@@ -30,6 +32,8 @@ Future<String> git(String directory, List<String> arguments) async {
 Future<void> gitInit(String directory) =>
     git(directory, ['init', '-q', '-b', 'main']);
 
+var _commits = 0;
+
 /// Stages everything in [directory] and commits it.
 ///
 /// Every commit gets a unique message, so commits made in the same second
@@ -41,6 +45,6 @@ Future<void> gitCommitAll(String directory) async {
     '-q',
     '--allow-empty',
     '-m',
-    'c${DateTime.now().microsecondsSinceEpoch}',
+    'c${_commits++}',
   ]);
 }

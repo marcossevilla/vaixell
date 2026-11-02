@@ -68,40 +68,44 @@ Iterable<String> _uris(File file) =>
         .map((directive) => directive.uri.stringValue!);
 
 void main() {
-  test('lib/src imports only follow the allowed layering', () {
-    final violations = <String>[];
-    for (final file in _dartFiles(_src)) {
-      final path = p.posix.joinAll(p.split(p.relative(file.path, from: _src)));
-      final layer = _layer(path);
-      final allowed = _allowedImports[layer];
-      if (allowed == null) {
-        violations.add('$path: layer "$layer" is not in the layering');
-        continue;
-      }
+  group('lib/src', () {
+    test('imports only follow the allowed layering', () {
+      final violations = <String>[];
+      for (final file in _dartFiles(_src)) {
+        final path = p.posix.joinAll(
+          p.split(p.relative(file.path, from: _src)),
+        );
+        final layer = _layer(path);
+        final allowed = _allowedImports[layer];
+        if (allowed == null) {
+          violations.add('$path: layer "$layer" is not in the layering');
+          continue;
+        }
 
-      for (final uri in _uris(file)) {
-        final target = _target(uri, from: path);
-        if (target == null) continue;
-        final targetLayer = _layer(target);
-        if (targetLayer != layer && !allowed.contains(targetLayer)) {
-          violations.add('$path: $layer must not import $targetLayer ($uri)');
+        for (final uri in _uris(file)) {
+          final target = _target(uri, from: path);
+          if (target == null) continue;
+          final targetLayer = _layer(target);
+          if (targetLayer != layer && !allowed.contains(targetLayer)) {
+            violations.add('$path: $layer must not import $targetLayer ($uri)');
+          }
         }
       }
-    }
 
-    expect(violations, isEmpty);
-  });
+      expect(violations, isEmpty);
+    });
 
-  test('lib/src/check imports no CLI packages or reporters', () {
-    final forbidden = RegExp(
-      r'^package:(args|mason_logger|io)/|reporter\.dart$',
-    );
-    final violations = [
-      for (final file in _dartFiles(p.join(_src, 'check')))
-        for (final uri in _uris(file))
-          if (forbidden.hasMatch(uri)) '${file.path}: $uri',
-    ];
+    test('keeps check free of CLI packages and reporters', () {
+      final forbidden = RegExp(
+        r'^package:(args|mason_logger|io)/|reporter\.dart$',
+      );
+      final violations = [
+        for (final file in _dartFiles(p.join(_src, 'check')))
+          for (final uri in _uris(file))
+            if (forbidden.hasMatch(uri)) '${file.path}: $uri',
+      ];
 
-    expect(violations, isEmpty);
+      expect(violations, isEmpty);
+    });
   });
 }

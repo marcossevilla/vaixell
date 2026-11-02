@@ -4,7 +4,7 @@ import 'package:test/test.dart';
 import 'package:test_descriptor/test_descriptor.dart' as d;
 import 'package:vaixell/vaixell.dart';
 
-Violation _v(
+Violation _violation(
   String id, {
   Severity severity = Severity.error,
   String path = 'lib/a.dart',
@@ -31,8 +31,11 @@ void main() {
     test('annotates every violation in a full run', () {
       const GithubReporter().write(
         Report.full([
-          _v('top-level-function:lib/a.dart:foo'),
-          _v('top-level-variable:lib/a.dart:x', severity: Severity.warning),
+          _violation('top-level-function:lib/a.dart:foo'),
+          _violation(
+            'top-level-variable:lib/a.dart:x',
+            severity: Severity.warning,
+          ),
         ]),
         out,
       );
@@ -50,11 +53,11 @@ void main() {
     });
 
     test('annotates only new violations in a diff', () {
-      final added = _v('top-level-function:lib/a.dart:added');
+      final added = _violation('top-level-function:lib/a.dart:added');
       const GithubReporter().write(
         Report.compared(ReportMode.diff, [
           added,
-          _v('top-level-function:lib/a.dart:old'),
+          _violation('top-level-function:lib/a.dart:old'),
         ], DiffResult(added: [added], fixed: const ['gone'])),
         out,
       );
@@ -66,7 +69,7 @@ void main() {
     test('escapes messages and property values', () {
       const GithubReporter().write(
         Report.full([
-          _v(
+          _violation(
             'id',
             path: 'lib/a,b:c%.dart',
             message: '100% sure:\r\nyes, really',
@@ -86,9 +89,9 @@ void main() {
     test('caps annotations per severity and prints the rest', () {
       const GithubReporter().write(
         Report.full([
-          for (var i = 0; i < 12; i++) _v('e$i', line: i + 1),
+          for (var i = 0; i < 12; i++) _violation('e$i', line: i + 1),
           for (var i = 0; i < 3; i++)
-            _v('w$i', severity: Severity.warning, line: i + 1),
+            _violation('w$i', severity: Severity.warning, line: i + 1),
         ]),
         out,
       );
@@ -110,7 +113,7 @@ void main() {
       setUp(() => path = d.path('summary.md'));
 
       test('is not written without a path', () {
-        const GithubReporter().write(Report.full([_v('x')]), out);
+        const GithubReporter().write(Report.full([_violation('x')]), out);
         expect(File(path).existsSync(), isFalse);
       });
 
@@ -130,7 +133,7 @@ void main() {
       });
 
       test('has tables of new and fixed violations', () {
-        final added = _v(
+        final added = _violation(
           'top-level-function:lib/a.dart:added',
           message: 'Pipes | and\nnew lines.',
         );
@@ -165,8 +168,10 @@ void main() {
       });
 
       test('lists every violation and says how many were not annotated', () {
-        GithubReporter(summaryPath: path)
-            .write(Report.full([for (var i = 0; i < 12; i++) _v('e$i')]), out);
+        GithubReporter(summaryPath: path).write(
+          Report.full([for (var i = 0; i < 12; i++) _violation('e$i')]),
+          out,
+        );
         final summary = File(path).readAsStringSync();
         expect(summary, contains('### Violations\n'));
         expect(
@@ -184,8 +189,10 @@ void main() {
       });
 
       test('uses the singular for one violation left out', () {
-        GithubReporter(summaryPath: path)
-            .write(Report.full([for (var i = 0; i < 11; i++) _v('e$i')]), out);
+        GithubReporter(summaryPath: path).write(
+          Report.full([for (var i = 0; i < 11; i++) _violation('e$i')]),
+          out,
+        );
         expect(
           File(path).readAsStringSync(),
           contains('> 1 violation was not annotated'),

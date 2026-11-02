@@ -12,9 +12,9 @@ class _MockProgress extends Mock implements Progress;
 
 class _MockPubUpdater extends Mock implements PubUpdater;
 
-void main() {
-  const latestVersion = '0.0.0';
+const _latestVersion = '0.0.0';
 
+void main() {
   group(UpdateCommand, () {
     late PubUpdater pubUpdater;
     late Logger logger;
@@ -35,7 +35,7 @@ void main() {
       when(
         () => pubUpdater.update(
           packageName: VaixellCommandRunner.packageName,
-          versionConstraint: latestVersion,
+          versionConstraint: _latestVersion,
         ),
       ).thenAnswer(
         (_) async => ProcessResult(0, ExitCode.success.code, null, null),
@@ -75,7 +75,7 @@ void main() {
 
     test('handles pub update errors', () async {
       when(() => pubUpdater.getLatestVersion(any()))
-          .thenAnswer((_) async => latestVersion);
+          .thenAnswer((_) async => _latestVersion);
       when(
         () => pubUpdater.update(
           packageName: any(named: 'packageName'),
@@ -98,7 +98,7 @@ void main() {
       const error = 'Oh no! Installing this is not possible right now!';
 
       when(() => pubUpdater.getLatestVersion(any()))
-          .thenAnswer((_) async => latestVersion);
+          .thenAnswer((_) async => _latestVersion);
 
       when(
         () => pubUpdater.update(
@@ -122,7 +122,7 @@ void main() {
 
     test('updates when newer version exists', () async {
       when(() => pubUpdater.getLatestVersion(any()))
-          .thenAnswer((_) async => latestVersion);
+          .thenAnswer((_) async => _latestVersion);
       when(
         () => pubUpdater.update(
           packageName: any(named: 'packageName'),
@@ -135,11 +135,11 @@ void main() {
       final result = await commandRunner.run(['update']);
       expect(result, equals(ExitCode.success.code));
       verify(() => logger.progress('Checking for updates')).called(1);
-      verify(() => logger.progress('Updating to $latestVersion')).called(1);
+      verify(() => logger.progress('Updating to $_latestVersion')).called(1);
       verify(
         () => pubUpdater.update(
           packageName: VaixellCommandRunner.packageName,
-          versionConstraint: latestVersion,
+          versionConstraint: _latestVersion,
         ),
       ).called(1);
     });
@@ -152,7 +152,7 @@ void main() {
       expect(result, equals(ExitCode.success.code));
       verify(() => logger.info('CLI is already at the latest version.'))
           .called(1);
-      verifyNever(() => logger.progress('Updating to $latestVersion'));
+      verifyNever(() => logger.progress('Updating to $_latestVersion'));
       verifyNever(
         () => pubUpdater.update(
           packageName: any(named: 'packageName'),

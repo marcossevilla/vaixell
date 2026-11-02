@@ -5,6 +5,12 @@ import 'package:vaixell/vaixell.dart';
 
 import '../../helpers/memory_source_tree.dart';
 
+class _MockPackageResolver extends Mock implements PackageResolver;
+
+class _MockEngine extends Mock implements Engine;
+
+class _MockBaselineFile extends Mock implements BaselineFile;
+
 void main() {
   group(WriteBaseline, () {
     setUp(
@@ -109,9 +115,3 @@ void main() {
     });
   });
 }
-
-class _MockPackageResolver extends Mock implements PackageResolver;
-
-class _MockEngine extends Mock implements Engine;
-
-class _MockBaselineFile extends Mock implements BaselineFile;

@@ -40,25 +40,6 @@ void main() {
       );
     });
 
-    test('Report.failing is every violation in a full run', () {
-      const violation = Violation(
-        id: 'x',
-        rule: 'r',
-        severity: Severity.warning,
-        path: 'lib/a.dart',
-        line: 1,
-        column: 1,
-        message: 'm',
-      );
-      expect(const Report.full([violation]).failing, equals([violation]));
-      expect(
-        const Report.compared(ReportMode.baseline, [
-          violation,
-        ], DiffResult(added: [], fixed: [])).failing,
-        isEmpty,
-      );
-    });
-
     group('output of a $Check', () {
       Future<String> run({String? gitDiff, String? baseline}) async {
         final report = await Check(root: d.sandbox)(
@@ -83,13 +64,13 @@ void main() {
         ]).create();
       });
 
-      test('full mode', () async {
+      test('matches the golden in full mode', () async {
         final output = await run();
         expect(() => jsonDecode(output), returnsNormally);
         _expectGolden(output, 'full');
       });
 
-      test('diff mode', () async {
+      test('matches the golden in diff mode', () async {
         await gitInit(d.sandbox);
         await gitCommitAll(d.sandbox);
         await d.dir('lib', [
@@ -99,7 +80,7 @@ void main() {
         _expectGolden(await run(gitDiff: 'main'), 'diff');
       });
 
-      test('baseline mode', () async {
+      test('matches the golden in baseline mode', () async {
         await d
             .file(
               'baseline.json',

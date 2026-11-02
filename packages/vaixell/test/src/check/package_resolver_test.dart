@@ -4,6 +4,10 @@ import 'package:vaixell/vaixell.dart';
 
 import '../../helpers/memory_source_tree.dart';
 
+class _MockPackageDiscovery extends Mock implements PackageDiscovery;
+
+class _MockConfigResolver extends Mock implements ConfigResolver;
+
 void main() {
   group(PackageResolver, () {
     late MemorySourceTree tree;
@@ -84,7 +88,3 @@ void main() {
     });
   });
 }
-
-class _MockPackageDiscovery extends Mock implements PackageDiscovery;
-
-class _MockConfigResolver extends Mock implements ConfigResolver;
