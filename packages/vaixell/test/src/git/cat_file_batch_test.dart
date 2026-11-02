@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 import 'package:test_descriptor/test_descriptor.dart' as d;
 import 'package:vaixell/src/git/cat_file_batch.dart';
@@ -50,16 +52,24 @@ void main() {
       expect(await batch.lookup('HEAD:./missing'), isNull);
     });
 
-    test('waits for contents that arrive after the header', () async {
-      const script =
-          r'read line; printf "x blob 3\n"; sleep 0.2; printf "abc\n"; '
-          'read line';
-      final process = await Process.start('sh', ['-c', script]);
+    test('waits for a blob that arrives after its header', () async {
+      final stdout = StreamController<List<int>>();
+      final stdin = StreamController<List<int>>();
+      addTearDown(stdout.close);
+      addTearDown(stdin.close);
+      stdin.stream.listen((_) => stdout.add(utf8.encode('abc blob 3\n')));
+      final process = _MockProcess();
+      when(() => process.stdout).thenAnswer((_) => stdout.stream);
+      when(() => process.stdin).thenReturn(IOSink(stdin));
+
       final batch = CatFileBatch(process);
-      addTearDown(batch.close);
-      final object = await batch.lookup('HEAD:./a');
+      final result = batch.lookup('HEAD:./a');
+      await pumpEventQueue();
+      stdout.add(utf8.encode('xyz\n'));
+
+      final object = await result;
       expect(object!.type, equals('blob'));
-      expect(utf8.decode(object.bytes), equals('abc'));
+      expect(utf8.decode(object.bytes), equals('xyz'));
     });
 
     final exited = throwsA(
@@ -85,3 +95,5 @@ void main() {
     });
   });
 }
+
+class _MockProcess extends Mock implements Process;

@@ -1,3 +1,4 @@
+import 'package:vaixell/src/rules/await_receiver.dart';
 import 'package:vaixell/src/rules/extension_declaration.dart';
 import 'package:vaixell/src/rules/generated_json.dart';
 import 'package:vaixell/src/rules/parse_error.dart';
@@ -21,5 +22,6 @@ class const RuleRegistry() {
     StaticMethodRule(),
     RawJsonRule(),
     GeneratedJsonRule(),
+    AwaitReceiverRule(),
   ];
 }

@@ -16,29 +16,22 @@ void main() {
           'static-method',
           'raw-json',
           'generated-json',
+          'await-receiver',
         ]),
       );
     });
 
-    test(
-      'defaults generated-json to warning and every other rule to error',
-      () {
+    test('each rule has the expected default severity', () {
+      const warnings = {'generated-json', 'await-receiver'};
+      for (final rule in const RuleRegistry().all) {
         expect(
-          {
-            for (final rule in const RuleRegistry().all)
-              rule.id: rule.defaultSeverity,
-          },
-          equals({
-            'parse-error': Severity.error,
-            'top-level-function': Severity.error,
-            'top-level-variable': Severity.error,
-            'extension-declaration': Severity.error,
-            'static-method': Severity.error,
-            'raw-json': Severity.error,
-            'generated-json': Severity.warning,
-          }),
+          rule.defaultSeverity,
+          equals(
+            warnings.contains(rule.id) ? Severity.warning : Severity.error,
+          ),
+          reason: rule.id,
         );
-      },
-    );
+      }
+    });
   });
 }
