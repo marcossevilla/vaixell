@@ -50,6 +50,18 @@ void main() {
       expect(await batch.lookup('HEAD:./missing'), isNull);
     });
 
+    test('waits for contents that arrive after the header', () async {
+      const script =
+          r'read line; printf "x blob 3\n"; sleep 0.2; printf "abc\n"; '
+          'read line';
+      final process = await Process.start('sh', ['-c', script]);
+      final batch = CatFileBatch(process);
+      addTearDown(batch.close);
+      final object = await batch.lookup('HEAD:./a');
+      expect(object!.type, equals('blob'));
+      expect(utf8.decode(object.bytes), equals('abc'));
+    });
+
     final exited = throwsA(
       isA<GitException>().having(
         (e) => e.message,
