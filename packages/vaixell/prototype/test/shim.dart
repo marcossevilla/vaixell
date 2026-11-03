@@ -6,11 +6,11 @@ import 'package:vaixell/src/violation/violation.dart';
 
 import '../declaration_rules.dart' as model;
 import '../model.dart';
-import '../rule.dart' show ModelRule;
+import '../rule.dart' as model show Rule;
 import '../rules.dart' as model;
 
 base class const _Shim(
-  final ModelRule _rule,
+  final model.Rule _rule,
   @override final Severity defaultSeverity, {
   @override final bool checksFilesWithErrors = false,
 }) extends Rule {

@@ -14,7 +14,7 @@ import 'model.dart';
 import 'rule.dart';
 
 /// Reports static methods, getters and setters.
-final class const StaticMethodRule() extends ModelRule with ChecksMembers {
+final class const StaticMethodRule() extends Rule with ChecksMembers {
   @override
   String get id => 'static-method';
 
@@ -36,9 +36,7 @@ extension on FunctionKind {
 }
 
 /// Reports top-level functions, getters and setters, except `main`.
-final class const TopLevelFunctionRule()
-    extends ModelRule
-    with ChecksDeclarations {
+final class const TopLevelFunctionRule() extends Rule with ChecksDeclarations {
   @override
   String get id => 'top-level-function';
 
@@ -56,9 +54,7 @@ final class const TopLevelFunctionRule()
 }
 
 /// Reports top-level variables and constants.
-final class const TopLevelVariableRule()
-    extends ModelRule
-    with ChecksDeclarations {
+final class const TopLevelVariableRule() extends Rule with ChecksDeclarations {
   @override
   String get id => 'top-level-variable';
 
@@ -76,7 +72,7 @@ final class const TopLevelVariableRule()
 
 /// Reports extensions and extension types.
 final class const ExtensionDeclarationRule()
-    extends ModelRule
+    extends Rule
     with ChecksDeclarations {
   @override
   String get id => 'extension-declaration';
@@ -104,7 +100,7 @@ final class const ExtensionDeclarationRule()
 /// It looks at the whole file, so it overrides `check` instead of mixing in
 /// a `Checks…` mixin. Running it on files that don't parse is the engine's
 /// call, which "Presets and parse errors with injected rules" (#39) decides.
-final class const ParseErrorRule() extends ModelRule {
+final class const ParseErrorRule() extends Rule {
   @override
   String get id => 'parse-error';
 
@@ -132,7 +128,7 @@ final class const ImportBoundary({
 
 /// Reports imports that cross an [ImportBoundary], as sketched in #32.
 final class const ForbiddenImportRule(final List<ImportBoundary> boundaries)
-    extends ModelRule
+    extends Rule
     with ChecksImports {
   @override
   String get id => 'forbidden-import';

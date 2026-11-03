@@ -18,9 +18,9 @@ final class const Finding({
   required final String message,
   final String? symbol,
 }) {
-  /// A finding at [element], whose symbol is [Located.symbol], followed by
+  /// A finding at [element], whose symbol is [Reportable.symbol], followed by
   /// `@qualifier` when there's one, as in `ApiClient.getUser@decode`.
-  new at(Located element, {required String message, String? qualifier})
+  new at(Reportable element, {required String message, String? qualifier})
     : this(
         offset: element.offset,
         message: message,
@@ -31,7 +31,7 @@ final class const Finding({
 }
 
 /// A rule written against the model.
-abstract base class const ModelRule() {
+abstract base class const Rule() {
   /// The id used in config and in violation ids.
   String get id;
 
@@ -43,7 +43,7 @@ abstract base class const ModelRule() {
 }
 
 /// Calls [checkDeclaration] for every top-level declaration in the file.
-base mixin ChecksDeclarations on ModelRule {
+base mixin ChecksDeclarations on Rule {
   Finding? checkDeclaration(Declaration declaration);
 
   @override
@@ -56,7 +56,7 @@ base mixin ChecksDeclarations on ModelRule {
 }
 
 /// Calls [checkImport] for every `import` in the file.
-base mixin ChecksImports on ModelRule {
+base mixin ChecksImports on Rule {
   Finding? checkImport(DartFile file, Import import);
 
   @override
@@ -69,7 +69,7 @@ base mixin ChecksImports on ModelRule {
 }
 
 /// Calls [checkExpression] for every expression in the file.
-base mixin ChecksExpressions on ModelRule {
+base mixin ChecksExpressions on Rule {
   Finding? checkExpression(Expression expression);
 
   @override
@@ -81,22 +81,22 @@ base mixin ChecksExpressions on ModelRule {
   );
 }
 
-/// Calls [checkTypeReference] for every type annotation in the file.
-base mixin ChecksTypeReferences on ModelRule {
-  Finding? checkTypeReference(TypeReference type);
+/// Calls [checkTypeAnnotation] for every type annotation in the file.
+base mixin ChecksTypeAnnotations on Rule {
+  Finding? checkTypeAnnotation(TypeAnnotation type);
 
   @override
   List<Finding> check(DartFile file) => _addFindings(
     this,
     file,
     super.check(file),
-    () => file.typeReferences.map(checkTypeReference),
+    () => file.typeAnnotations.map(checkTypeAnnotation),
   );
 }
 
 /// Calls [checkMember] for every member of every class, mixin, enum,
 /// extension and extension type in the file.
-base mixin ChecksMembers on ModelRule {
+base mixin ChecksMembers on Rule {
   Finding? checkMember(TypeDeclaration type, Member member);
 
   @override
@@ -112,7 +112,7 @@ base mixin ChecksMembers on ModelRule {
 }
 
 /// Skips files under any of [skippedDirectories], such as `models`.
-base mixin SkipsDirectories on ModelRule {
+base mixin SkipsDirectories on Rule {
   Set<String> get skippedDirectories;
 
   @override
@@ -124,7 +124,7 @@ base mixin SkipsDirectories on ModelRule {
 /// [inherited] plus the non-null findings from [visit], in source order,
 /// or nothing when [rule] skips [file].
 List<Finding> _addFindings(
-  ModelRule rule,
+  Rule rule,
   DartFile file,
   List<Finding> inherited,
   Iterable<Finding?> Function() visit,

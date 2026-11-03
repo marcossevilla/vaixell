@@ -63,7 +63,7 @@ final class _DartFile(
   List<Expression> get expressions => _collected.expressions;
 
   @override
-  List<TypeReference> get typeReferences => _collected.types;
+  List<TypeAnnotation> get typeAnnotations => _collected.types;
 
   T _wrap<T extends Object>(ast.AstNode node, T Function() create) =>
       _cache.putIfAbsent(node, create) as T;
@@ -131,8 +131,8 @@ final class _DartFile(
   Expression? expressionOrNull(ast.Expression? node) =>
       node == null ? null : expression(node);
 
-  TypeReference type(ast.TypeAnnotation node) =>
-      _wrap(node, () => _TypeReference(this, node));
+  TypeAnnotation type(ast.TypeAnnotation node) =>
+      _wrap(node, () => _TypeAnnotation(this, node));
 
   // --- Shared lookups ------------------------------------------------------
 
@@ -240,7 +240,7 @@ final class _DartFile(
 final class _Collector(final _DartFile file)
     extends GeneralizingAstVisitor<void> {
   final List<Expression> expressions = [];
-  final List<TypeReference> types = [];
+  final List<TypeAnnotation> types = [];
 
   void collect(ast.AstNode node) => node.accept(this);
 
@@ -691,7 +691,7 @@ final class _Cast(final _DartFile file, final ast.AsExpression node)
   Expression get operand => file.expression(node.expression);
 
   @override
-  TypeReference get type => file.type(node.type);
+  TypeAnnotation get type => file.type(node.type);
 }
 
 final class _NullCheck(final _DartFile file, final ast.PostfixExpression node)
@@ -722,9 +722,9 @@ final class _OtherExpression(final _DartFile file, final ast.Expression node)
     with _Enclosed, _Expression
     implements OtherExpression;
 
-final class _TypeReference(final _DartFile file, final ast.TypeAnnotation node)
+final class _TypeAnnotation(final _DartFile file, final ast.TypeAnnotation node)
     with _Enclosed
-    implements TypeReference {
+    implements TypeAnnotation {
   @override
   String? get name => switch (node) {
     ast.NamedType(:final name) => name.lexeme,
@@ -738,7 +738,7 @@ final class _TypeReference(final _DartFile file, final ast.TypeAnnotation node)
   };
 
   @override
-  List<TypeReference> get typeArguments => switch (node) {
+  List<TypeAnnotation> get typeArguments => switch (node) {
     ast.NamedType(:final typeArguments?) => [
       for (final argument in typeArguments.arguments) file.type(argument),
     ],

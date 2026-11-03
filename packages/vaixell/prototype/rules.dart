@@ -6,7 +6,7 @@
 //
 // What a rule needs to know about the code is written as file-private
 // extension getters, so checks read as patterns over named facts, as in
-// `TypeReference(isStringDynamicMap: true)`.
+// `TypeAnnotation(isStringDynamicMap: true)`.
 
 import 'model.dart';
 import 'rule.dart';
@@ -15,7 +15,7 @@ import 'rule.dart';
 
 /// Reports an `await` whose result is used as a receiver, as in
 /// `(await f).x` or `(await f)!`.
-final class const AwaitReceiverRule() extends ModelRule with ChecksExpressions {
+final class const AwaitReceiverRule() extends Rule with ChecksExpressions {
   @override
   String get id => 'await-receiver';
 
@@ -47,8 +47,8 @@ extension on Expression {
 /// Reports `jsonDecode`, `jsonEncode`, `json.decode`, `json.encode` and
 /// `Map<String, dynamic>` outside model classes.
 final class const RawJsonRule()
-    extends ModelRule
-    with ChecksExpressions, ChecksTypeReferences, SkipsDirectories {
+    extends Rule
+    with ChecksExpressions, ChecksTypeAnnotations, SkipsDirectories {
   static const Map<String, String> _advice = {
     'decode': 'Deserialize JSON in a `fromJson` constructor.',
     'encode': 'Serialize JSON in a `toJson` method.',
@@ -79,8 +79,8 @@ final class const RawJsonRule()
   };
 
   @override
-  Finding? checkTypeReference(TypeReference type) => switch (type) {
-    TypeReference(
+  Finding? checkTypeAnnotation(TypeAnnotation type) => switch (type) {
+    TypeAnnotation(
       isInJsonMember: false,
       isStringDynamicMap: true,
       cast: null || Cast(isPassedToFromJson: false),
@@ -151,13 +151,13 @@ extension on Expression {
   };
 }
 
-extension on TypeReference {
+extension on TypeAnnotation {
   bool get isStringDynamicMap => switch (this) {
-    TypeReference(
+    TypeAnnotation(
       name: 'Map',
       typeArguments: [
-        TypeReference(name: 'String'),
-        TypeReference(name: 'dynamic'),
+        TypeAnnotation(name: 'String'),
+        TypeAnnotation(name: 'dynamic'),
       ],
     ) =>
       true,
@@ -169,7 +169,7 @@ extension on TypeReference {
 
 /// Reports `fromJson` and `toJson` members that json_serializable doesn't
 /// generate.
-final class const GeneratedJsonRule() extends ModelRule with ChecksMembers {
+final class const GeneratedJsonRule() extends Rule with ChecksMembers {
   @override
   String get id => 'generated-json';
 

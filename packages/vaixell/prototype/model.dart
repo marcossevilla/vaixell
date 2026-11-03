@@ -41,13 +41,13 @@ abstract interface class DartFile {
 
   /// NEW: every type annotation, at any depth, in source order. Both types
   /// in `List<Map<String, dynamic>>` are in it.
-  List<TypeReference> get typeReferences;
+  List<TypeAnnotation> get typeAnnotations;
 }
 
 // --- Reportable elements ----------------------------------------------------
 
 /// Something a finding can point at.
-sealed class Located {
+sealed class Reportable {
   int get offset;
 
   /// NEW (#37): what violation ids call it: `Container.member`, `member` or
@@ -57,13 +57,13 @@ sealed class Located {
 }
 
 /// A syntax error reported by the parser.
-abstract interface class SyntaxError implements Located {
+abstract interface class SyntaxError implements Reportable {
   String get message;
 }
 
 /// An `import` directive, as decided in #44. Its offset is the `import`
 /// keyword's and its symbol is [uri].
-abstract interface class Import implements Located {
+abstract interface class Import implements Reportable {
   /// The URI as written, for example `package:flutter/material.dart`.
   String get uri;
 
@@ -78,7 +78,7 @@ enum ImportKind { dart, package, relative }
 
 // --- Declarations (#35) ----------------------------------------------------
 
-sealed class Declaration implements Located;
+sealed class Declaration implements Reportable;
 
 /// A declaration with members.
 sealed class TypeDeclaration implements Declaration {
@@ -135,7 +135,7 @@ abstract interface class TopLevelVariable implements Declaration {
 enum FunctionKind { function, getter, setter, operator }
 
 /// NEW: a method, constructor or field of a [TypeDeclaration].
-sealed class Member implements Located;
+sealed class Member implements Reportable;
 
 abstract interface class Method implements Member {
   String get name;
@@ -207,7 +207,7 @@ abstract interface class Argument {
 
 /// An expression or type annotation, and the declaration it's written in.
 /// Its [symbol] is the one of where it is.
-sealed class Enclosed implements Located {
+sealed class Enclosed implements Reportable {
   /// The top-level declaration it's in. `null` in a library directive's
   /// annotation, a top-level variable declaration's annotation, or a
   /// typedef, which #35 doesn't model.
@@ -300,7 +300,7 @@ enum AccessOperator { period, questionPeriod, cascade, questionCascade }
 abstract interface class Cast implements Expression {
   Expression get operand;
 
-  TypeReference get type;
+  TypeAnnotation get type;
 }
 
 /// `operand!`.
@@ -343,13 +343,13 @@ final class const OtherUse() extends Use;
 ///
 /// A type annotation shared by several variables, as in
 /// `Map<String, dynamic> a, b;`, is enclosed by the first.
-abstract interface class TypeReference implements Enclosed {
+abstract interface class TypeAnnotation implements Enclosed {
   /// `null` for a function or record type.
   String? get name;
 
   String? get prefix;
 
-  List<TypeReference> get typeArguments;
+  List<TypeAnnotation> get typeArguments;
 
   /// The cast this is the type of, as in `x as Map<String, dynamic>`.
   Cast? get cast;
