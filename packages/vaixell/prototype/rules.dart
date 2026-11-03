@@ -230,7 +230,7 @@ final class const _Unchecked() implements _JsonMember {
 /// Enums use `@JsonEnum` and `@JsonValue` instead, whatever the body.
 final class _InEnum(final EnumDeclaration type, final Member member)
     implements _JsonMember {
-  String get symbol => '${type.name}.${member.jsonName}';
+  String get symbol => member.symbol!;
 
   @override
   Finding get finding => Finding(
@@ -248,7 +248,7 @@ base class _InClass(final ClassDeclaration type, final Member member)
     implements _JsonMember {
   String get name => member.jsonName;
 
-  String get symbol => '${type.name}.$name';
+  String get symbol => member.symbol!;
 
   /// `_$UserFromJson` for `User.fromJson`. Leading underscores are dropped.
   String get generated =>

@@ -18,15 +18,15 @@ final class const Finding({
   required final String message,
   final String? symbol,
 }) {
-  /// A finding at [code], whose symbol is [Enclosed.symbol], followed by
+  /// A finding at [element], whose symbol is [Located.symbol], followed by
   /// `@qualifier` when there's one, as in `ApiClient.getUser@decode`.
-  new at(Enclosed code, {required String message, String? qualifier})
+  new at(Located element, {required String message, String? qualifier})
     : this(
-        offset: code.offset,
+        offset: element.offset,
         message: message,
         symbol: qualifier == null
-            ? code.symbol
-            : '${code.symbol ?? ''}@$qualifier',
+            ? element.symbol
+            : '${element.symbol ?? ''}@$qualifier',
       );
 }
 
@@ -40,6 +40,32 @@ abstract base class const ModelRule() {
 
   /// The findings in [file], in source order.
   List<Finding> check(DartFile file) => const [];
+}
+
+/// Calls [checkDeclaration] for every top-level declaration in the file.
+base mixin ChecksDeclarations on ModelRule {
+  Finding? checkDeclaration(Declaration declaration);
+
+  @override
+  List<Finding> check(DartFile file) => _addFindings(
+    this,
+    file,
+    super.check(file),
+    () => file.declarations.map(checkDeclaration),
+  );
+}
+
+/// Calls [checkImport] for every `import` in the file.
+base mixin ChecksImports on ModelRule {
+  Finding? checkImport(DartFile file, Import import);
+
+  @override
+  List<Finding> check(DartFile file) => _addFindings(
+    this,
+    file,
+    super.check(file),
+    () => [for (final import in file.imports) checkImport(file, import)],
+  );
 }
 
 /// Calls [checkExpression] for every expression in the file.

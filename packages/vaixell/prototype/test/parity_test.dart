@@ -3,14 +3,34 @@
 
 import 'package:test/test.dart';
 import 'package:vaixell/src/rules/await_receiver.dart' as today;
+import 'package:vaixell/src/rules/extension_declaration.dart' as today;
 import 'package:vaixell/src/rules/generated_json.dart' as today;
+import 'package:vaixell/src/rules/parse_error.dart' as today;
 import 'package:vaixell/src/rules/raw_json.dart' as today;
 import 'package:vaixell/src/rules/rule.dart';
+import 'package:vaixell/src/rules/static_method.dart' as today;
+import 'package:vaixell/src/rules/top_level_function.dart' as today;
+import 'package:vaixell/src/rules/top_level_variable.dart' as today;
 
 import '../../test/helpers/parse.dart';
 import 'shim.dart' as model;
 
 const _sources = [
+  // Declarations.
+  'extension on int { static int get a => 1; static set a(int v) {} }',
+  'extension X on int { static void m() {} }',
+  'extension type T(int v) { static T of() => T(0); }',
+  'mixin M { static void m() {} }',
+  'enum E { a; static E parse() => a; static set x(int v) {} }',
+  'class C { static operator ==(Object o) => true; static final x = 1; }',
+  'int get main => 1; set main(int v) {} void main() {} external void f();',
+  'set x(int v) {} int get y => 1; void z() {}',
+  'const a = 1, b = 2; final c = 3; var d; late int e; external int f;',
+  'class A {} extension on A {} extension B on A {} extension type C(int v) {}',
+  // Syntax errors.
+  'class A {',
+  'class A { void f( }\nclass {',
+  'void f() { a = ; b = ; }',
   // Member access shapes around json/jsonDecode.
   'f() { a?.json.decode(s); x..json.decode(s); x..jsonDecode(s); }',
   'f() { (a).json.decode(s); this.json.decode(s); a.b.json.decode(s); }',
@@ -76,6 +96,14 @@ void main() {
     (const today.AwaitReceiverRule(), const model.AwaitReceiverRule()),
     (const today.RawJsonRule(), const model.RawJsonRule()),
     (const today.GeneratedJsonRule(), const model.GeneratedJsonRule()),
+    (const today.StaticMethodRule(), const model.StaticMethodRule()),
+    (const today.TopLevelFunctionRule(), const model.TopLevelFunctionRule()),
+    (const today.TopLevelVariableRule(), const model.TopLevelVariableRule()),
+    (
+      const today.ExtensionDeclarationRule(),
+      const model.ExtensionDeclarationRule(),
+    ),
+    (const today.ParseErrorRule(), const model.ParseErrorRule()),
   ];
 
   List<(int, String?, String)> findings(Rule rule, ParsedFile file) =>

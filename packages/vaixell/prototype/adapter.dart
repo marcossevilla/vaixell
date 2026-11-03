@@ -11,10 +11,19 @@ part of 'model.dart';
 // the mixins' getters, and `@override` on every parameter adds only noise.
 // ignore_for_file: annotate_overrides
 
-/// The model of [file].
-DartFile modelOf(ParsedFile file) => _DartFile(file);
+/// The model of [file], in the package at [packageRoot] named
+/// [packageName], which resolve imports of the file's own package.
+DartFile modelOf(
+  ParsedFile file, {
+  String packageRoot = '',
+  String? packageName,
+}) => _DartFile(file, packageRoot, packageName);
 
-final class _DartFile(final ParsedFile parsed) implements DartFile {
+final class _DartFile(
+  final ParsedFile parsed,
+  final String packageRoot,
+  final String? packageName,
+) implements DartFile {
   final Map<ast.AstNode, Object> _cache = {};
 
   late final _Collector _collected = _Collector(this)..collect(parsed.unit);
@@ -23,7 +32,23 @@ final class _DartFile(final ParsedFile parsed) implements DartFile {
   String get path => parsed.path;
 
   @override
+  String get packagePath =>
+      packageRoot.isEmpty ? path : p.posix.relative(path, from: packageRoot);
+
+  @override
   List<String> get directories => path.split('/')..removeLast();
+
+  @override
+  List<SyntaxError> get errors => [
+    for (final error in parsed.result.errors)
+      _SyntaxError(error.offset, error.message),
+  ];
+
+  @override
+  List<Import> get imports => [
+    for (final directive in parsed.unit.directives)
+      if (directive is ast.ImportDirective) _Import(this, directive),
+  ];
 
   @override
   late final List<Declaration> declarations = [
@@ -75,7 +100,7 @@ final class _DartFile(final ParsedFile parsed) implements DartFile {
     ast.VariableDeclaration(
       parent: ast.VariableDeclarationList(parent: ast.FieldDeclaration()),
     ) =>
-      _wrap(node, () => _Field(node)),
+      _wrap(node, () => _Field(this, node)),
     _ => null,
   };
 
@@ -98,6 +123,10 @@ final class _DartFile(final ParsedFile parsed) implements DartFile {
       _ => _OtherExpression(this, node),
     },
   );
+
+  /// A member's symbol, which needs the declaration around [node].
+  String? symbolOfMember(ast.AstNode node, Member member) =>
+      _symbolOf(enclosing(node).declaration, member);
 
   Expression? expressionOrNull(ast.Expression? node) =>
       node == null ? null : expression(node);
@@ -259,13 +288,16 @@ final class _Collector(final _DartFile file)
 
 // --- Declarations ------------------------------------------------------------
 
-/// What every type declaration shares: annotations and members.
+/// What every type declaration shares: a symbol, annotations and members.
 mixin _Members implements TypeDeclaration {
   _DartFile get file;
 
   ast.AnnotatedNode get node;
 
   List<ast.ClassMember> get body;
+
+  @override
+  String? get symbol => _symbolOf(this, null);
 
   @override
   List<Annotation> get annotations => [
@@ -379,6 +411,9 @@ final class _TopLevelFunction(final ast.FunctionDeclaration node)
   @override
   FunctionKind get kind =>
       _DartFile.kind(isGetter: node.isGetter, isSetter: node.isSetter);
+
+  @override
+  String? get symbol => _symbolOf(this, null);
 }
 
 final class _TopLevelVariable(final ast.VariableDeclaration node)
@@ -388,12 +423,21 @@ final class _TopLevelVariable(final ast.VariableDeclaration node)
 
   @override
   int get offset => node.name.offset;
+
+  @override
+  bool get isConst => (node.parent! as ast.VariableDeclarationList).isConst;
+
+  @override
+  String? get symbol => _symbolOf(this, null);
 }
 
 // --- Members -----------------------------------------------------------------
 
 final class _Method(final _DartFile file, final ast.MethodDeclaration node)
     implements Method {
+  @override
+  String? get symbol => file.symbolOfMember(node, this);
+
   @override
   String get name => node.name.lexeme;
 
@@ -425,6 +469,9 @@ final class _Constructor(
   final ast.ConstructorDeclaration node,
 ) implements Constructor {
   @override
+  String? get symbol => file.symbolOfMember(node, this);
+
+  @override
   String? get name => node.name?.lexeme;
 
   @override
@@ -440,7 +487,11 @@ final class _Constructor(
   Expression? get returnExpression => file.returnExpression(node.body);
 }
 
-final class _Field(final ast.VariableDeclaration node) implements Field {
+final class _Field(final _DartFile file, final ast.VariableDeclaration node)
+    implements Field {
+  @override
+  String? get symbol => file.symbolOfMember(node, this);
+
   @override
   String get name => node.name.lexeme;
 
@@ -699,4 +750,45 @@ final class _TypeReference(final _DartFile file, final ast.TypeAnnotation node)
     final ast.AsExpression cast => file.expression(cast) as Cast,
     _ => null,
   };
+}
+
+// --- Directives and errors ---------------------------------------------------
+
+final class _Import(final _DartFile file, final ast.ImportDirective node)
+    implements Import {
+  @override
+  int get offset => node.importKeyword.offset;
+
+  @override
+  String get uri => node.uri.stringValue ?? '';
+
+  @override
+  String get symbol => uri;
+
+  @override
+  ImportKind get kind => switch (uri) {
+    _ when uri.startsWith('dart:') => ImportKind.dart,
+    _ when uri.startsWith('package:') => ImportKind.package,
+    _ => ImportKind.relative,
+  };
+
+  @override
+  String? get path => switch (kind) {
+    ImportKind.relative => p.posix.normalize(
+      p.posix.join(p.posix.dirname(file.path), uri),
+    ),
+    ImportKind.package when uri.startsWith('package:${file.packageName}/') =>
+      p.posix.join(
+        file.packageRoot,
+        'lib',
+        uri.substring('package:${file.packageName}/'.length),
+      ),
+    _ => null,
+  };
+}
+
+final class _SyntaxError(final int offset, final String message)
+    implements SyntaxError {
+  @override
+  String? get symbol => null;
 }

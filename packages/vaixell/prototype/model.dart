@@ -11,6 +11,7 @@
 import 'package:analyzer/dart/ast/ast.dart' as ast;
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
+import 'package:path/path.dart' as p;
 import 'package:vaixell/src/rules/rule.dart' show ParsedFile;
 
 part 'adapter.dart';
@@ -20,8 +21,17 @@ abstract interface class DartFile {
   /// The POSIX path, relative to the repository root.
   String get path;
 
+  /// The path relative to the package root, for example `lib/src/a.dart`.
+  String get packagePath;
+
   /// The directories of [path], for example `['lib', 'src', 'models']`.
   List<String> get directories;
+
+  /// Syntax errors, in source order. Empty when the file parses.
+  List<SyntaxError> get errors;
+
+  /// The `import` directives, in source order.
+  List<Import> get imports;
 
   /// The top-level declarations, in source order.
   List<Declaration> get declarations;
@@ -34,11 +44,41 @@ abstract interface class DartFile {
   List<TypeReference> get typeReferences;
 }
 
+// --- Reportable elements ----------------------------------------------------
+
+/// Something a finding can point at.
+sealed class Located {
+  int get offset;
+
+  /// NEW (#37): what violation ids call it: `Container.member`, `member` or
+  /// `Container`, or `null` when it has no name. Setters end in `=`,
+  /// unnamed constructors are `new` and unnamed extensions are `<unnamed>`.
+  String? get symbol;
+}
+
+/// A syntax error reported by the parser.
+abstract interface class SyntaxError implements Located {
+  String get message;
+}
+
+/// An `import` directive, as decided in #44. Its offset is the `import`
+/// keyword's and its symbol is [uri].
+abstract interface class Import implements Located {
+  /// The URI as written, for example `package:flutter/material.dart`.
+  String get uri;
+
+  ImportKind get kind;
+
+  /// The file it imports, relative to the repository root, for relative
+  /// imports and imports of the file's own package. `null` otherwise.
+  String? get path;
+}
+
+enum ImportKind { dart, package, relative }
+
 // --- Declarations (#35) ----------------------------------------------------
 
-sealed class Declaration {
-  int get offset;
-}
+sealed class Declaration implements Located;
 
 /// A declaration with members.
 sealed class TypeDeclaration implements Declaration {
@@ -88,14 +128,14 @@ abstract interface class TopLevelFunction implements Declaration {
 /// One per declared name.
 abstract interface class TopLevelVariable implements Declaration {
   String get name;
+
+  bool get isConst;
 }
 
 enum FunctionKind { function, getter, setter, operator }
 
 /// NEW: a method, constructor or field of a [TypeDeclaration].
-sealed class Member {
-  int get offset;
-}
+sealed class Member implements Located;
 
 abstract interface class Method implements Member {
   String get name;
@@ -166,9 +206,8 @@ abstract interface class Argument {
 // --- Where code sits (NEW) ---------------------------------------------------
 
 /// An expression or type annotation, and the declaration it's written in.
-sealed class Enclosed {
-  int get offset;
-
+/// Its [symbol] is the one of where it is.
+sealed class Enclosed implements Located {
   /// The top-level declaration it's in. `null` in a library directive's
   /// annotation, a top-level variable declaration's annotation, or a
   /// typedef, which #35 doesn't model.
@@ -177,15 +216,9 @@ sealed class Enclosed {
   /// The member of [declaration] it's in, or `null` when it's in the
   /// declaration itself, such as its annotations or an enum value.
   Member? get member;
-
-  /// NEW (#37): where it is, as violation ids spell it: `Container.member`,
-  /// `member` or `Container`, or `null` outside any declaration. Setters
-  /// end in `=`, unnamed constructors are `new` and unnamed extensions are
-  /// `<unnamed>`.
-  String? get symbol;
 }
 
-/// [Enclosed.symbol] for [declaration] and [member].
+/// The symbol of [member] in [declaration], or of [declaration] alone.
 String? _symbolOf(Declaration? declaration, Member? member) {
   final container = switch (declaration) {
     TypeDeclaration(:final name) => name ?? '<unnamed>',
