@@ -1,8 +1,7 @@
 import 'package:test/test.dart';
 
-import 'shim.dart';
-
 import '../../test/helpers/parse.dart';
+import 'shim.dart';
 
 void main() {
   group(RawJsonRule, () {

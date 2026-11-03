@@ -1,10 +1,9 @@
 import 'package:test/test.dart';
 
-import 'shim.dart';
-
 import 'package:vaixell/vaixell.dart';
 
 import '../../test/helpers/parse.dart';
+import 'shim.dart';
 
 void main() {
   group(GeneratedJsonRule, () {

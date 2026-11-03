@@ -1,15 +1,12 @@
 // PROTOTYPE: the expression-level model, for discussion on
 // https://github.com/marcossevilla/vaixell/issues/36. Never merged.
 //
-// The declaration part restates what #35 approved, trimmed to what the rules
-// in rules.dart touch (imports, errors and `packagePath` are left out). Lines
-// marked NEW are what this ticket adds.
+// This is everything a rule author sees. The declaration part restates what
+// #35 approved, trimmed to what rules.dart uses. NEW marks what #36 adds.
 //
-// No public type or signature mentions `package:analyzer`. The adapter.dart
-// part builds the model from the parse-only AST, and prototype/test re-runs
-// today's rule tests against the rules in rules.dart.
-
-// ignore_for_file: public_member_api_docs
+// No public type mentions `package:analyzer`. The adapter.dart part wraps
+// the parse-only AST in private classes. It's a part because the types here
+// are sealed, so only this library can implement them.
 
 import 'package:analyzer/dart/ast/ast.dart' as ast;
 import 'package:analyzer/dart/ast/token.dart';
@@ -18,9 +15,9 @@ import 'package:vaixell/src/rules/rule.dart' show ParsedFile;
 
 part 'adapter.dart';
 
-/// A parsed Dart file, as a rule sees it.
+/// A parsed Dart file.
 abstract interface class DartFile {
-  /// The POSIX path of the file, relative to the repository root.
+  /// The POSIX path, relative to the repository root.
   String get path;
 
   /// The directories of [path], for example `['lib', 'src', 'models']`.
@@ -29,13 +26,11 @@ abstract interface class DartFile {
   /// The top-level declarations, in source order.
   List<Declaration> get declarations;
 
-  /// NEW: every expression in the file, at any depth, in source order,
-  /// including those in annotations, initializers and default values.
+  /// NEW: every expression, at any depth, in source order.
   List<Expression> get expressions;
 
-  /// NEW: every type annotation in the file, at any depth, in source order,
-  /// including type arguments, as in both types of
-  /// `List<Map<String, dynamic>>`.
+  /// NEW: every type annotation, at any depth, in source order. Both types
+  /// in `List<Map<String, dynamic>>` are in it.
   List<TypeReference> get typeReferences;
 }
 
@@ -45,9 +40,9 @@ sealed class Declaration {
   int get offset;
 }
 
-/// A declaration that has members.
+/// A declaration with members.
 sealed class TypeDeclaration implements Declaration {
-  /// The name, or `null` for an unnamed extension.
+  /// `null` only for an unnamed extension.
   String? get name;
 
   List<Annotation> get annotations;
@@ -59,35 +54,42 @@ sealed class TypeDeclaration implements Declaration {
   List<Field> get fields;
 }
 
-abstract interface class ClassDeclaration implements TypeDeclaration {}
+abstract interface class ClassDeclaration implements TypeDeclaration {
+  @override
+  String get name;
+}
 
-abstract interface class MixinDeclaration implements TypeDeclaration {}
+abstract interface class MixinDeclaration implements TypeDeclaration {
+  @override
+  String get name;
+}
 
-abstract interface class EnumDeclaration implements TypeDeclaration {}
+abstract interface class EnumDeclaration implements TypeDeclaration {
+  @override
+  String get name;
+}
 
-abstract interface class ExtensionDeclaration implements TypeDeclaration {}
+abstract interface class ExtensionDeclaration implements TypeDeclaration;
 
-abstract interface class ExtensionTypeDeclaration implements TypeDeclaration {}
+abstract interface class ExtensionTypeDeclaration implements TypeDeclaration {
+  @override
+  String get name;
+}
 
 abstract interface class TopLevelFunction implements Declaration {
   String get name;
 
   FunctionKind get kind;
-
-  List<Parameter> get parameters;
 }
 
 /// One per declared name.
 abstract interface class TopLevelVariable implements Declaration {
   String get name;
-
-  bool get isConst;
 }
 
 enum FunctionKind { function, getter, setter, operator }
 
-/// NEW: groups the members of a [TypeDeclaration], so an [Expression] can say
-/// which one it's in.
+/// NEW: a method, constructor or field of a [TypeDeclaration].
 sealed class Member {
   int get offset;
 }
@@ -102,11 +104,9 @@ abstract interface class Method implements Member {
   /// Whether it has no body.
   bool get isAbstract;
 
-  bool get isExternal;
-
   List<Parameter> get parameters;
 
-  /// NEW: see [Constructor.returnExpression].
+  /// NEW: `e` when the body is `=> e;` or `{ return e; }`, else `null`.
   Expression? get returnExpression;
 }
 
@@ -114,22 +114,17 @@ abstract interface class Constructor implements Member {
   /// The name after the dot, or `null` when unnamed.
   String? get name;
 
-  bool get isFactory;
-
   bool get isExternal;
 
   List<Parameter> get parameters;
 
-  /// NEW: `e` when the body is `=> e;` or `{ return e; }` with nothing else
-  /// in the block, or `null` otherwise.
+  /// NEW: `e` when the body is `=> e;` or `{ return e; }`, else `null`.
   Expression? get returnExpression;
 }
 
 /// One per declared name.
 abstract interface class Field implements Member {
   String get name;
-
-  bool get isStatic;
 }
 
 abstract interface class Parameter {
@@ -137,14 +132,12 @@ abstract interface class Parameter {
 
   bool get isPositional;
 
-  bool get isNamed;
-
+  /// Whether it's a function, as in `T Function(Object?) fromJsonT`.
   bool get isFunction;
 }
 
+/// `@prefix.name(arguments)`.
 abstract interface class Annotation {
-  int get offset;
-
   String get name;
 
   String? get prefix;
@@ -152,40 +145,47 @@ abstract interface class Annotation {
   List<Argument> get arguments;
 }
 
-/// An argument of an [Annotation] or, NEW, of a [Call].
+/// An argument of an [Annotation] or, NEW, a [Call].
 abstract interface class Argument {
-  /// The name of a named argument, or `null` when positional.
+  /// `null` when positional.
   String? get name;
 
-  /// The value when it's a literal `bool`, `int`, `double`, `String` or
-  /// `null`. [isLiteral] tells `null` apart from a value that isn't one.
+  /// NEW.
+  Expression get value;
+
+  /// The value of a `bool`, number, `String` or `null` literal.
   Object? get literal;
 
+  /// Whether [value] is one of the literals [literal] covers.
   bool get isLiteral;
+}
 
-  /// NEW: the argument's expression.
-  Expression get value;
+// --- Where code sits (NEW) ---------------------------------------------------
+
+/// An expression or type annotation, and the declaration it's written in.
+sealed class Enclosed {
+  int get offset;
+
+  /// The top-level declaration it's in. `null` in a library directive's
+  /// annotation, a top-level variable declaration's annotation, or a
+  /// typedef, which #35 doesn't model.
+  Declaration? get declaration;
+
+  /// The member of [declaration] it's in, or `null` when it's in the
+  /// declaration itself, such as its annotations or an enum value.
+  Member? get member;
 }
 
 // --- Expressions (NEW) -------------------------------------------------------
 
-/// An expression. Only the forms a rule needs to tell apart get their own
-/// type. Everything else is an [OtherExpression], whose subexpressions are
-/// still in [DartFile.expressions].
-sealed class Expression {
-  /// The offset of the first token. For an [Await], the `await` keyword.
-  int get offset;
-
+/// An expression. Forms that rules tell apart get their own type. The rest
+/// are [OtherExpression]s, whose parts are still in [DartFile.expressions].
+sealed class Expression implements Enclosed {
   /// How the value is used, looking through parentheses and `as` casts.
   Use get use;
 
-  /// The top-level declaration it's in, or `null` in a library directive's
-  /// annotation.
-  Declaration? get declaration;
-
-  /// The member of [declaration] it's in, or `null` when it's in the
-  /// declaration itself, as in an annotation or an enum value.
-  Member? get member;
+  /// This expression without any parentheses around it.
+  Expression get unparenthesized;
 }
 
 /// `await operand`.
@@ -193,21 +193,19 @@ abstract interface class Await implements Expression {
   Expression get operand;
 }
 
-/// A call with an argument list.
+/// Something called with an argument list.
 sealed class Call implements Expression {
   List<Argument> get arguments;
 }
 
-/// `name(…)`, `target.name(…)`, `target?.name(…)` or a cascade section
-/// `..name(…)`.
+/// `name(…)`, `target.name(…)`, `target?.name(…)` or `..name(…)`.
 ///
-/// Without types, `User.fromJson(…)` and `User(…)` are method calls too.
+/// Without types, `User(…)` and `User.fromJson(…)` are method calls too.
 abstract interface class MethodCall implements Call {
-  /// What it's called on, or `null` for `name(…)`. In a cascade section,
-  /// the cascade's target.
+  /// `null` for `name(…)`. In a cascade, the cascade's target.
   Expression? get target;
 
-  /// How [target] is accessed, or `null` when there's no target.
+  /// `null` when there's no [target].
   AccessOperator? get operator;
 
   String get name;
@@ -215,24 +213,22 @@ abstract interface class MethodCall implements Call {
 
 /// `new …(…)` or `const …(…)`.
 abstract interface class InstanceCreation implements Call {
-  /// The last identifier before the arguments: `fromJson` in
-  /// `new User.fromJson(…)` and `new api.User.fromJson(…)`, `User` in
-  /// `const User()`.
+  /// The last name before the arguments: `fromJson` in
+  /// `new User.fromJson(…)`, `User` in `const User()`.
   String get name;
 }
 
-/// A call of any other expression, as in `(await f)()` or `f()()`.
+/// Any other expression called, as in `(await f)()`.
 abstract interface class FunctionCall implements Call {
   Expression get callee;
 }
 
-/// `name`, `target.name`, `target?.name` or a cascade section `..name`.
+/// `name`, `target.name`, `target?.name` or `..name`.
 abstract interface class Reference implements Expression {
-  /// What it's read from, or `null` for `name`. In a cascade section, the
-  /// cascade's target.
+  /// `null` for `name`. In a cascade, the cascade's target.
   Expression? get target;
 
-  /// How [target] is accessed, or `null` when there's no target.
+  /// `null` when there's no [target].
   AccessOperator? get operator;
 
   String get name;
@@ -254,69 +250,48 @@ abstract interface class NullCheck implements Expression {
 }
 
 /// `this`.
-abstract interface class This implements Expression {}
+abstract interface class This implements Expression;
 
 /// A list, set or map literal.
-abstract interface class CollectionLiteral implements Expression {}
+abstract interface class CollectionLiteral implements Expression;
 
 /// `(expression)`.
 abstract interface class Parenthesized implements Expression {
   Expression get expression;
 }
 
-/// Any other expression.
-abstract interface class OtherExpression implements Expression {}
+abstract interface class OtherExpression implements Expression;
 
-/// How an expression's value is used. [Expression.use] looks through
-/// parentheses and `as` casts first, so `((await f) as T).x` is a
-/// [ReceiverUse] of the `await`.
-sealed class Use {
-  const Use();
-}
+/// How a value is used. See [Expression.use].
+sealed class const Use();
 
 /// The target of `.`, `?.`, `[]`, `?[]`, `..` or `?..`, or the callee of
 /// `()`.
-final class ReceiverUse extends Use {
-  const ReceiverUse();
-}
+final class const ReceiverUse() extends Use;
 
 /// The operand of `!`.
-final class NullCheckUse extends Use {
-  const NullCheckUse();
-}
+final class const NullCheckUse() extends Use;
 
-/// An argument of [call].
-final class ArgumentUse extends Use {
-  const ArgumentUse(this.call, {this.name});
+/// An argument of [call]. [name] is `null` when positional.
+final class const ArgumentUse(final Call call, {final String? name})
+    extends Use;
 
-  final Call call;
+final class const OtherUse() extends Use;
 
-  /// The name of a named argument, or `null` when positional.
-  final String? name;
-}
+// --- Types (NEW) -------------------------------------------------------------
 
-/// Anything else.
-final class OtherUse extends Use {
-  const OtherUse();
-}
-
-/// NEW: a type annotation, such as `Map<String, dynamic>`.
-abstract interface class TypeReference {
-  int get offset;
-
-  /// The name without any import prefix, or `null` for a function or record
-  /// type.
+/// A type annotation, such as `Map<String, dynamic>`.
+///
+/// A type annotation shared by several variables, as in
+/// `Map<String, dynamic> a, b;`, is enclosed by the first.
+abstract interface class TypeReference implements Enclosed {
+  /// `null` for a function or record type.
   String? get name;
 
   String? get prefix;
 
-  /// The type arguments, or empty when there are none.
   List<TypeReference> get typeArguments;
 
-  /// See [Expression.declaration]. A type annotation shared by several
-  /// variables, as in `Map<String, dynamic> a, b;`, belongs to the first.
-  Declaration? get declaration;
-
-  /// See [Expression.member].
-  Member? get member;
+  /// The cast this is the type of, as in `x as Map<String, dynamic>`.
+  Cast? get cast;
 }

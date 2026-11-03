@@ -1,10 +1,9 @@
 import 'package:test/test.dart';
 
-import 'shim.dart';
-
 import 'package:vaixell/src/violation/violation.dart';
 
 import '../../test/helpers/parse.dart';
+import 'shim.dart';
 
 void main() {
   group(AwaitReceiverRule, () {

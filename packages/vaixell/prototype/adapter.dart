@@ -1,274 +1,163 @@
-// PROTOTYPE: builds the model in model.dart from the parse-only AST, for
+// PROTOTYPE: wraps the parse-only AST in the model, for
 // https://github.com/marcossevilla/vaixell/issues/36. Never merged.
 //
-// Only this part uses `package:analyzer`, and only in private classes. It
-// shows the model can be built from what the engine already parses.
-
-// It's a part of model.dart because the model's types are sealed. In the
-// real thing, the model library would be built the same way, with every
-// analyzer type private.
+// Every model type is a small private class around one AST node. Wrappers
+// are created on demand and cached per file, so the same node always gives
+// the same object, which keeps `Expression.member` and friends consistent.
 
 part of 'model.dart';
 
-/// Builds the model of [file].
-DartFile modelOf(ParsedFile file) => _Builder(file).build();
+// The `file` and `node` fields declared in primary constructors implement
+// the mixins' getters, and `@override` on every parameter adds only noise.
+// ignore_for_file: annotate_overrides
 
-class _Builder {
-  _Builder(this.file);
+/// The model of [file].
+DartFile modelOf(ParsedFile file) => _DartFile(file);
 
-  final ParsedFile file;
-  final Map<ast.AstNode, Declaration> _declarations = {};
-  final Map<ast.AstNode, Member> _members = {};
-  final Map<ast.Expression, Expression> _expressions = {};
-  final Map<ast.TypeAnnotation, TypeReference> _types = {};
+final class _DartFile(final ParsedFile parsed) implements DartFile {
+  final Map<ast.AstNode, Object> _cache = {};
 
-  DartFile build() {
-    final declarations = [
-      for (final node in file.unit.declarations) ..._declaration(node),
-    ];
-    final collector = _Collector(this);
-    file.unit.accept(collector);
-    return _DartFile(
-      path: file.path,
-      directories: file.path.split('/')..removeLast(),
-      declarations: declarations,
-      expressions: collector.expressions,
-      typeReferences: collector.types,
-    );
-  }
+  late final _Collector _collected = _Collector(this)..collect(parsed.unit);
 
-  // --- Declarations --------------------------------------------------------
+  @override
+  String get path => parsed.path;
 
-  List<Declaration> _declaration(ast.CompilationUnitMember node) {
-    Declaration register(Declaration d) => _declarations[node] = d;
-    return switch (node) {
-      ast.ClassDeclaration() => [
-        register(
-          _Type.of(
-            this,
-            _Class.new,
-            node.namePart.typeName.lexeme,
-            node.namePart.typeName.offset,
-            node.metadata,
-            node.body.members,
-          ),
-        ),
-      ],
-      ast.MixinDeclaration() => [
-        register(
-          _Type.of(
-            this,
-            _Mixin.new,
-            node.name.lexeme,
-            node.name.offset,
-            node.metadata,
-            node.body.members,
-          ),
-        ),
-      ],
-      ast.EnumDeclaration() => [
-        register(
-          _Type.of(
-            this,
-            _Enum.new,
-            node.namePart.typeName.lexeme,
-            node.namePart.typeName.offset,
-            node.metadata,
-            node.body.members,
-          ),
-        ),
-      ],
-      ast.ExtensionDeclaration() => [
-        register(
-          _Type.of(
-            this,
-            _Extension.new,
-            node.name?.lexeme,
-            (node.name ?? node.extensionKeyword).offset,
-            node.metadata,
-            node.body.members,
-          ),
-        ),
-      ],
-      ast.ExtensionTypeDeclaration() => [
-        register(
-          _Type.of(
-            this,
-            _ExtensionType.new,
-            node.namePart.typeName.lexeme,
-            node.namePart.typeName.offset,
-            node.metadata,
-            node.body.members,
-          ),
-        ),
-      ],
-      ast.FunctionDeclaration() => [
-        register(
-          _TopLevelFunction(
-            name: node.name.lexeme,
-            offset: node.name.offset,
-            kind: _kind(
-              isGetter: node.isGetter,
-              isSetter: node.isSetter,
-              isOperator: false,
-            ),
-            parameters: _parameters(node.functionExpression.parameters),
-          ),
-        ),
-      ],
-      ast.TopLevelVariableDeclaration() => [
-        for (final variable in node.variables.variables)
-          _declarations[variable] = _TopLevelVariable(
-            name: variable.name.lexeme,
-            offset: variable.name.offset,
-            isConst: node.variables.isConst,
-          ),
-      ],
-      _ => const [],
-    };
-  }
+  @override
+  List<String> get directories => path.split('/')..removeLast();
 
-  FunctionKind _kind({
-    required bool isGetter,
-    required bool isSetter,
-    required bool isOperator,
-  }) => isGetter
-      ? FunctionKind.getter
-      : isSetter
-      ? FunctionKind.setter
-      : isOperator
-      ? FunctionKind.operator
-      : FunctionKind.function;
+  @override
+  late final List<Declaration> declarations = [
+    for (final node in parsed.unit.declarations)
+      if (node is ast.TopLevelVariableDeclaration)
+        for (final variable in node.variables.variables) declaration(variable)!
+      else
+        ?declaration(node),
+  ];
 
-  List<Parameter> _parameters(ast.FormalParameterList? list) => [
-    for (final p in list?.parameters ?? const <ast.FormalParameter>[])
-      _Parameter(
-        name: p.name?.lexeme,
-        isPositional: p.isPositional,
-        isNamed: p.isNamed,
-        isFunction:
-            p.functionTypedSuffix != null || p.type is ast.GenericFunctionType,
+  @override
+  List<Expression> get expressions => _collected.expressions;
+
+  @override
+  List<TypeReference> get typeReferences => _collected.types;
+
+  T _wrap<T extends Object>(ast.AstNode node, T Function() create) =>
+      _cache.putIfAbsent(node, create) as T;
+
+  // --- Node to model -------------------------------------------------------
+
+  /// The model of a top-level declaration, or of one top-level variable.
+  Declaration? declaration(ast.AstNode node) => switch (node) {
+    ast.ClassDeclaration() => _wrap(node, () => _Class(this, node)),
+    ast.MixinDeclaration() => _wrap(node, () => _Mixin(this, node)),
+    ast.EnumDeclaration() => _wrap(node, () => _Enum(this, node)),
+    ast.ExtensionDeclaration() => _wrap(node, () => _Extension(this, node)),
+    ast.ExtensionTypeDeclaration() => _wrap(
+      node,
+      () => _ExtensionType(this, node),
+    ),
+    ast.FunctionDeclaration(parent: ast.CompilationUnit()) => _wrap(
+      node,
+      () => _TopLevelFunction(node),
+    ),
+    ast.VariableDeclaration(
+      parent: ast.VariableDeclarationList(
+        parent: ast.TopLevelVariableDeclaration(),
       ),
-  ];
-
-  List<Annotation> _annotations(List<ast.Annotation> metadata) => [
-    for (final a in metadata)
-      _Annotation(
-        offset: a.offset,
-        name: switch (a.name) {
-          ast.PrefixedIdentifier(:final identifier) => identifier.name,
-          final name => name.name,
-        },
-        prefix: switch (a.name) {
-          ast.PrefixedIdentifier(:final prefix) => prefix.name,
-          _ => null,
-        },
-        arguments: _arguments(a.arguments),
-      ),
-  ];
-
-  List<Argument> _arguments(ast.ArgumentList? list) => [
-    for (final argument in list?.arguments ?? const <ast.Argument>[])
-      _Argument(this, switch (argument) {
-        ast.NamedArgument(:final name) => name.lexeme,
-        _ => null,
-      }, argument.argumentExpression),
-  ];
-
-  Expression? _returned(ast.FunctionBody body) => switch (body) {
-    ast.ExpressionFunctionBody(expression: final e) ||
-    ast.BlockFunctionBody(
-      block: ast.Block(statements: [ast.ReturnStatement(expression: final e?)]),
-    ) => expression(e),
+    ) =>
+      _wrap(node, () => _TopLevelVariable(node)),
     _ => null,
   };
 
-  // --- Expressions ---------------------------------------------------------
+  /// The model of a method, a constructor or one field.
+  Member? member(ast.AstNode node) => switch (node) {
+    ast.MethodDeclaration() => _wrap(node, () => _Method(this, node)),
+    ast.ConstructorDeclaration() => _wrap(node, () => _Constructor(this, node)),
+    ast.VariableDeclaration(
+      parent: ast.VariableDeclarationList(parent: ast.FieldDeclaration()),
+    ) =>
+      _wrap(node, () => _Field(node)),
+    _ => null,
+  };
 
-  Expression expression(ast.Expression node) =>
-      _expressions[node] ??= _newExpression(node);
+  Expression expression(ast.Expression node) => _wrap(
+    node,
+    () => switch (node) {
+      ast.AwaitExpression() => _Await(this, node),
+      ast.MethodInvocation() => _MethodCall(this, node),
+      ast.InstanceCreationExpression() => _InstanceCreation(this, node),
+      ast.FunctionExpressionInvocation() => _FunctionCall(this, node),
+      ast.SimpleIdentifier() => _Identifier(this, node),
+      ast.PrefixedIdentifier() => _PrefixedIdentifier(this, node),
+      ast.PropertyAccess() => _PropertyAccess(this, node),
+      ast.AsExpression() => _Cast(this, node),
+      ast.PostfixExpression(operator: Token(type: TokenType.BANG)) =>
+        _NullCheck(this, node),
+      ast.ThisExpression() => _This(this, node),
+      ast.TypedLiteral() => _CollectionLiteral(this, node),
+      ast.ParenthesizedExpression() => _Parenthesized(this, node),
+      _ => _OtherExpression(this, node),
+    },
+  );
 
-  Expression _newExpression(ast.Expression node) {
-    final site = _Site(this, node);
-    return switch (node) {
-      ast.AwaitExpression() => _Await(site, node.awaitKeyword.offset, node),
-      ast.MethodInvocation() => _MethodCall(site, node),
-      ast.InstanceCreationExpression(:final constructorName) =>
-        _InstanceCreation(
-          site,
-          node,
-          constructorName.name?.name ?? constructorName.type.name.lexeme,
-        ),
-      ast.FunctionExpressionInvocation() => _FunctionCall(site, node),
-      ast.SimpleIdentifier(:final name) => _Reference(site, null, null, name),
-      ast.PrefixedIdentifier(:final prefix, :final identifier) => _Reference(
-        site,
-        prefix,
-        AccessOperator.period,
-        identifier.name,
+  Expression? expressionOrNull(ast.Expression? node) =>
+      node == null ? null : expression(node);
+
+  TypeReference type(ast.TypeAnnotation node) =>
+      _wrap(node, () => _TypeReference(this, node));
+
+  // --- Shared lookups ------------------------------------------------------
+
+  /// The declaration and member around [node]. A type annotation shared by
+  /// several variables belongs to the first.
+  ({Declaration? declaration, Member? member}) enclosing(ast.AstNode node) {
+    Declaration? declaration;
+    Member? member;
+    for (ast.AstNode? n = node; n != null; n = n.parent) {
+      final subject = switch (n) {
+        ast.VariableDeclarationList(:final variables) => variables.first,
+        _ => n,
+      };
+      member ??= this.member(subject);
+      declaration ??= this.declaration(subject);
+    }
+    return (declaration: declaration, member: member);
+  }
+
+  /// How [node]'s value is used, looking through parentheses and casts.
+  Use use(ast.Expression node) {
+    ast.AstNode current = node;
+    while (_wraps(current.parent, current)) {
+      current = current.parent!;
+    }
+    return switch (current.parent) {
+      ast.MethodInvocation(:final ast.Expression? target) ||
+      ast.PropertyAccess(:final ast.Expression? target) ||
+      ast.IndexExpression(:final ast.Expression? target) ||
+      ast.CascadeExpression(
+        :final ast.Expression? target,
+      ) when target == current => const ReceiverUse(),
+      ast.FunctionExpressionInvocation(:final function)
+          when function == current =>
+        const ReceiverUse(),
+      ast.PostfixExpression(operator: Token(type: TokenType.BANG)) =>
+        const NullCheckUse(),
+      ast.NamedArgument(:final name, parent: final list?) => _argumentOf(
+        list,
+        name: name.lexeme,
       ),
-      ast.PropertyAccess(
-        :final realTarget,
-        :final operator,
-        :final propertyName,
-      ) =>
-        _Reference(site, realTarget, _operator(operator), propertyName.name),
-      ast.AsExpression() => _Cast(site, node),
-      ast.PostfixExpression(:final operator, :final operand)
-          when operator.type == TokenType.BANG =>
-        _NullCheck(site, operand),
-      ast.ThisExpression() => _This(site),
-      ast.ListLiteral() || ast.SetOrMapLiteral() => _CollectionLiteral(site),
-      ast.ParenthesizedExpression(:final expression) => _Parenthesized(
-        site,
-        expression,
-      ),
-      _ => _OtherExpression(site),
+      final ast.ArgumentList list => _argumentOf(list),
+      _ => const OtherUse(),
     };
   }
 
-  AccessOperator _operator(Token token) => switch (token.type) {
-    TokenType.PERIOD => AccessOperator.period,
-    TokenType.QUESTION_PERIOD => AccessOperator.questionPeriod,
-    TokenType.PERIOD_PERIOD => AccessOperator.cascade,
-    _ => AccessOperator.questionCascade,
+  /// Whether [parent] only wraps [child] in parentheses or a cast.
+  bool _wraps(ast.AstNode? parent, ast.AstNode child) => switch (parent) {
+    ast.ParenthesizedExpression() => true,
+    ast.AsExpression(:final expression) => expression == child,
+    _ => false,
   };
 
-  Use useOf(ast.Expression node) {
-    ast.AstNode current = node;
-    while (true) {
-      switch (current.parent) {
-        case final ast.ParenthesizedExpression parent:
-          current = parent;
-        case final ast.AsExpression parent when parent.expression == current:
-          current = parent;
-        default:
-          return _useAt(current);
-      }
-    }
-  }
-
-  Use _useAt(ast.AstNode node) => switch (node.parent) {
-    ast.PropertyAccess(:final ast.Expression? target) ||
-    ast.MethodInvocation(:final ast.Expression? target) ||
-    ast.IndexExpression(:final ast.Expression? target) ||
-    ast.CascadeExpression(
-      :final ast.Expression? target,
-    ) when target == node => const ReceiverUse(),
-    ast.FunctionExpressionInvocation(:final function) when function == node =>
-      const ReceiverUse(),
-    ast.PostfixExpression(:final operator)
-        when operator.type == TokenType.BANG =>
-      const NullCheckUse(),
-    ast.NamedArgument(:final name, :final parent?) => _argumentUse(
-      parent,
-      name.lexeme,
-    ),
-    final ast.ArgumentList list => _argumentUse(list, null),
-    _ => const OtherUse(),
-  };
-
-  Use _argumentUse(ast.AstNode list, String? name) => switch (list.parent) {
+  Use _argumentOf(ast.AstNode list, {String? name}) => switch (list.parent) {
     final ast.Expression call
         when call is ast.MethodInvocation ||
             call is ast.InstanceCreationExpression ||
@@ -277,82 +166,70 @@ class _Builder {
     _ => const OtherUse(),
   };
 
-  /// Today's `EnclosingDeclaration` walk, returning model elements.
-  (Declaration?, Member?) enclosing(ast.AstNode node) {
-    Declaration? declaration;
-    Member? member;
-    for (ast.AstNode? n = node; n != null; n = n.parent) {
-      switch (n) {
-        case ast.MethodDeclaration() || ast.ConstructorDeclaration():
-          member = _members[n];
-        case ast.VariableDeclaration(
-          parent: ast.VariableDeclarationList(parent: ast.FieldDeclaration()),
-        ):
-          member = _members[n];
-        case ast.VariableDeclaration(
-          parent: ast.VariableDeclarationList(
-            parent: ast.TopLevelVariableDeclaration(),
-          ),
-        ):
-          declaration = _declarations[n];
-        case ast.VariableDeclarationList(
-          :final variables,
-          parent: ast.FieldDeclaration(),
-        ):
-          member ??= _members[variables.first];
-        case ast.VariableDeclarationList(
-          :final variables,
-          parent: ast.TopLevelVariableDeclaration(),
-        ):
-          declaration ??= _declarations[variables.first];
-        case ast.CompilationUnitMember():
-          declaration ??= _declarations[n];
-      }
-    }
-    return (declaration, member);
-  }
+  Expression? returnExpression(ast.FunctionBody body) => switch (body) {
+    ast.ExpressionFunctionBody(:final expression) ||
+    ast.BlockFunctionBody(
+      block: ast.Block(statements: [ast.ReturnStatement(:final expression?)]),
+    ) => this.expression(expression),
+    _ => null,
+  };
 
-  // --- Types ---------------------------------------------------------------
+  List<Argument> arguments(ast.ArgumentList? list) => [
+    for (final argument in list?.arguments ?? const <ast.Argument>[])
+      _Argument(this, argument),
+  ];
 
-  TypeReference type(ast.TypeAnnotation node) =>
-      _types[node] ??= switch (node) {
-        ast.NamedType(:final name, :final importPrefix, :final typeArguments) =>
-          _TypeReference(
-            this,
-            node,
-            name.lexeme,
-            importPrefix?.name.lexeme,
-            typeArguments?.arguments ?? const [],
-          ),
-        _ => _TypeReference(this, node, null, null, const []),
-      };
+  List<Parameter> parameters(ast.FormalParameterList? list) => [
+    for (final parameter in list?.parameters ?? const <ast.FormalParameter>[])
+      _Parameter(parameter),
+  ];
+
+  static FunctionKind kind({
+    bool isGetter = false,
+    bool isSetter = false,
+    bool isOperator = false,
+  }) => switch ((isGetter, isSetter, isOperator)) {
+    (true, _, _) => FunctionKind.getter,
+    (_, true, _) => FunctionKind.setter,
+    (_, _, true) => FunctionKind.operator,
+    _ => FunctionKind.function,
+  };
+
+  static AccessOperator? accessOperator(Token? token) => switch (token?.type) {
+    TokenType.PERIOD => AccessOperator.period,
+    TokenType.QUESTION_PERIOD => AccessOperator.questionPeriod,
+    TokenType.PERIOD_PERIOD => AccessOperator.cascade,
+    TokenType.QUESTION_PERIOD_PERIOD => AccessOperator.questionCascade,
+    _ => null,
+  };
 }
 
-extension on ast.Expression? {
-  Expression? let(Expression Function(ast.Expression) f) =>
-      this == null ? null : f(this!);
-}
-
-class _Collector extends GeneralizingAstVisitor<void> {
-  _Collector(this.builder);
-
-  final _Builder builder;
+/// Lists every expression and type annotation in source order.
+///
+/// Names that are part of a larger node, such as `m` in `a.m()`, aren't
+/// expressions of their own, so the visitor skips them.
+final class _Collector(final _DartFile file)
+    extends GeneralizingAstVisitor<void> {
   final List<Expression> expressions = [];
   final List<TypeReference> types = [];
 
+  void collect(ast.AstNode node) => node.accept(this);
+
   @override
-  void visitAnnotation(ast.Annotation node) {
-    // The annotation's name and constructor name aren't expressions.
-    node.typeArguments?.accept(this);
-    node.arguments?.accept(this);
+  void visitExpression(ast.Expression node) {
+    expressions.add(file.expression(node));
+    super.visitExpression(node);
   }
 
   @override
-  void visitConstructorName(ast.ConstructorName node) => node.type.accept(this);
+  void visitTypeAnnotation(ast.TypeAnnotation node) {
+    types.add(file.type(node));
+    super.visitTypeAnnotation(node);
+  }
 
   @override
   void visitMethodInvocation(ast.MethodInvocation node) {
-    expressions.add(builder.expression(node));
+    expressions.add(file.expression(node));
     node.target?.accept(this);
     node.typeArguments?.accept(this);
     node.argumentList.accept(this);
@@ -360,289 +237,251 @@ class _Collector extends GeneralizingAstVisitor<void> {
 
   @override
   void visitPrefixedIdentifier(ast.PrefixedIdentifier node) {
-    expressions.add(builder.expression(node));
+    expressions.add(file.expression(node));
     node.prefix.accept(this);
   }
 
   @override
   void visitPropertyAccess(ast.PropertyAccess node) {
-    expressions.add(builder.expression(node));
+    expressions.add(file.expression(node));
     node.target?.accept(this);
   }
 
   @override
-  void visitNode(ast.AstNode node) {
-    if (node is ast.Expression) expressions.add(builder.expression(node));
-    if (node is ast.TypeAnnotation) types.add(builder.type(node));
-    super.visitNode(node);
-  }
-}
-
-// --- Model implementations ----------------------------------------------------
-
-class _DartFile implements DartFile {
-  _DartFile({
-    required this.path,
-    required this.directories,
-    required this.declarations,
-    required this.expressions,
-    required this.typeReferences,
-  });
-
-  @override
-  final String path;
-  @override
-  final List<String> directories;
-  @override
-  final List<Declaration> declarations;
-  @override
-  final List<Expression> expressions;
-  @override
-  final List<TypeReference> typeReferences;
-}
-
-abstract class _Type implements TypeDeclaration {
-  _Type(this.name, this.offset, this.annotations);
-
-  static _Type of(
-    _Builder b,
-    _Type Function(String?, int, List<Annotation>) create,
-    String? name,
-    int offset,
-    List<ast.Annotation> metadata,
-    List<ast.ClassMember> body,
-  ) {
-    final annotations = b._annotations(metadata);
-    final type = create(name, offset, annotations);
-    for (final node in body) {
-      switch (node) {
-        case ast.MethodDeclaration():
-          type.methods.add(
-            b._members[node] = _Method(
-              name: node.name.lexeme,
-              offset: node.name.offset,
-              kind: b._kind(
-                isGetter: node.isGetter,
-                isSetter: node.isSetter,
-                isOperator: node.isOperator,
-              ),
-              isStatic: node.isStatic,
-              isAbstract: node.body is ast.EmptyFunctionBody,
-              isExternal: node.externalKeyword != null,
-              parameters: b._parameters(node.parameters),
-              returned: () => b._returned(node.body),
-            ),
-          );
-        case ast.ConstructorDeclaration():
-          type.constructors.add(
-            b._members[node] = _Constructor(
-              name: node.name?.lexeme,
-              offset: node.name?.offset ?? node.offset,
-              isFactory: node.factoryKeyword != null,
-              isExternal: node.externalKeyword != null,
-              parameters: b._parameters(node.parameters),
-              returned: () => b._returned(node.body),
-            ),
-          );
-        case ast.FieldDeclaration():
-          for (final variable in node.fields.variables) {
-            type.fields.add(
-              b._members[variable] = _Field(
-                name: variable.name.lexeme,
-                offset: variable.name.offset,
-                isStatic: node.isStatic,
-              ),
-            );
-          }
-        default:
-      }
-    }
-    return type;
+  void visitAnnotation(ast.Annotation node) {
+    node.typeArguments?.accept(this);
+    node.arguments?.accept(this);
   }
 
   @override
-  final String? name;
-  @override
-  final int offset;
-  @override
-  final List<Annotation> annotations;
-  @override
-  final List<Method> methods = [];
-  @override
-  final List<Constructor> constructors = [];
-  @override
-  final List<Field> fields = [];
+  void visitConstructorName(ast.ConstructorName node) => node.type.accept(this);
 }
 
-class _Class extends _Type implements ClassDeclaration {
-  _Class(super.name, super.offset, super.annotations);
+// --- Declarations ------------------------------------------------------------
+
+/// What every type declaration shares: annotations and members.
+mixin _Members implements TypeDeclaration {
+  _DartFile get file;
+
+  ast.AnnotatedNode get node;
+
+  List<ast.ClassMember> get body;
+
+  @override
+  List<Annotation> get annotations => [
+    for (final annotation in node.metadata) _Annotation(file, annotation),
+  ];
+
+  @override
+  List<Method> get methods => [
+    for (final m in body.whereType<ast.MethodDeclaration>())
+      file.member(m)! as Method,
+  ];
+
+  @override
+  List<Constructor> get constructors => [
+    for (final c in body.whereType<ast.ConstructorDeclaration>())
+      file.member(c)! as Constructor,
+  ];
+
+  @override
+  List<Field> get fields => [
+    for (final f in body.whereType<ast.FieldDeclaration>())
+      for (final variable in f.fields.variables)
+        file.member(variable)! as Field,
+  ];
 }
 
-class _Mixin extends _Type implements MixinDeclaration {
-  _Mixin(super.name, super.offset, super.annotations);
+final class _Class(final _DartFile file, final ast.ClassDeclaration node)
+    with _Members
+    implements ClassDeclaration {
+  @override
+  String get name => node.namePart.typeName.lexeme;
+
+  @override
+  int get offset => node.namePart.typeName.offset;
+
+  @override
+  List<ast.ClassMember> get body => node.body.members;
 }
 
-class _Enum extends _Type implements EnumDeclaration {
-  _Enum(super.name, super.offset, super.annotations);
+final class _Mixin(final _DartFile file, final ast.MixinDeclaration node)
+    with _Members
+    implements MixinDeclaration {
+  @override
+  String get name => node.name.lexeme;
+
+  @override
+  int get offset => node.name.offset;
+
+  @override
+  List<ast.ClassMember> get body => node.body.members;
 }
 
-class _Extension extends _Type implements ExtensionDeclaration {
-  _Extension(super.name, super.offset, super.annotations);
+final class _Enum(final _DartFile file, final ast.EnumDeclaration node)
+    with _Members
+    implements EnumDeclaration {
+  @override
+  String get name => node.namePart.typeName.lexeme;
+
+  @override
+  int get offset => node.namePart.typeName.offset;
+
+  @override
+  List<ast.ClassMember> get body => node.body.members;
 }
 
-class _ExtensionType extends _Type implements ExtensionTypeDeclaration {
-  _ExtensionType(super.name, super.offset, super.annotations);
+final class _Extension(
+  final _DartFile file,
+  final ast.ExtensionDeclaration node,
+) with _Members implements ExtensionDeclaration {
+  @override
+  String? get name => node.name?.lexeme;
+
+  @override
+  int get offset => (node.name ?? node.extensionKeyword).offset;
+
+  @override
+  List<ast.ClassMember> get body => node.body.members;
 }
 
-class _TopLevelFunction implements TopLevelFunction {
-  _TopLevelFunction({
-    required this.name,
-    required this.offset,
-    required this.kind,
-    required this.parameters,
-  });
+final class _ExtensionType(
+  final _DartFile file,
+  final ast.ExtensionTypeDeclaration node,
+) with _Members implements ExtensionTypeDeclaration {
+  @override
+  String get name => node.namePart.typeName.lexeme;
 
   @override
-  final String name;
+  int get offset => node.namePart.typeName.offset;
+
   @override
-  final int offset;
-  @override
-  final FunctionKind kind;
-  @override
-  final List<Parameter> parameters;
+  List<ast.ClassMember> get body => node.body.members;
 }
 
-class _TopLevelVariable implements TopLevelVariable {
-  _TopLevelVariable({
-    required this.name,
-    required this.offset,
-    required this.isConst,
-  });
+final class _TopLevelFunction(final ast.FunctionDeclaration node)
+    implements TopLevelFunction {
+  @override
+  String get name => node.name.lexeme;
 
   @override
-  final String name;
+  int get offset => node.name.offset;
+
   @override
-  final int offset;
-  @override
-  final bool isConst;
+  FunctionKind get kind =>
+      _DartFile.kind(isGetter: node.isGetter, isSetter: node.isSetter);
 }
 
-class _Method implements Method {
-  _Method({
-    required this.name,
-    required this.offset,
-    required this.kind,
-    required this.isStatic,
-    required this.isAbstract,
-    required this.isExternal,
-    required this.parameters,
-    required Expression? Function() returned,
-  }) : _returned = returned;
+final class _TopLevelVariable(final ast.VariableDeclaration node)
+    implements TopLevelVariable {
+  @override
+  String get name => node.name.lexeme;
 
   @override
-  final String name;
-  @override
-  final int offset;
-  @override
-  final FunctionKind kind;
-  @override
-  final bool isStatic;
-  @override
-  final bool isAbstract;
-  @override
-  final bool isExternal;
-  @override
-  final List<Parameter> parameters;
-  final Expression? Function() _returned;
-  @override
-  Expression? get returnExpression => _returned();
+  int get offset => node.name.offset;
 }
 
-class _Constructor implements Constructor {
-  _Constructor({
-    required this.name,
-    required this.offset,
-    required this.isFactory,
-    required this.isExternal,
-    required this.parameters,
-    required Expression? Function() returned,
-  }) : _returned = returned;
+// --- Members -----------------------------------------------------------------
+
+final class _Method(final _DartFile file, final ast.MethodDeclaration node)
+    implements Method {
+  @override
+  String get name => node.name.lexeme;
 
   @override
-  final String? name;
+  int get offset => node.name.offset;
+
   @override
-  final int offset;
+  FunctionKind get kind => _DartFile.kind(
+    isGetter: node.isGetter,
+    isSetter: node.isSetter,
+    isOperator: node.isOperator,
+  );
+
   @override
-  final bool isFactory;
+  bool get isStatic => node.isStatic;
+
   @override
-  final bool isExternal;
+  bool get isAbstract => node.body is ast.EmptyFunctionBody;
+
   @override
-  final List<Parameter> parameters;
-  final Expression? Function() _returned;
+  List<Parameter> get parameters => file.parameters(node.parameters);
+
   @override
-  Expression? get returnExpression => _returned();
+  Expression? get returnExpression => file.returnExpression(node.body);
 }
 
-class _Field implements Field {
-  _Field({required this.name, required this.offset, required this.isStatic});
+final class _Constructor(
+  final _DartFile file,
+  final ast.ConstructorDeclaration node,
+) implements Constructor {
+  @override
+  String? get name => node.name?.lexeme;
 
   @override
-  final String name;
+  int get offset => node.name?.offset ?? node.offset;
+
   @override
-  final int offset;
+  bool get isExternal => node.externalKeyword != null;
+
   @override
-  final bool isStatic;
+  List<Parameter> get parameters => file.parameters(node.parameters);
+
+  @override
+  Expression? get returnExpression => file.returnExpression(node.body);
 }
 
-class _Parameter implements Parameter {
-  _Parameter({
-    required this.name,
-    required this.isPositional,
-    required this.isNamed,
-    required this.isFunction,
-  });
+final class _Field(final ast.VariableDeclaration node) implements Field {
+  @override
+  String get name => node.name.lexeme;
 
   @override
-  final String? name;
-  @override
-  final bool isPositional;
-  @override
-  final bool isNamed;
-  @override
-  final bool isFunction;
+  int get offset => node.name.offset;
 }
 
-class _Annotation implements Annotation {
-  _Annotation({
-    required this.offset,
-    required this.name,
-    required this.prefix,
-    required this.arguments,
-  });
+final class _Parameter(final ast.FormalParameter node) implements Parameter {
+  @override
+  String? get name => node.name?.lexeme;
 
   @override
-  final int offset;
+  bool get isPositional => node.isPositional;
+
   @override
-  final String name;
-  @override
-  final String? prefix;
-  @override
-  final List<Argument> arguments;
+  bool get isFunction =>
+      node.functionTypedSuffix != null || node.type is ast.GenericFunctionType;
 }
 
-class _Argument implements Argument {
-  _Argument(this._builder, this.name, this._node);
-
-  final _Builder _builder;
-  final ast.Expression _node;
+final class _Annotation(final _DartFile file, final ast.Annotation node)
+    implements Annotation {
   @override
-  final String? name;
-
-  @override
-  Expression get value => _builder.expression(_node);
+  String get name => switch (node.name) {
+    ast.PrefixedIdentifier(:final identifier) => identifier.name,
+    final name => name.name,
+  };
 
   @override
-  bool get isLiteral => switch (_node) {
+  String? get prefix => switch (node.name) {
+    ast.PrefixedIdentifier(:final prefix) => prefix.name,
+    _ => null,
+  };
+
+  @override
+  List<Argument> get arguments => file.arguments(node.arguments);
+}
+
+final class _Argument(final _DartFile file, final ast.Argument node)
+    implements Argument {
+  @override
+  String? get name => switch (node) {
+    ast.NamedArgument(:final name) => name.lexeme,
+    _ => null,
+  };
+
+  @override
+  Expression get value => file.expression(node.argumentExpression);
+
+  @override
+  bool get isLiteral => switch (node.argumentExpression) {
     ast.BooleanLiteral() ||
     ast.IntegerLiteral() ||
     ast.DoubleLiteral() ||
@@ -652,7 +491,7 @@ class _Argument implements Argument {
   };
 
   @override
-  Object? get literal => switch (_node) {
+  Object? get literal => switch (node.argumentExpression) {
     ast.BooleanLiteral(:final value) => value,
     ast.IntegerLiteral(:final value) => value,
     ast.DoubleLiteral(:final value) => value,
@@ -661,199 +500,191 @@ class _Argument implements Argument {
   };
 }
 
-/// What every expression shares: its node and the builder that maps
-/// surrounding nodes to model elements.
-class _Site {
-  _Site(this.builder, this.node);
+// --- Expressions and types ---------------------------------------------------
 
-  final _Builder builder;
-  final ast.Expression node;
-  late final (Declaration?, Member?) enclosing = builder.enclosing(node);
+/// Where an expression or type annotation sits.
+mixin _Enclosed implements Enclosed {
+  _DartFile get file;
+
+  ast.AstNode get node;
+
+  @override
+  int get offset => node.offset;
+
+  @override
+  Declaration? get declaration => file.enclosing(node).declaration;
+
+  @override
+  Member? get member => file.enclosing(node).member;
 }
 
-mixin _Expression implements Expression {
-  _Site get site;
+/// What every expression shares.
+mixin _Expression on _Enclosed implements Expression {
+  @override
+  ast.Expression get node;
 
   @override
-  int get offset => site.node.offset;
+  Use get use => file.use(node);
 
   @override
-  Use get use => site.builder.useOf(site.node);
-
-  @override
-  Declaration? get declaration => site.enclosing.$1;
-
-  @override
-  Member? get member => site.enclosing.$2;
-
-  Expression _map(ast.Expression node) => site.builder.expression(node);
+  Expression get unparenthesized => file.expression(node.unParenthesized);
 }
 
-class _Await with _Expression implements Await {
-  _Await(this.site, this.offset, this._node);
-
+final class _Await(final _DartFile file, final ast.AwaitExpression node)
+    with _Enclosed, _Expression
+    implements Await {
   @override
-  final _Site site;
-  @override
-  final int offset;
-  final ast.AwaitExpression _node;
-
-  @override
-  Expression get operand => _map(_node.expression);
+  Expression get operand => file.expression(node.expression);
 }
 
-class _MethodCall with _Expression implements MethodCall {
-  _MethodCall(this.site, this._node);
+final class _MethodCall(final _DartFile file, final ast.MethodInvocation node)
+    with _Enclosed, _Expression
+    implements MethodCall {
+  @override
+  Expression? get target => file.expressionOrNull(node.realTarget);
 
   @override
-  final _Site site;
-  final ast.MethodInvocation _node;
+  AccessOperator? get operator => _DartFile.accessOperator(node.operator);
 
   @override
-  Expression? get target => _node.realTarget.let(_map);
+  String get name => node.methodName.name;
 
   @override
-  AccessOperator? get operator => switch (_node.operator) {
-    final token? => site.builder._operator(token),
-    null => null,
+  List<Argument> get arguments => file.arguments(node.argumentList);
+}
+
+final class _InstanceCreation(
+  final _DartFile file,
+  final ast.InstanceCreationExpression node,
+) with _Enclosed, _Expression implements InstanceCreation {
+  /// Without types, `new User.fromJson()` parses `User` as an import prefix
+  /// and `fromJson` as the type, so the type's name can be the last name.
+  @override
+  String get name =>
+      node.constructorName.name?.name ?? node.constructorName.type.name.lexeme;
+
+  @override
+  List<Argument> get arguments => file.arguments(node.argumentList);
+}
+
+final class _FunctionCall(
+  final _DartFile file,
+  final ast.FunctionExpressionInvocation node,
+) with _Enclosed, _Expression implements FunctionCall {
+  @override
+  Expression get callee => file.expression(node.function);
+
+  @override
+  List<Argument> get arguments => file.arguments(node.argumentList);
+}
+
+/// `name`.
+final class _Identifier(final _DartFile file, final ast.SimpleIdentifier node)
+    with _Enclosed, _Expression
+    implements Reference {
+  @override
+  Expression? get target => null;
+
+  @override
+  AccessOperator? get operator => null;
+
+  @override
+  String get name => node.name;
+}
+
+/// `prefix.name`, which without types may be a property or an import prefix.
+final class _PrefixedIdentifier(
+  final _DartFile file,
+  final ast.PrefixedIdentifier node,
+) with _Enclosed, _Expression implements Reference {
+  @override
+  Expression get target => file.expression(node.prefix);
+
+  @override
+  AccessOperator get operator => AccessOperator.period;
+
+  @override
+  String get name => node.identifier.name;
+}
+
+/// `target.name`, `target?.name` or `..name`.
+final class _PropertyAccess(final _DartFile file, final ast.PropertyAccess node)
+    with _Enclosed, _Expression
+    implements Reference {
+  @override
+  Expression get target => file.expression(node.realTarget);
+
+  @override
+  AccessOperator? get operator => _DartFile.accessOperator(node.operator);
+
+  @override
+  String get name => node.propertyName.name;
+}
+
+final class _Cast(final _DartFile file, final ast.AsExpression node)
+    with _Enclosed, _Expression
+    implements Cast {
+  @override
+  Expression get operand => file.expression(node.expression);
+
+  @override
+  TypeReference get type => file.type(node.type);
+}
+
+final class _NullCheck(final _DartFile file, final ast.PostfixExpression node)
+    with _Enclosed, _Expression
+    implements NullCheck {
+  @override
+  Expression get operand => file.expression(node.operand);
+}
+
+final class _This(final _DartFile file, final ast.ThisExpression node)
+    with _Enclosed, _Expression
+    implements This;
+
+final class _CollectionLiteral(
+  final _DartFile file,
+  final ast.TypedLiteral node,
+) with _Enclosed, _Expression implements CollectionLiteral;
+
+final class _Parenthesized(
+  final _DartFile file,
+  final ast.ParenthesizedExpression node,
+) with _Enclosed, _Expression implements Parenthesized {
+  @override
+  Expression get expression => file.expression(node.expression);
+}
+
+final class _OtherExpression(final _DartFile file, final ast.Expression node)
+    with _Enclosed, _Expression
+    implements OtherExpression;
+
+final class _TypeReference(final _DartFile file, final ast.TypeAnnotation node)
+    with _Enclosed
+    implements TypeReference {
+  @override
+  String? get name => switch (node) {
+    ast.NamedType(:final name) => name.lexeme,
+    _ => null,
   };
 
   @override
-  String get name => _node.methodName.name;
+  String? get prefix => switch (node) {
+    ast.NamedType(:final importPrefix?) => importPrefix.name.lexeme,
+    _ => null,
+  };
 
   @override
-  List<Argument> get arguments => site.builder._arguments(_node.argumentList);
-}
-
-class _InstanceCreation with _Expression implements InstanceCreation {
-  _InstanceCreation(this.site, this._node, this.name);
-
-  @override
-  final _Site site;
-  final ast.InstanceCreationExpression _node;
-  @override
-  final String name;
+  List<TypeReference> get typeArguments => switch (node) {
+    ast.NamedType(:final typeArguments?) => [
+      for (final argument in typeArguments.arguments) file.type(argument),
+    ],
+    _ => const [],
+  };
 
   @override
-  List<Argument> get arguments => site.builder._arguments(_node.argumentList);
-}
-
-class _FunctionCall with _Expression implements FunctionCall {
-  _FunctionCall(this.site, this._node);
-
-  @override
-  final _Site site;
-  final ast.FunctionExpressionInvocation _node;
-
-  @override
-  Expression get callee => _map(_node.function);
-
-  @override
-  List<Argument> get arguments => site.builder._arguments(_node.argumentList);
-}
-
-class _Reference with _Expression implements Reference {
-  _Reference(this.site, this._target, this.operator, this.name);
-
-  @override
-  final _Site site;
-  final ast.Expression? _target;
-  @override
-  final AccessOperator? operator;
-  @override
-  final String name;
-
-  @override
-  Expression? get target => _target.let(_map);
-}
-
-class _Cast with _Expression implements Cast {
-  _Cast(this.site, this._node);
-
-  @override
-  final _Site site;
-  final ast.AsExpression _node;
-
-  @override
-  Expression get operand => _map(_node.expression);
-
-  @override
-  TypeReference get type => site.builder.type(_node.type);
-}
-
-class _NullCheck with _Expression implements NullCheck {
-  _NullCheck(this.site, this._operand);
-
-  @override
-  final _Site site;
-  final ast.Expression _operand;
-
-  @override
-  Expression get operand => _map(_operand);
-}
-
-class _This with _Expression implements This {
-  _This(this.site);
-
-  @override
-  final _Site site;
-}
-
-class _CollectionLiteral with _Expression implements CollectionLiteral {
-  _CollectionLiteral(this.site);
-
-  @override
-  final _Site site;
-}
-
-class _Parenthesized with _Expression implements Parenthesized {
-  _Parenthesized(this.site, this._inner);
-
-  @override
-  final _Site site;
-  final ast.Expression _inner;
-
-  @override
-  Expression get expression => _map(_inner);
-}
-
-class _OtherExpression with _Expression implements OtherExpression {
-  _OtherExpression(this.site);
-
-  @override
-  final _Site site;
-}
-
-class _TypeReference implements TypeReference {
-  _TypeReference(
-    this._builder,
-    this._node,
-    this.name,
-    this.prefix,
-    this._arguments,
-  );
-
-  final _Builder _builder;
-  final ast.TypeAnnotation _node;
-  final List<ast.TypeAnnotation> _arguments;
-  late final (Declaration?, Member?) _enclosing = _builder.enclosing(_node);
-
-  @override
-  final String? name;
-  @override
-  final String? prefix;
-
-  @override
-  int get offset => _node.offset;
-
-  @override
-  List<TypeReference> get typeArguments => [
-    for (final argument in _arguments) _builder.type(argument),
-  ];
-
-  @override
-  Declaration? get declaration => _enclosing.$1;
-
-  @override
-  Member? get member => _enclosing.$2;
+  Cast? get cast => switch (node.parent) {
+    final ast.AsExpression cast => file.expression(cast) as Cast,
+    _ => null,
+  };
 }
