@@ -47,6 +47,9 @@ sealed class TypeDeclaration implements Declaration {
 
   List<Annotation> get annotations;
 
+  /// NEW: methods, constructors and fields, in source order.
+  List<Member> get members;
+
   List<Method> get methods;
 
   List<Constructor> get constructors;

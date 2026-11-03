@@ -5,10 +5,11 @@ import 'package:vaixell/src/rules/rule.dart';
 import 'package:vaixell/src/violation/violation.dart';
 
 import '../model.dart';
+import '../rule.dart';
 import '../rules.dart' as model;
 
 base class const _Shim(
-  final model.ModelRule _rule,
+  final ModelRule _rule,
   @override final Severity defaultSeverity,
 ) extends Rule {
   @override

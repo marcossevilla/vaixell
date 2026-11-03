@@ -1,63 +1,37 @@
-// PROTOTYPE: await-receiver, raw-json and generated-json written against
-// model.dart, for https://github.com/marcossevilla/vaixell/issues/36. Never
-// merged. They behave exactly like packages/vaixell/lib/src/rules/, which
-// prototype/test checks.
+// PROTOTYPE: await-receiver, raw-json and generated-json composed from the
+// mixins in rule.dart and written against model.dart, for
+// https://github.com/marcossevilla/vaixell/issues/36. Never merged. They
+// behave exactly like packages/vaixell/lib/src/rules/, which prototype/test
+// checks.
 
 import 'package:vaixell/src/rules/rule.dart' show Finding;
 
 import 'model.dart';
-
-/// A rule written against the model.
-abstract base class const ModelRule() {
-  String get id;
-
-  List<Finding> check(DartFile file);
-}
-
-/// `Container.member`, `member`, `Container` or `null` for where [code]
-/// sits, as today's ids spell it. A stand-in for whatever #37 decides.
-String? enclosingSymbol(Enclosed code) {
-  final container = switch (code.declaration) {
-    TypeDeclaration(:final name) => name ?? '<unnamed>',
-    TopLevelFunction(:final name, kind: FunctionKind.setter) => '$name=',
-    TopLevelFunction(:final name) || TopLevelVariable(:final name) => name,
-    null => null,
-  };
-  final member = switch (code.member) {
-    Method(:final name, kind: FunctionKind.setter) => '$name=',
-    Method(:final name) || Field(:final name) => name,
-    Constructor(:final name) => name ?? 'new',
-    null => null,
-  };
-  return member == null ? container : '$container.$member';
-}
+import 'rule.dart';
 
 /// Reports an `await` whose result is used as a receiver, as in
 /// `(await f).x` or `(await f)!`.
-final class const AwaitReceiverRule() extends ModelRule {
+final class const AwaitReceiverRule()
+    extends ModelRule
+    with ChecksExpressions, NamesFindings {
   @override
   String get id => 'await-receiver';
 
   @override
-  List<Finding> check(DartFile file) => [
-    for (final awaited in file.expressions.whereType<Await>())
-      if (awaited.use case ReceiverUse() || NullCheckUse())
-        Finding(
-          offset: awaited.offset,
-          symbol: _symbol(awaited),
-          message:
-              '`await` result is used as a receiver. '
-              'Assign it to a local variable first.',
-        ),
-  ];
-
-  /// `Foo.bar@fetch`: where the await is, and what it awaits.
-  String? _symbol(Await awaited) {
-    final enclosing = enclosingSymbol(awaited);
-    return switch (_awaitedName(awaited.operand)) {
-      final name? => '${enclosing ?? ''}@$name',
-      null => enclosing,
-    };
+  Finding? checkExpression(Expression expression) {
+    if (expression case Await(
+      use: ReceiverUse() || NullCheckUse(),
+      :final operand,
+    )) {
+      return Finding(
+        offset: expression.offset,
+        symbol: symbolOf(expression, at: _awaitedName(operand)),
+        message:
+            '`await` result is used as a receiver. '
+            'Assign it to a local variable first.',
+      );
+    }
+    return null;
   }
 
   /// The name of the call or getter in [expression], if any.
@@ -71,7 +45,13 @@ final class const AwaitReceiverRule() extends ModelRule {
 
 /// Reports `jsonDecode`, `jsonEncode`, `json.decode`, `json.encode` and
 /// `Map<String, dynamic>` outside model classes.
-final class const RawJsonRule() extends ModelRule {
+final class const RawJsonRule()
+    extends ModelRule
+    with
+        ChecksExpressions,
+        ChecksTypeReferences,
+        SkipsDirectories,
+        NamesFindings {
   static const _decodeAdvice = 'Deserialize JSON in a `fromJson` constructor.';
   static const _encodeAdvice = 'Serialize JSON in a `toJson` method.';
 
@@ -87,36 +67,32 @@ final class const RawJsonRule() extends ModelRule {
   String get id => 'raw-json';
 
   @override
-  List<Finding> check(DartFile file) {
-    if (file.directories.contains('models')) return const [];
-    return [
-      for (final call in file.expressions.whereType<MethodCall>())
-        if (!_isInJsonMember(call)) ?_checkCall(call),
-      for (final type in file.typeReferences)
-        if (!_isInJsonMember(type)) ?_checkType(type),
-    ]..sort((a, b) => a.offset.compareTo(b.offset));
-  }
+  Set<String> get skippedDirectories => const {'models'};
 
-  Finding? _checkCall(MethodCall call) {
-    final written = _writtenAs(call);
+  @override
+  Finding? checkExpression(Expression expression) {
+    if (expression is! MethodCall || _isInJsonMember(expression)) return null;
+    final written = _writtenAs(expression);
     if (_calls[written] case (final kind, final advice)
-        when !_handsOffToModel(call, kind)) {
-      return _finding(
-        call,
-        kind,
-        '`$written` is not allowed outside model classes. $advice',
+        when !_handsOffToModel(expression, kind)) {
+      return Finding(
+        offset: expression.offset,
+        symbol: symbolOf(expression, at: kind),
+        message: '`$written` is not allowed outside model classes. $advice',
       );
     }
     return null;
   }
 
-  Finding? _checkType(TypeReference type) {
-    if (!_isStringDynamicMap(type)) return null;
+  @override
+  Finding? checkTypeReference(TypeReference type) {
+    if (_isInJsonMember(type) || !_isStringDynamicMap(type)) return null;
     if (type.cast case final cast? when _isPassedToFromJson(cast)) return null;
-    return _finding(
-      type,
-      'map',
-      '`Map<String, dynamic>` is not allowed outside model classes. '
+    return Finding(
+      offset: type.offset,
+      symbol: symbolOf(type, at: 'map'),
+      message:
+          '`Map<String, dynamic>` is not allowed outside model classes. '
           'Use a model class with `fromJson` and `toJson`.',
     );
   }
@@ -174,80 +150,52 @@ final class const RawJsonRule() extends ModelRule {
       true,
     _ => false,
   };
-
-  Finding _finding(Enclosed code, String kind, String message) => Finding(
-    offset: code.offset,
-    symbol: '${enclosingSymbol(code) ?? ''}@$kind',
-    message: message,
-  );
 }
 
 /// Reports `fromJson` and `toJson` members that json_serializable doesn't
 /// generate.
-final class const GeneratedJsonRule() extends ModelRule {
+final class const GeneratedJsonRule() extends ModelRule with ChecksMembers {
   @override
   String get id => 'generated-json';
 
   @override
-  List<Finding> check(DartFile file) => [
-    for (final declaration in file.declarations)
-      ...switch (declaration) {
-        ClassDeclaration() => _checkClass(declaration),
-        EnumDeclaration() => _checkEnum(declaration),
-        _ => const <Finding>[],
-      },
-  ];
-
-  List<Finding> _checkClass(ClassDeclaration type) => [
-    for (final member in _jsonMembers(type))
-      ?switch (member) {
-        Method(isStatic: true, name: 'fromJson') => _staticFromJson(
+  Finding? checkMember(TypeDeclaration type, Member member) {
+    if (!_isJsonMember(member)) return null;
+    return switch ((type, member)) {
+      (final EnumDeclaration type, _) => _handWrittenInEnum(type.name, member),
+      (
+        final ClassDeclaration type,
+        final Method method && Method(isStatic: true, name: 'fromJson'),
+      ) =>
+        _staticFromJson(type.name, method),
+      (final ClassDeclaration type, final Constructor constructor) =>
+        _checkBody(
           type,
-          member,
-        ),
-        Constructor(:final parameters, :final returnExpression) => _checkBody(
-          type,
-          member,
+          constructor,
           name: 'fromJson',
-          body: returnExpression,
-          input: parameters.firstOrNull?.name ?? 'json',
+          body: constructor.returnExpression,
+          input: constructor.parameters.firstOrNull?.name ?? 'json',
         ),
-        Method(:final name, :final returnExpression) => _checkBody(
-          type,
-          member,
-          name: name,
-          body: returnExpression,
-          input: 'this',
-        ),
-        Field() => null,
-      },
-  ];
-
-  /// Enums use `@JsonEnum` and `@JsonValue` instead, whatever the body.
-  List<Finding> _checkEnum(EnumDeclaration type) => [
-    for (final member in _jsonMembers(type))
-      Finding(
-        offset: member.offset,
-        symbol: '${type.name}.${_nameOf(member)}',
-        message:
-            '`${type.name}.${_nameOf(member)}` is written by hand. Annotate '
-            '`${type.name}` with `@JsonEnum()` and its values with '
-            '`@JsonValue` instead.',
+      (final ClassDeclaration type, final Method method) => _checkBody(
+        type,
+        method,
+        name: method.name,
+        body: method.returnExpression,
+        input: 'this',
       ),
-  ];
+      _ => null,
+    };
+  }
 
-  /// `fromJson` constructors, static `fromJson` methods and `toJson`
-  /// methods that convert the type itself, in source order.
-  List<Member> _jsonMembers(TypeDeclaration type) => [
-    for (final constructor in type.constructors)
-      if (constructor.name == 'fromJson' && !constructor.isExternal)
-        constructor,
-    for (final method in type.methods)
-      if (!method.isAbstract && method.kind == FunctionKind.function)
-        if ((method.name == 'fromJson' && method.isStatic) ||
-            (method.name == 'toJson' && !_convertsAnotherValue(method)))
-          method,
-  ]..sort((a, b) => a.offset.compareTo(b.offset));
+  /// A `fromJson` constructor, a static `fromJson` method or a `toJson`
+  /// method that converts the type itself.
+  bool _isJsonMember(Member member) => switch (member) {
+    Constructor(name: 'fromJson', isExternal: false) => true,
+    Method(isAbstract: true) || Method(kind: != FunctionKind.function) => false,
+    Method(name: 'fromJson', isStatic: true) => true,
+    Method(name: 'toJson') => !_convertsAnotherValue(member),
+    _ => false,
+  };
 
   /// A `toJson(value)`, as in HydratedBloc or a `JsonConverter`. A model's
   /// `toJson` only takes functions, with `genericArgumentFactories`.
@@ -257,13 +205,25 @@ final class const GeneratedJsonRule() extends ModelRule {
         null => false,
       };
 
-  Finding _staticFromJson(ClassDeclaration type, Method method) => Finding(
+  /// Enums use `@JsonEnum` and `@JsonValue` instead, whatever the body.
+  Finding _handWrittenInEnum(String enumName, Member member) {
+    final symbol = '$enumName.${member is Method ? member.name : 'fromJson'}';
+    return Finding(
+      offset: member.offset,
+      symbol: symbol,
+      message:
+          '`$symbol` is written by hand. Annotate `$enumName` with '
+          '`@JsonEnum()` and its values with `@JsonValue` instead.',
+    );
+  }
+
+  Finding _staticFromJson(String className, Method method) => Finding(
     offset: method.offset,
-    symbol: '${type.name}.fromJson',
+    symbol: '$className.fromJson',
     message:
-        '`${type.name}.fromJson` is a method. Make it a factory constructor, '
-        '`factory ${type.name}.fromJson(Map<String, dynamic> json) => '
-        '${_generated(type, 'fromJson')}(json);`.',
+        '`$className.fromJson` is a method. Make it a factory constructor, '
+        '`factory $className.fromJson(Map<String, dynamic> json) => '
+        '${_generated(className, 'fromJson')}(json);`.',
   );
 
   /// Reports the `fromJson` or `toJson` member [name] unless [type] is
@@ -277,7 +237,7 @@ final class const GeneratedJsonRule() extends ModelRule {
     required String input,
   }) {
     final annotation = _jsonSerializable(type);
-    final generated = _generated(type, name);
+    final generated = _generated(type.name, name);
     final delegates = _delegates(body, to: generated, passing: input);
     if (annotation != null && delegates) return null;
 
@@ -334,9 +294,9 @@ final class const GeneratedJsonRule() extends ModelRule {
   };
 
   /// `_$UserFromJson` for `User.fromJson`. Leading underscores are dropped.
-  String _generated(ClassDeclaration type, String name) {
+  String _generated(String className, String name) {
     final suffix = name == 'fromJson' ? 'FromJson' : 'ToJson';
-    return '_\$${type.name.replaceFirst(RegExp('^_*'), '')}$suffix';
+    return '_\$${className.replaceFirst(RegExp('^_*'), '')}$suffix';
   }
 
   Annotation? _jsonSerializable(ClassDeclaration type) =>
@@ -346,9 +306,4 @@ final class const GeneratedJsonRule() extends ModelRule {
   /// doesn't exist.
   bool _disables(Annotation annotation, String flag) => annotation.arguments
       .any((a) => a.name == flag && a.isLiteral && a.literal == false);
-
-  String _nameOf(Member member) => switch (member) {
-    Method(:final name) => name,
-    _ => 'fromJson',
-  };
 }

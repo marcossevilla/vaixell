@@ -273,6 +273,15 @@ mixin _Members implements TypeDeclaration {
   ];
 
   @override
+  List<Member> get members => [
+    for (final node in body)
+      if (node is ast.FieldDeclaration)
+        for (final variable in node.fields.variables) file.member(variable)!
+      else
+        ?file.member(node),
+  ];
+
+  @override
   List<Method> get methods => [
     for (final m in body.whereType<ast.MethodDeclaration>())
       file.member(m)! as Method,
