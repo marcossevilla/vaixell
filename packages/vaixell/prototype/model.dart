@@ -177,6 +177,29 @@ sealed class Enclosed {
   /// The member of [declaration] it's in, or `null` when it's in the
   /// declaration itself, such as its annotations or an enum value.
   Member? get member;
+
+  /// NEW (#37): where it is, as violation ids spell it: `Container.member`,
+  /// `member` or `Container`, or `null` outside any declaration. Setters
+  /// end in `=`, unnamed constructors are `new` and unnamed extensions are
+  /// `<unnamed>`.
+  String? get symbol;
+}
+
+/// [Enclosed.symbol] for [declaration] and [member].
+String? _symbolOf(Declaration? declaration, Member? member) {
+  final container = switch (declaration) {
+    TypeDeclaration(:final name) => name ?? '<unnamed>',
+    TopLevelFunction(:final name, kind: FunctionKind.setter) => '$name=',
+    TopLevelFunction(:final name) || TopLevelVariable(:final name) => name,
+    null => null,
+  };
+  final memberName = switch (member) {
+    Method(:final name, kind: FunctionKind.setter) => '$name=',
+    Method(:final name) || Field(:final name) => name,
+    Constructor(:final name) => name ?? 'new',
+    null => null,
+  };
+  return memberName == null ? container : '$container.$memberName';
 }
 
 // --- Expressions (NEW) -------------------------------------------------------

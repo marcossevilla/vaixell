@@ -5,10 +5,30 @@
 // implement it by visiting one kind of element and asking the rule about
 // each. They chain through `super`, so they combine in any order, and
 // `shouldCheck` lets a mixin such as `SkipsDirectories` turn a file off.
-
-import 'package:vaixell/src/rules/rule.dart' show Finding;
+//
+// `Finding` is redeclared here to show `Finding.at`. test/shim.dart turns
+// it back into today's `Finding`.
 
 import 'model.dart';
+
+/// Something a rule found, before it gets an id. Today's `Finding` (#41),
+/// plus [Finding.at].
+final class const Finding({
+  required final int offset,
+  required final String message,
+  final String? symbol,
+}) {
+  /// A finding at [code], whose symbol is [Enclosed.symbol], followed by
+  /// `@qualifier` when there's one, as in `ApiClient.getUser@decode`.
+  new at(Enclosed code, {required String message, String? qualifier})
+    : this(
+        offset: code.offset,
+        message: message,
+        symbol: qualifier == null
+            ? code.symbol
+            : '${code.symbol ?? ''}@$qualifier',
+      );
+}
 
 /// A rule written against the model.
 abstract base class const ModelRule() {
@@ -73,36 +93,6 @@ base mixin SkipsDirectories on ModelRule {
   bool shouldCheck(DartFile file) =>
       !file.directories.any(skippedDirectories.contains) &&
       super.shouldCheck(file);
-}
-
-/// Spells finding symbols the way today's violation ids do.
-base mixin NamesFindings on ModelRule {
-  /// `Container.member`, `member` or `Container` for where [code] is, or
-  /// `null` outside any declaration. With [at], the symbol ends in `@at`,
-  /// as in `ApiClient.getUser@decode`.
-  ///
-  /// A stand-in for whatever "Where finding symbols come from" (#37)
-  /// decides.
-  String? symbolOf(Enclosed code, {String? at}) {
-    final enclosing = _enclosing(code);
-    return at == null ? enclosing : '${enclosing ?? ''}@$at';
-  }
-
-  String? _enclosing(Enclosed code) {
-    final container = switch (code.declaration) {
-      TypeDeclaration(:final name) => name ?? '<unnamed>',
-      TopLevelFunction(:final name, kind: FunctionKind.setter) => '$name=',
-      TopLevelFunction(:final name) || TopLevelVariable(:final name) => name,
-      null => null,
-    };
-    final member = switch (code.member) {
-      Method(:final name, kind: FunctionKind.setter) => '$name=',
-      Method(:final name) || Field(:final name) => name,
-      Constructor(:final name) => name ?? 'new',
-      null => null,
-    };
-    return member == null ? container : '$container.$member';
-  }
 }
 
 /// [inherited] plus the non-null findings from [visit], in source order,

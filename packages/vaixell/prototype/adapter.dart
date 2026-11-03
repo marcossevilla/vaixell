@@ -525,6 +525,9 @@ mixin _Enclosed implements Enclosed {
 
   @override
   Member? get member => file.enclosing(node).member;
+
+  @override
+  String? get symbol => _symbolOf(declaration, member);
 }
 
 /// What every expression shares.
