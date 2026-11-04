@@ -10,7 +10,8 @@ import 'package:test/test.dart';
 /// A layer is a directory under `lib/src`, or a file directly in it.
 const _allowedImports = <String, Set<String>>{
   'violation': {},
-  'rules': {'violation'},
+  'model': {},
+  'rules': {'model', 'violation'},
   'config': {'rules', 'source', 'violation'},
   'source': {'git'},
   'engine': {'config', 'rules', 'source', 'violation'},

@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:vaixell/src/model/model.dart';
 import 'package:vaixell/src/violation/violation.dart';
 
 /// A Dart file that has been parsed without type resolution.
@@ -34,6 +35,17 @@ class const Finding({
 }) {
   /// Creates a finding at [offset] in the file.
   this;
+
+  /// A finding at [element]. Its symbol is the element's, followed by
+  /// `@qualifier` when there's one, as in `ApiClient.getUser@decode`.
+  new at(Reportable element, {required String message, String? qualifier})
+    : this(
+        offset: element.offset,
+        message: message,
+        symbol: qualifier == null
+            ? element.symbol
+            : '${element.symbol ?? ''}@$qualifier',
+      );
 }
 
 /// An architecture rule.
