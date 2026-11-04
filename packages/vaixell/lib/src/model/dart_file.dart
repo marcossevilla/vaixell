@@ -16,4 +16,8 @@ abstract interface class DartFile {
 
   /// The `import` directives, in source order.
   List<Import> get imports;
+
+  /// The top-level declarations, in source order, with one
+  /// [TopLevelVariable] per declared name.
+  List<Declaration> get declarations;
 }

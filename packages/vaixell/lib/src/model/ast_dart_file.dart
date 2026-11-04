@@ -47,7 +47,7 @@ final class _AstDartFile(
     ),
   );
 
-  static int _bySourceOrder((int, Diagnostic) a, (int, Diagnostic) b) =>
+  int _bySourceOrder((int, Diagnostic) a, (int, Diagnostic) b) =>
       switch (a.$2.offset.compareTo(b.$2.offset)) {
         0 => a.$1.compareTo(b.$1),
         final order => order,
@@ -58,6 +58,94 @@ final class _AstDartFile(
     for (final directive in result.unit.directives)
       if (directive is ast.ImportDirective) _AstImport(this, directive),
   ]);
+
+  @override
+  late final List<Declaration> declarations = List.unmodifiable([
+    for (final node in result.unit.declarations)
+      if (node is ast.TopLevelVariableDeclaration)
+        for (final variable in node.variables.variables) declaration(variable)!
+      else
+        ?declaration(node),
+  ]);
+
+  /// The model of each node, so a node always gives the same object.
+  final Map<ast.AstNode, Object> _models = Map.identity();
+
+  T _model<T extends Object>(ast.AstNode node, T Function() create) =>
+      _models.putIfAbsent(node, create) as T;
+
+  /// The model of a top-level declaration, or of one top-level variable.
+  Declaration? declaration(ast.AstNode node) => switch (node) {
+    ast.ClassDeclaration() => _model(node, () => _AstClass(this, node)),
+    ast.MixinDeclaration() => _model(node, () => _AstMixin(this, node)),
+    ast.EnumDeclaration() => _model(node, () => _AstEnum(this, node)),
+    ast.ExtensionDeclaration() => _model(node, () => _AstExtension(this, node)),
+    ast.ExtensionTypeDeclaration() => _model(
+      node,
+      () => _AstExtensionType(this, node),
+    ),
+    ast.FunctionDeclaration(parent: ast.CompilationUnit()) => _model(
+      node,
+      () => _AstTopLevelFunction(this, node),
+    ),
+    ast.VariableDeclaration(
+      parent: ast.VariableDeclarationList(
+        parent: ast.TopLevelVariableDeclaration(),
+      ),
+    ) =>
+      _model(node, () => _AstTopLevelVariable(this, node)),
+    _ => null,
+  };
+
+  /// The model of a method, a constructor or one field.
+  Member? member(ast.AstNode node) => switch (node) {
+    ast.MethodDeclaration() => _model(node, () => _AstMethod(this, node)),
+    ast.ConstructorDeclaration() => _model(
+      node,
+      () => _AstConstructor(this, node),
+    ),
+    ast.VariableDeclaration(
+      parent: ast.VariableDeclarationList(parent: ast.FieldDeclaration()),
+    ) =>
+      _model(node, () => _AstField(this, node)),
+    _ => null,
+  };
+
+  /// The top-level declaration that [node] is in.
+  Declaration declarationAround(ast.AstNode node) =>
+      declaration(node) ?? declarationAround(node.parent!);
+
+  /// The symbol of [member] in [declaration], or of [declaration] alone.
+  String symbolOf(Declaration declaration, Member? member) {
+    final container = switch (declaration) {
+      TypeDeclaration(:final name) => name ?? '<unnamed>',
+      TopLevelFunction(:final name, kind: FunctionKind.setter) => '$name=',
+      TopLevelFunction(:final name) || TopLevelVariable(:final name) => name,
+    };
+    final memberName = switch (member) {
+      Method(:final name, kind: FunctionKind.setter) => '$name=',
+      Method(:final name) || Field(:final name) => name,
+      Constructor(:final name) => name ?? 'new',
+      null => null,
+    };
+    return memberName == null ? container : '$container.$memberName';
+  }
+
+  FunctionKind kind({
+    required bool isGetter,
+    required bool isSetter,
+    bool isOperator = false,
+  }) => switch ((isGetter, isSetter, isOperator)) {
+    (true, _, _) => FunctionKind.getter,
+    (_, true, _) => FunctionKind.setter,
+    (_, _, true) => FunctionKind.operator,
+    _ => FunctionKind.function,
+  };
+
+  List<Parameter> parameters(ast.FormalParameterList? list) => [
+    for (final parameter in list?.parameters ?? const <ast.FormalParameter>[])
+      _AstParameter(parameter),
+  ];
 }
 
 final class _AstSyntaxError(

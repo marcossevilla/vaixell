@@ -13,6 +13,8 @@ import 'package:analyzer/diagnostic/diagnostic.dart';
 import 'package:path/path.dart' as p;
 
 part 'ast_dart_file.dart';
+part 'ast_declarations.dart';
 part 'dart_file.dart';
+part 'declarations.dart';
 part 'import.dart';
 part 'reportable.dart';
