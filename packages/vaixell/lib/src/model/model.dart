@@ -9,12 +9,17 @@ library;
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart' as ast;
+import 'package:analyzer/dart/ast/token.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/diagnostic/diagnostic.dart';
 import 'package:path/path.dart' as p;
 
 part 'ast_dart_file.dart';
 part 'ast_declarations.dart';
+part 'ast_expressions.dart';
 part 'dart_file.dart';
 part 'declarations.dart';
+part 'expressions.dart';
 part 'import.dart';
 part 'reportable.dart';
+part 'type_annotations.dart';

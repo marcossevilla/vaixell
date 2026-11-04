@@ -13,7 +13,7 @@ mixin _AstTypeDeclaration implements TypeDeclaration {
 
   @override
   List<Annotation> get annotations => [
-    for (final annotation in node.metadata) _AstAnnotation(annotation),
+    for (final annotation in node.metadata) _AstAnnotation(file, annotation),
   ];
 
   @override
@@ -146,7 +146,7 @@ final class _AstMethod(
   final ast.MethodDeclaration node,
 ) implements Method {
   @override
-  String? get symbol => file.symbolOf(file.declarationAround(node), this);
+  String? get symbol => file.symbolOf(file.enclosing(node).declaration, this);
 
   @override
   String get name => node.name.lexeme;
@@ -172,6 +172,9 @@ final class _AstMethod(
 
   @override
   List<Parameter> get parameters => file.parameters(node.parameters);
+
+  @override
+  Expression? get returnExpression => file.returnExpression(node.body);
 }
 
 final class _AstConstructor(
@@ -179,7 +182,7 @@ final class _AstConstructor(
   final ast.ConstructorDeclaration node,
 ) implements Constructor {
   @override
-  String? get symbol => file.symbolOf(file.declarationAround(node), this);
+  String? get symbol => file.symbolOf(file.enclosing(node).declaration, this);
 
   @override
   String? get name => node.name?.lexeme;
@@ -201,6 +204,9 @@ final class _AstConstructor(
 
   @override
   List<Parameter> get parameters => file.parameters(node.parameters);
+
+  @override
+  Expression? get returnExpression => file.returnExpression(node.body);
 }
 
 final class _AstField(
@@ -208,7 +214,7 @@ final class _AstField(
   final ast.VariableDeclaration node,
 ) implements Field {
   @override
-  String? get symbol => file.symbolOf(file.declarationAround(node), this);
+  String? get symbol => file.symbolOf(file.enclosing(node).declaration, this);
 
   @override
   String get name => node.name.lexeme;
@@ -235,7 +241,8 @@ final class _AstParameter(final ast.FormalParameter node) implements Parameter {
       node.functionTypedSuffix != null || node.type is ast.GenericFunctionType;
 }
 
-final class _AstAnnotation(final ast.Annotation node) implements Annotation {
+final class _AstAnnotation(final _AstDartFile file, final ast.Annotation node)
+    implements Annotation {
   @override
   String get name => switch (node.name) {
     ast.PrefixedIdentifier(:final identifier) => identifier.name,
@@ -249,18 +256,19 @@ final class _AstAnnotation(final ast.Annotation node) implements Annotation {
   };
 
   @override
-  List<Argument> get arguments => [
-    for (final argument in node.arguments?.arguments ?? const <ast.Argument>[])
-      _AstArgument(argument),
-  ];
+  List<Argument> get arguments => file.arguments(node.arguments);
 }
 
-final class _AstArgument(final ast.Argument node) implements Argument {
+final class _AstArgument(final _AstDartFile file, final ast.Argument node)
+    implements Argument {
   @override
   String? get name => switch (node) {
     ast.NamedArgument(:final name) => name.lexeme,
     _ => null,
   };
+
+  @override
+  Expression get value => file.expression(node.argumentExpression);
 
   @override
   bool get isLiteral => switch (node.argumentExpression) {

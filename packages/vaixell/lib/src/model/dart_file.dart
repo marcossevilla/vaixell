@@ -20,4 +20,11 @@ abstract interface class DartFile {
   /// The top-level declarations, in source order, with one
   /// [TopLevelVariable] per declared name.
   List<Declaration> get declarations;
+
+  /// Every expression, at any depth, in source order.
+  List<Expression> get expressions;
+
+  /// Every type annotation, at any depth, including type arguments, in
+  /// source order.
+  List<TypeAnnotation> get typeAnnotations;
 }

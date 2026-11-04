@@ -118,6 +118,9 @@ abstract interface class Method implements Member {
 
   /// The parameters, in source order. Empty for a getter.
   List<Parameter> get parameters;
+
+  /// `e` when the body is `=> e;` or `{ return e; }`, otherwise `null`.
+  Expression? get returnExpression;
 }
 
 /// A constructor. Its offset is its name's, or the type name's or keyword's
@@ -134,6 +137,9 @@ abstract interface class Constructor implements Member {
 
   /// The parameters, in source order.
   List<Parameter> get parameters;
+
+  /// `e` when the body is `=> e;` or `{ return e; }`, otherwise `null`.
+  Expression? get returnExpression;
 }
 
 /// One name of a field declaration.
@@ -175,12 +181,15 @@ abstract interface class Annotation {
   List<Argument> get arguments;
 }
 
-/// An argument of an [Annotation].
+/// An argument of an [Annotation] or a [Call].
 abstract interface class Argument {
   /// The name, or `null` when positional.
   String? get name;
 
-  /// Whether the value is a `bool`, number, `String` or `null` literal.
+  /// The value.
+  Expression get value;
+
+  /// Whether [value] is a `bool`, number, `String` or `null` literal.
   bool get isLiteral;
 
   /// The value of the literal, when [isLiteral], otherwise `null`.

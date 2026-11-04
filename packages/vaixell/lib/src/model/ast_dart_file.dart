@@ -68,6 +68,19 @@ final class _AstDartFile(
         ?declaration(node),
   ]);
 
+  late final _AstCollector _collected = _AstCollector(this)
+    ..visitCompilationUnit(result.unit);
+
+  @override
+  late final List<Expression> expressions = List.unmodifiable(
+    _collected.expressions,
+  );
+
+  @override
+  late final List<TypeAnnotation> typeAnnotations = List.unmodifiable(
+    _collected.types,
+  );
+
   /// The model of each node, so a node always gives the same object.
   final Map<ast.AstNode, Object> _models = Map.identity();
 
@@ -111,16 +124,56 @@ final class _AstDartFile(
     _ => null,
   };
 
-  /// The top-level declaration that [node] is in.
-  Declaration declarationAround(ast.AstNode node) =>
-      declaration(node) ?? declarationAround(node.parent!);
+  Expression expression(ast.Expression node) => _model(
+    node,
+    () => switch (node) {
+      ast.AwaitExpression() => _AstAwait(this, node),
+      ast.MethodInvocation() => _AstMethodCall(this, node),
+      ast.InstanceCreationExpression() => _AstInstanceCreation(this, node),
+      ast.FunctionExpressionInvocation() => _AstFunctionCall(this, node),
+      ast.SimpleIdentifier() => _AstIdentifier(this, node),
+      ast.PrefixedIdentifier() => _AstPrefixedIdentifier(this, node),
+      ast.PropertyAccess() => _AstPropertyAccess(this, node),
+      ast.AsExpression() => _AstCast(this, node),
+      ast.PostfixExpression(operator: Token(type: TokenType.BANG)) =>
+        _AstNullCheck(this, node),
+      ast.ThisExpression() => _AstThis(this, node),
+      ast.TypedLiteral() => _AstCollectionLiteral(this, node),
+      ast.ParenthesizedExpression() => _AstParenthesized(this, node),
+      _ => _AstOtherExpression(this, node),
+    },
+  );
+
+  Expression? expressionOrNull(ast.Expression? node) =>
+      node == null ? null : expression(node);
+
+  TypeAnnotation type(ast.TypeAnnotation node) =>
+      _model(node, () => _AstTypeAnnotation(this, node));
+
+  /// The declaration and member around [node]. A node in a variable
+  /// declaration list, such as a type shared by several variables, belongs
+  /// to the first variable.
+  ({Declaration? declaration, Member? member}) enclosing(ast.AstNode node) {
+    Declaration? declaration;
+    Member? member;
+    for (ast.AstNode? n = node; n != null; n = n.parent) {
+      final subject = switch (n) {
+        ast.VariableDeclarationList(:final variables) => variables.first,
+        _ => n,
+      };
+      member ??= this.member(subject);
+      declaration ??= this.declaration(subject);
+    }
+    return (declaration: declaration, member: member);
+  }
 
   /// The symbol of [member] in [declaration], or of [declaration] alone.
-  String symbolOf(Declaration declaration, Member? member) {
+  String? symbolOf(Declaration? declaration, Member? member) {
     final container = switch (declaration) {
       TypeDeclaration(:final name) => name ?? '<unnamed>',
       TopLevelFunction(:final name, kind: FunctionKind.setter) => '$name=',
       TopLevelFunction(:final name) || TopLevelVariable(:final name) => name,
+      null => null,
     };
     final memberName = switch (member) {
       Method(:final name, kind: FunctionKind.setter) => '$name=',
@@ -140,6 +193,28 @@ final class _AstDartFile(
     (_, true, _) => FunctionKind.setter,
     (_, _, true) => FunctionKind.operator,
     _ => FunctionKind.function,
+  };
+
+  AccessOperator? accessOperator(Token? token) => switch (token?.type) {
+    TokenType.PERIOD => AccessOperator.period,
+    TokenType.QUESTION_PERIOD => AccessOperator.questionPeriod,
+    TokenType.PERIOD_PERIOD => AccessOperator.cascade,
+    TokenType.QUESTION_PERIOD_PERIOD => AccessOperator.questionCascade,
+    _ => null,
+  };
+
+  List<Argument> arguments(ast.ArgumentList? list) => [
+    for (final argument in list?.arguments ?? const <ast.Argument>[])
+      _AstArgument(this, argument),
+  ];
+
+  /// `e` when [body] is `=> e;` or `{ return e; }`, otherwise `null`.
+  Expression? returnExpression(ast.FunctionBody body) => switch (body) {
+    ast.ExpressionFunctionBody(:final expression) ||
+    ast.BlockFunctionBody(
+      block: ast.Block(statements: [ast.ReturnStatement(:final expression?)]),
+    ) => this.expression(expression),
+    _ => null,
   };
 
   List<Parameter> parameters(ast.FormalParameterList? list) => [
