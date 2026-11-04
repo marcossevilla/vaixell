@@ -1,4 +1,4 @@
-part of 'model.dart';
+part of '../model.dart';
 
 /// An `import` directive. Its offset is the `import` keyword's and its
 /// symbol is its [uri].

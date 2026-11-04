@@ -1,4 +1,4 @@
-part of 'model.dart';
+part of '../model.dart';
 
 /// A type annotation, such as `Map<String, dynamic>`.
 ///
