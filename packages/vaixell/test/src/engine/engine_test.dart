@@ -30,6 +30,14 @@ final class const _FileRule({final bool skips = false}) extends Rule {
   ];
 }
 
+/// Reports 20 findings at the start of every file.
+final class const _RepeatRule(@override final String id) extends Rule {
+  @override
+  List<Finding> check(DartFile file) => [
+    for (var i = 0; i < 20; i++) Finding(offset: 0, message: '$id $i'),
+  ];
+}
+
 /// Reports the resolved path of every import.
 final class const _ImportRule() extends Rule with ChecksImports {
   @override
@@ -181,6 +189,22 @@ class Foo {
         'a1',
         'a3',
         'b',
+      ]);
+    });
+
+    test('keeps the rule order for findings at the same position', () async {
+      final violations = await _run(
+        {'lib/a.dart': 'void a() {}\n'},
+        config: const Config(
+          rules: [
+            (_RepeatRule('first'), Severity.error),
+            (_RepeatRule('second'), Severity.error),
+          ],
+        ),
+      );
+      expect(violations.map((v) => v.message), [
+        for (final rule in ['first', 'second'])
+          for (var i = 0; i < 20; i++) '$rule $i',
       ]);
     });
 

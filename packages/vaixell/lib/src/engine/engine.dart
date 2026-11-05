@@ -18,18 +18,20 @@ class const Engine() {
   /// the rules enabled in that config. A file that doesn't parse only gets a
   /// `parse-error`, which is always on.
   ///
-  /// Returns the violations, sorted by path, line and column.
+  /// Returns the violations, sorted by path, line and column, and in the
+  /// order of the rules at the same position.
   Future<List<Violation>> run({
     required SourceTree tree,
     required List<Package> packages,
   }) async {
-    final violations = <Violation>[];
+    final files = <(String, List<Violation>)>[];
     for (final package in packages) {
       for (final path in await _dartFiles(tree, package)) {
-        violations.addAll(_check(package, path, await tree.read(path)));
+        files.add((path, _check(package, path, await tree.read(path))));
       }
     }
-    return violations..sort(_compare);
+    files.sort((a, b) => a.$1.compareTo(b.$1));
+    return [for (final (_, violations) in files) ...violations];
   }
 
   Future<List<String>> _dartFiles(SourceTree tree, Package package) async {
@@ -52,10 +54,10 @@ class const Engine() {
       packageRoot: package.path,
       packageName: package.name,
     );
-    final found = switch (file.errors) {
+    final found = const FindingOrder().byOffset(switch (file.errors) {
       [] => _findings(file, package.config.rules),
       final errors => [_parseError(package, errors)],
-    }..sort((a, b) => a.$3.offset.compareTo(b.$3.offset));
+    }, (found) => found.$3);
 
     final ids = ViolationIds();
     return [
@@ -108,13 +110,5 @@ class const Engine() {
       column: column,
       message: finding.message,
     );
-  }
-
-  int _compare(Violation a, Violation b) {
-    final byPath = a.path.compareTo(b.path);
-    if (byPath != 0) return byPath;
-    final byLine = a.line.compareTo(b.line);
-    if (byLine != 0) return byLine;
-    return a.column.compareTo(b.column);
   }
 }

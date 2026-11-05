@@ -61,8 +61,13 @@ abstract base class const Rule() implements RuleEntry {
   @override
   bool get recommended => true;
 
-  /// Whether to check [file] at all. When it's `false`, [check] isn't
-  /// called and no `Checks…` hook runs.
+  /// Whether to check [file] at all. When it's `false`, vaixell and
+  /// `RuleTester` don't call [check].
+  ///
+  /// The `Checks…` mixins also return nothing when it's `false`, so calling
+  /// their [check] directly honors it. A rule that overrides [check] without
+  /// them only gets that from vaixell's callers, so a direct call doesn't
+  /// honor it unless [check] asks [shouldCheck] itself.
   bool shouldCheck(DartFile file) => true;
 
   /// The findings in [file], in any order.
@@ -76,8 +81,10 @@ abstract base class const Rule() implements RuleEntry {
     Iterable<Finding?> Function() visit,
   ) {
     if (!shouldCheck(file)) return const [];
-    return [...inherited, ...visit().nonNulls]
-      ..sort((a, b) => a.offset.compareTo(b.offset));
+    return const FindingOrder().byOffset([
+      ...inherited,
+      ...visit().nonNulls,
+    ], (finding) => finding);
   }
 }
 
@@ -99,6 +106,26 @@ final class const RuleFactory(
   /// Creates a factory for the rule [id] that [create] builds. Its
   /// [defaultSeverity] and [recommended] count, not the built rule's.
   this;
+}
+
+/// Sorts findings in source order. Internal: it's never exported.
+class const FindingOrder() {
+  /// Creates the order.
+  this;
+
+  /// [items] sorted by the offset of their [findingOf], keeping their order
+  /// for equal offsets, which [List.sort] doesn't promise.
+  List<T> byOffset<T>(Iterable<T> items, Finding Function(T item) findingOf) {
+    final indexed = items.indexed.toList()
+      ..sort(
+        (a, b) =>
+            switch (findingOf(a.$2).offset.compareTo(findingOf(b.$2).offset)) {
+              0 => a.$1.compareTo(b.$1),
+              final order => order,
+            },
+      );
+    return [for (final (_, item) in indexed) item];
+  }
 }
 
 /// Builds the configured rule of a [RuleEntry]. Internal: it's never

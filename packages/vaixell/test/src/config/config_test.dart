@@ -54,10 +54,8 @@ void main() {
 
     test('recommended throws an ArgumentError for a repeated id', () {
       expect(
-        () => Config.recommended([
-          ...Recommended.rules,
-          Recommended.rules.first,
-        ]),
+        () =>
+            Config.recommended([...Recommended.rules, Recommended.rules.first]),
         throwsArgumentError,
       );
     });

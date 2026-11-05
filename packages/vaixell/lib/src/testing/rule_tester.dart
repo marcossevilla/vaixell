@@ -52,11 +52,7 @@ final class const RuleTester() {
     );
     if (file.errors.isNotEmpty) throw _syntaxErrors(file);
     if (!rule.shouldCheck(file)) return const [];
-    return [
-      for (final (_, finding)
-          in rule.check(file).indexed.toList()..sort(_byOffset))
-        finding,
-    ];
+    return const FindingOrder().byOffset(rule.check(file), (f) => f);
   }
 
   /// The rule [factory] builds from the options in the YAML file at
@@ -80,13 +76,6 @@ final class const RuleTester() {
         : const OptionValues().of(node, name: factory.id, path: fixture);
     return const RuleBuilder().build(factory, options);
   }
-
-  /// Sorts by offset, keeping the rule's order for equal offsets.
-  int _byOffset((int, Finding) a, (int, Finding) b) =>
-      switch (a.$2.offset.compareTo(b.$2.offset)) {
-        0 => a.$1.compareTo(b.$1),
-        final order => order,
-      };
 
   FormatException _syntaxErrors(DartFile file) {
     return FormatException(

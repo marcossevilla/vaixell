@@ -7,6 +7,22 @@ import 'package:vaixell/src/violation/violation.dart';
 DartFile _parse(String source, {String path = 'lib/a.dart'}) =>
     const DartFileParser().parse(path: path, content: source);
 
+/// Reports every expression, by whether it's a name read from a target.
+final class const _ReferenceRule() extends Rule with ChecksExpressions {
+  @override
+  String get id => 'reference';
+
+  @override
+  Finding? checkExpression(Expression expression) => Finding.at(
+    expression,
+    message: switch (expression) {
+      Reference(target: null) => 'name',
+      Reference() => 'target.name',
+      _ => 'other',
+    },
+  );
+}
+
 final class const _PlainRule() extends Rule {
   @override
   String get id => 'plain';
@@ -207,6 +223,17 @@ void f() {}
       ]);
       final offsets = findings.map((f) => f.offset).toList();
       expect(offsets, orderedEquals([...offsets]..sort()));
+    });
+
+    test('keep the visiting order for findings at the same offset', () {
+      final source = 'f() => [${List.filled(40, 'a.b').join(', ')}];';
+      expect(
+        const _ReferenceRule().check(_parse(source)).map((f) => f.message),
+        [
+          'other',
+          for (var i = 0; i < 40; i++) ...['target.name', 'name'],
+        ],
+      );
     });
 
     test('combine in any order', () {
