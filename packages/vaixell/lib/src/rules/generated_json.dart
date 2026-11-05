@@ -8,8 +8,9 @@ import 'package:vaixell/src/violation/violation.dart';
 /// A `fromJson` constructor or `toJson` method passes when its class is
 /// annotated with `@JsonSerializable` and its body only returns
 /// `_$<Class>FromJson(json, …)` or `_$<Class>ToJson(this, …)`, where
-/// `<Class>` drops any leading underscores. A static `fromJson` method is
-/// always reported, since json_serializable expects a constructor.
+/// `<Class>` drops any leading underscores. A static `fromJson` method and
+/// a generative `fromJson` constructor are always reported, since
+/// json_serializable expects a factory constructor.
 ///
 /// Abstract and external members aren't reported. Neither are instance
 /// `fromJson` methods or `toJson` methods whose first positional parameter
@@ -63,6 +64,8 @@ sealed class _JsonMember {
     (final EnumDeclaration type, _) => _InEnum(type, member),
     (final ClassDeclaration type, Method(isStatic: true, name: 'fromJson')) =>
       _StaticFromJson(type, member),
+    (final ClassDeclaration type, Constructor(isFactory: false)) =>
+      _GenerativeFromJson(type, member),
     (
       final ClassDeclaration type,
       Constructor(:final returnExpression) || Method(:final returnExpression),
@@ -156,6 +159,11 @@ base class _InClass(
     _ => false,
   };
 
+  /// The factory constructor json_serializable expects, taking [parameter].
+  String factoryTaking(String parameter) =>
+      'factory ${type.name}.fromJson(Map<String, dynamic> $parameter) => '
+      '$generated($parameter);';
+
   @override
   Finding? get finding => annotation != null && delegates
       ? null
@@ -190,7 +198,28 @@ final class _StaticFromJson(super.type, super.member) extends _InClass {
     member,
     message:
         '`$symbol` is a method. Make it a factory constructor, '
-        '`factory ${type.name}.fromJson(Map<String, dynamic> json) => '
-        '$generated(json);`.',
+        '`${factoryTaking('json')}`.',
   );
+}
+
+/// A generative `fromJson` constructor, including a primary one, can't
+/// return what json_serializable generates, so it's reported whatever its
+/// body, with how to make it a factory.
+final class _GenerativeFromJson(super.type, super.member) extends _InClass {
+  @override
+  Finding get finding => Finding.at(
+    member,
+    message:
+        "`$symbol` is a generative constructor, which can't return the "
+        'generated function. $_steps a factory constructor, '
+        '`${factoryTaking(input)}`.',
+  );
+
+  /// The steps before the factory constructor, ending in "make it".
+  String get _steps => switch (annotation) {
+    null => 'Annotate `${type.name}` with `@JsonSerializable()` and make it',
+    _ when isTurnedOff =>
+      'Remove `$flag: false` from `@JsonSerializable` and make it',
+    _ => 'Make it',
+  };
 }
