@@ -36,6 +36,8 @@ void main() {
       test('lists the directories of the path', () {
         final file = _parse('', path: 'packages/app/lib/models/a.dart');
         expect(file.directories, ['packages', 'app', 'lib', 'models']);
+        expect(file.directories, same(file.directories));
+        expect(file.directories.clear, throwsUnsupportedError);
       });
 
       test('has no directories for a file at the root', () {
@@ -99,6 +101,7 @@ void main() {
           '\n',
         );
         expect(file.imports.single.uri, isEmpty);
+        expect(file.imports.single.path, isNull);
       });
 
       group('path', () {

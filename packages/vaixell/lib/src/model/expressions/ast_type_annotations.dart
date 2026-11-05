@@ -17,10 +17,10 @@ final class _AstTypeAnnotation(
   };
 
   @override
-  List<TypeAnnotation> get typeArguments => switch (node) {
-    ast.NamedType(:final typeArguments?) => [
+  late final List<TypeAnnotation> typeArguments = switch (node) {
+    ast.NamedType(:final typeArguments?) => List.unmodifiable([
       for (final argument in typeArguments.arguments) file.type(argument),
-    ],
+    ]),
     _ => const [],
   };
 

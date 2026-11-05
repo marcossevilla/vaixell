@@ -20,6 +20,7 @@ final class _AstImport(final _AstDartFile file, final ast.ImportDirective node)
 
   @override
   String? get path => switch ((kind, file.packageName)) {
+    _ when node.uri.stringValue == null => null,
     (ImportKind.relative, _) => p.posix.normalize(
       p.posix.join(p.posix.dirname(file.path), uri),
     ),

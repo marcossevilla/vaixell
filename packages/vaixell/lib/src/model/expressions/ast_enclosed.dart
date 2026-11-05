@@ -9,14 +9,17 @@ mixin _AstEnclosed implements Enclosed {
   @override
   int get offset => node.offset;
 
-  @override
-  Declaration? get declaration => file.enclosing(node).declaration;
+  late final ({Declaration? declaration, Member? member}) _enclosing = file
+      .enclosing(node);
 
   @override
-  Member? get member => file.enclosing(node).member;
+  Declaration? get declaration => _enclosing.declaration;
 
   @override
-  String? get symbol => file.symbolOf(declaration, member);
+  Member? get member => _enclosing.member;
+
+  @override
+  late final String? symbol = file.symbolOf(declaration, member);
 }
 
 /// What every expression shares.

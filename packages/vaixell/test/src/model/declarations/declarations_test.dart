@@ -83,11 +83,24 @@ void f() {}
     test('keep the same objects on every read', () {
       final file = const DartFileParser().parse(
         path: 'lib/a.dart',
-        content: 'class C { void m() {} }',
+        content: '@A(1) class C { int f = 0; C(); void m(int p) {} }',
       );
       expect(file.declarations.single, same(file.declarations.single));
       final type = file.declarations.single as TypeDeclaration;
-      expect(type.members.single, same(type.methods.single));
+      expect(type.members[2], same(type.methods.single));
+      for (final list in <List<Object> Function()>[
+        () => type.members,
+        () => type.methods,
+        () => type.constructors,
+        () => type.fields,
+        () => type.annotations,
+        () => type.annotations.single.arguments,
+        () => type.methods.single.parameters,
+        () => type.constructors.single.parameters,
+      ]) {
+        expect(list(), same(list()));
+        expect(() => list().clear(), throwsUnsupportedError);
+      }
     });
 
     group(TypeDeclaration, () {

@@ -5,7 +5,10 @@ final class _AstMethod(
   final ast.MethodDeclaration node,
 ) implements Method {
   @override
-  String? get symbol => file.symbolOf(file.enclosing(node).declaration, this);
+  late final String? symbol = file.symbolOf(
+    file.enclosing(node).declaration,
+    this,
+  );
 
   @override
   String get name => node.name.lexeme;
@@ -41,7 +44,10 @@ final class _AstConstructor(
   final ast.ConstructorDeclaration node,
 ) implements Constructor {
   @override
-  String? get symbol => file.symbolOf(file.enclosing(node).declaration, this);
+  late final String? symbol = file.symbolOf(
+    file.enclosing(node).declaration,
+    this,
+  );
 
   @override
   String? get name => node.name?.lexeme;
@@ -73,7 +79,10 @@ final class _AstField(
   final ast.VariableDeclaration node,
 ) implements Field {
   @override
-  String? get symbol => file.symbolOf(file.enclosing(node).declaration, this);
+  late final String? symbol = file.symbolOf(
+    file.enclosing(node).declaration,
+    this,
+  );
 
   @override
   String get name => node.name.lexeme;

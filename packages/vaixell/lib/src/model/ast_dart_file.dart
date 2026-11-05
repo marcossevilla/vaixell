@@ -35,8 +35,9 @@ final class _AstDartFile(
       packageRoot.isEmpty ? path : p.posix.relative(path, from: packageRoot);
 
   @override
-  List<String> get directories =>
-      p.posix.split(p.posix.dirname(path))..remove('.');
+  late final List<String> directories = List.unmodifiable(
+    p.posix.split(p.posix.dirname(path))..remove('.'),
+  );
 
   /// The parser doesn't report errors in source order, so they're sorted,
   /// keeping the parser's order among errors at the same offset.
@@ -81,7 +82,8 @@ final class _AstDartFile(
     _collected.types,
   );
 
-  /// The model of each node, so a node always gives the same object.
+  /// The model of each node, or of each argument or parameter list, so a
+  /// node always gives the same object.
   final Map<ast.AstNode, Object> _models = Map.identity();
 
   T _model<T extends Object>(ast.AstNode node, T Function() create) =>
@@ -203,10 +205,16 @@ final class _AstDartFile(
     _ => null,
   };
 
-  List<Argument> arguments(ast.ArgumentList? list) => [
-    for (final argument in list?.arguments ?? const <ast.Argument>[])
-      _AstArgument(this, argument),
-  ];
+  /// The arguments in [list], the same list on every call.
+  List<Argument> arguments(ast.ArgumentList? list) => switch (list) {
+    null => const [],
+    _ => _model(
+      list,
+      () => List<Argument>.unmodifiable([
+        for (final argument in list.arguments) _AstArgument(this, argument),
+      ]),
+    ),
+  };
 
   /// `e` when [body] is `=> e;` or `{ return e; }`, otherwise `null`.
   Expression? returnExpression(ast.FunctionBody body) => switch (body) {
@@ -217,10 +225,16 @@ final class _AstDartFile(
     _ => null,
   };
 
-  List<Parameter> parameters(ast.FormalParameterList? list) => [
-    for (final parameter in list?.parameters ?? const <ast.FormalParameter>[])
-      _AstParameter(parameter),
-  ];
+  /// The parameters in [list], the same list on every call.
+  List<Parameter> parameters(ast.FormalParameterList? list) => switch (list) {
+    null => const [],
+    _ => _model(
+      list,
+      () => List<Parameter>.unmodifiable([
+        for (final parameter in list.parameters) _AstParameter(parameter),
+      ]),
+    ),
+  };
 }
 
 final class _AstSyntaxError(

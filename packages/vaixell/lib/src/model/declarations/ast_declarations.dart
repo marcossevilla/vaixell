@@ -9,31 +9,34 @@ mixin _AstTypeDeclaration implements TypeDeclaration {
   List<ast.ClassMember> get body;
 
   @override
-  String? get symbol => file.symbolOf(this, null);
+  late final String? symbol = file.symbolOf(this, null);
 
   @override
-  List<Annotation> get annotations => [
+  late final List<Annotation> annotations = List.unmodifiable([
     for (final annotation in node.metadata) _AstAnnotation(file, annotation),
-  ];
+  ]);
 
   @override
-  List<Member> get members => [
+  late final List<Member> members = List.unmodifiable([
     for (final member in body)
       if (member is ast.FieldDeclaration)
         for (final variable in member.fields.variables) file.member(variable)!
       else
         ?file.member(member),
-  ];
+  ]);
 
   @override
-  List<Method> get methods => members.whereType<Method>().toList();
+  late final List<Method> methods = List.unmodifiable(
+    members.whereType<Method>(),
+  );
 
   @override
-  List<Constructor> get constructors =>
-      members.whereType<Constructor>().toList();
+  late final List<Constructor> constructors = List.unmodifiable(
+    members.whereType<Constructor>(),
+  );
 
   @override
-  List<Field> get fields => members.whereType<Field>().toList();
+  late final List<Field> fields = List.unmodifiable(members.whereType<Field>());
 }
 
 final class _AstClass(
@@ -121,7 +124,7 @@ final class _AstTopLevelFunction(
       file.kind(isGetter: node.isGetter, isSetter: node.isSetter);
 
   @override
-  String? get symbol => file.symbolOf(this, null);
+  late final String? symbol = file.symbolOf(this, null);
 }
 
 final class _AstTopLevelVariable(
@@ -138,5 +141,5 @@ final class _AstTopLevelVariable(
   bool get isConst => (node.parent! as ast.VariableDeclarationList).isConst;
 
   @override
-  String? get symbol => file.symbolOf(this, null);
+  late final String? symbol = file.symbolOf(this, null);
 }
