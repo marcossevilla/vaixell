@@ -44,6 +44,26 @@ f() {
         expect(names, ['c', 'a', 'a', 'a']);
       });
 
+      test('leave out the names in constructors and dot shorthands', () {
+        final expressions = _expressions('''
+enum E { a.named(1); const E.named(int x); }
+class C extends B {
+  final int f;
+  C(int x) : f = x, super.named();
+  C.other() : this(0);
+  C.redirect() : this.other();
+}
+E g() => .named(.c, .d());
+''');
+        expect(
+          [
+            for (final expression in expressions)
+              if (expression is Reference) expression.name,
+          ],
+          ['x'],
+        );
+      });
+
       test('leave out directives, doc comment references and labels', () {
         final expressions = _expressions('''
 library a.b;

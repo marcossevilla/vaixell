@@ -23,25 +23,30 @@ final class _AstCollector(final _AstDartFile file)
     super.visitTypeAnnotation(node);
   }
 
+  /// A name that's part of a larger node, such as `m` in `a.m()` or `x` in
+  /// a constructor's `: x = 1`, isn't an expression of its own.
   @override
-  void visitMethodInvocation(ast.MethodInvocation node) {
-    expressions.add(file.expression(node));
-    node.target?.accept(this);
-    node.typeArguments?.accept(this);
-    node.argumentList.accept(this);
+  void visitSimpleIdentifier(ast.SimpleIdentifier node) {
+    if (!_isNameOf(node.parent, node)) super.visitSimpleIdentifier(node);
   }
 
-  @override
-  void visitPrefixedIdentifier(ast.PrefixedIdentifier node) {
-    expressions.add(file.expression(node));
-    node.prefix.accept(this);
-  }
-
-  @override
-  void visitPropertyAccess(ast.PropertyAccess node) {
-    expressions.add(file.expression(node));
-    node.target?.accept(this);
-  }
+  bool _isNameOf(ast.AstNode? parent, ast.SimpleIdentifier node) =>
+      switch (parent) {
+        ast.MethodInvocation(methodName: final name) ||
+        ast.PrefixedIdentifier(identifier: final name) ||
+        ast.PropertyAccess(propertyName: final name) ||
+        ast.ConstructorDeclaration(typeName: final name?) ||
+        ast.ConstructorFieldInitializer(fieldName: final name) ||
+        ast.SuperConstructorInvocation(constructorName: final name?) ||
+        ast.RedirectingConstructorInvocation(constructorName: final name?) ||
+        ast.ConstructorSelector(:final name) ||
+        ast.DotShorthandInvocation(memberName: final name) ||
+        ast.DotShorthandPropertyAccess(propertyName: final name) ||
+        ast.DotShorthandConstructorInvocation(
+          constructorName: final name,
+        ) => name == node,
+        _ => false,
+      };
 
   @override
   void visitAnnotation(ast.Annotation node) {
