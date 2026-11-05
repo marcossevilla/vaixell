@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:isolate';
 
 import 'package:args/command_runner.dart';
 import 'package:cli_completion/cli_completion.dart';
@@ -199,12 +198,11 @@ void main() {
             .called(1);
       });
 
-      test('matches the pubspec version', () async {
-        final lib = await Isolate.resolvePackageUri(
-          Uri.parse('package:vaixell_cli/'),
-        );
-        final pubspec = File.fromUri(lib!.resolve('../pubspec.yaml'))
-            .readAsStringSync();
+      test('matches the pubspec version', () {
+        // Tests run from the package root, so read the pubspec directly
+        // rather than resolving `package:` URIs, which `very_good test`
+        // does not support.
+        final pubspec = File('pubspec.yaml').readAsStringSync();
         final version = RegExp(
           r'^version: (\S+)$',
           multiLine: true,
