@@ -1,5 +1,6 @@
 import 'package:test/test.dart';
 import 'package:vaixell/src/model/model.dart';
+import 'package:vaixell/src/options/option_value.dart';
 import 'package:vaixell/src/rules/rule.dart';
 import 'package:vaixell/src/violation/violation.dart';
 
@@ -120,6 +121,21 @@ final class _SometimesRule extends Rule with ChecksDeclarations {
   };
 }
 
+/// Reports every class named one of [names].
+final class const _NamedRule(
+  final List<String> names, {
+  @override final String id = 'named',
+}) extends Rule with ChecksDeclarations {
+  @override
+  Finding? checkDeclaration(Declaration declaration) => switch (declaration) {
+    ClassDeclaration(:final name) when names.contains(name) => Finding.at(
+      declaration,
+      message: name,
+    ),
+    _ => null,
+  };
+}
+
 void main() {
   group(Finding, () {
     group('at', () {
@@ -229,6 +245,65 @@ void f() {}
       final file = _parse('class A {}', path: 'lib/src/model/a.dart');
       expect(rule.shouldCheck(file), isTrue);
       expect(rule.check(file).map((f) => f.symbol), ['A']);
+    });
+  });
+
+  group(RuleFactory, () {
+    Rule create(OptionValue options) => _NamedRule([
+      for (final name in options['names'].asList()) name.asString(),
+    ]);
+
+    test('has defaults', () {
+      final factory = RuleFactory('named', create);
+      expect(factory.id, 'named');
+      expect(factory.defaultSeverity, Severity.error);
+      expect(factory.recommended, isTrue);
+    });
+
+    test('keeps the given severity and recommended', () {
+      final factory = RuleFactory(
+        'named',
+        create,
+        defaultSeverity: Severity.warning,
+        recommended: false,
+      );
+      expect(factory.defaultSeverity, Severity.warning);
+      expect(factory.recommended, isFalse);
+    });
+  });
+
+  group(RuleBuilder, () {
+    final options = const OptionValues().empty(name: 'named', path: 'a.yaml');
+
+    test('builds a plain rule as itself', () {
+      const rule = _PlainRule();
+      expect(const RuleBuilder().build(rule, options), same(rule));
+    });
+
+    test("builds a factory's rule from the options", () {
+      const rule = _NamedRule(['A']);
+      final factory = RuleFactory('named', (given) {
+        expect(given, same(options));
+        return rule;
+      });
+      expect(const RuleBuilder().build(factory, options), same(rule));
+    });
+
+    test('throws when the built rule has another id', () {
+      final factory = RuleFactory(
+        'named',
+        (_) => const _NamedRule([], id: 'x'),
+      );
+      expect(
+        () => const RuleBuilder().build(factory, options),
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            'The factory for `named` built a rule with id `x`.',
+          ),
+        ),
+      );
     });
   });
 }

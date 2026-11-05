@@ -1,7 +1,10 @@
 import 'package:glob/glob.dart';
+import 'package:path/path.dart' as p;
+import 'package:vaixell/src/options/option_value.dart';
 import 'package:vaixell/src/rules/rule.dart';
 import 'package:vaixell/src/violation/violation.dart';
-import 'package:yaml/yaml.dart';
+
+export 'package:vaixell/src/options/config_exception.dart';
 
 /// The resolved `vaixell:` configuration for a package.
 class const Config({
@@ -28,14 +31,23 @@ class const Config({
   /// entry at its default severity, except those that aren't
   /// [RuleEntry.recommended].
   ///
-  /// It's the config used when there's no `vaixell:` section.
+  /// It's the config used when there's no config file. Factories build
+  /// their rules without options, and report errors at the start of
+  /// [root]'s `analysis_options.yaml`, where options would go.
   factory recommended(List<RuleEntry> entries, {String root = ''}) => Config(
     rules: [
       for (final entry in entries)
         if (entry.recommended)
-          switch (entry) {
-            Rule() => (entry, entry.defaultSeverity),
-          },
+          (
+            const RuleBuilder().build(
+              entry,
+              const OptionValues().empty(
+                name: entry.id,
+                path: p.posix.join(root, 'analysis_options.yaml'),
+              ),
+            ),
+            entry.defaultSeverity,
+          ),
     ],
     root: root,
   );
@@ -52,46 +64,4 @@ class const Config({
     final relative = path.substring(root.length + 1);
     return exclude.any((glob) => glob.matches(relative));
   }
-}
-
-/// An invalid `vaixell:` configuration.
-class const ConfigException(
-  /// A description of the problem.
-  final String message, {
-
-  /// The path of the config file.
-  required final String path,
-
-  /// The 1-based line of the problem.
-  required final int line,
-
-  /// The 1-based column of the problem.
-  required final int column,
-}) implements Exception {
-  /// Creates an exception for a problem at [line] and [column] of the
-  /// config file at [path].
-  this;
-
-  /// Creates an exception for a problem with [node] in the file at [path].
-  factory at(YamlNode node, String message, {required String path}) =>
-      ConfigException(
-        message,
-        path: path,
-        line: node.span.start.line + 1,
-        column: node.span.start.column + 1,
-      );
-
-  /// Creates an exception for invalid YAML in the file at [path].
-  factory yaml(YamlException error, {required String path}) {
-    final start = error.span?.start;
-    return ConfigException(
-      error.message,
-      path: path,
-      line: (start?.line ?? 0) + 1,
-      column: (start?.column ?? 0) + 1,
-    );
-  }
-
-  @override
-  String toString() => '$path:$line:$column: $message';
 }

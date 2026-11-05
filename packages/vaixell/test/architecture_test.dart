@@ -11,13 +11,14 @@ import 'package:test/test.dart';
 const _allowedImports = <String, Set<String>>{
   'violation': {},
   'model': {},
-  'rules': {'model', 'violation'},
-  'config': {'rules', 'source', 'violation'},
+  'options': {},
+  'rules': {'model', 'options', 'violation'},
+  'config': {'options', 'rules', 'source', 'violation'},
   'source': {'git'},
   'engine': {'config', 'model', 'rules', 'source', 'violation'},
   'report': {'engine', 'violation'},
   'baseline': {},
-  'discovery': {'config', 'source'},
+  'discovery': {'config', 'options', 'source'},
   'git': {},
   'check': {
     'baseline',

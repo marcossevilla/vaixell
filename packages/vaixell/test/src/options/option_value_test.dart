@@ -1,6 +1,6 @@
 import 'package:test/test.dart';
-import 'package:vaixell/src/config/config.dart';
-import 'package:vaixell/src/config/option_value.dart';
+import 'package:vaixell/src/options/config_exception.dart';
+import 'package:vaixell/src/options/option_value.dart';
 import 'package:yaml/yaml.dart';
 
 const _path = 'analysis_options.yaml';
@@ -133,19 +133,40 @@ void main() {
 
   group(OptionValues, () {
     test('empty options are an empty map at the given position', () {
-      final key = (loadYamlNode('\n  my-rule: error\n') as YamlMap).nodes.keys
-          .cast<YamlNode>()
-          .single;
       final options = const OptionValues().empty(
-        key,
         name: 'my-rule',
         path: _path,
+        line: 2,
+        column: 3,
       );
       expect(options.asMap(), isEmpty);
       expect(() => options.allowOnly({}), returnsNormally);
       _throws(
         () => options['imports'].asList(),
         '$_path:2:3: `my-rule` needs `imports`.',
+      );
+    });
+
+    test('empty options default to the start of the file', () {
+      final options = const OptionValues().empty(name: 'my-rule', path: _path);
+      _throws(
+        () => options['a'].asString(),
+        '$_path:1:1: `my-rule` needs `a`.',
+      );
+    });
+
+    test('hides the given keys', () {
+      final options = const OptionValues().of(
+        loadYamlNode('severity: error\na: x\n', sourceUrl: Uri.file(_path)),
+        name: 'my-rule',
+        path: _path,
+        without: {'severity'},
+      );
+      expect(options.asMap().keys, ['a']);
+      expect(() => options.allowOnly({'a'}), returnsNormally);
+      _throws(
+        () => options['severity'].asString(),
+        '$_path:1:1: `my-rule` needs `severity`.',
       );
     });
   });

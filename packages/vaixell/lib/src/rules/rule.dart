@@ -1,4 +1,5 @@
 import 'package:vaixell/src/model/model.dart';
+import 'package:vaixell/src/options/option_value.dart';
 import 'package:vaixell/src/violation/violation.dart';
 
 /// Something a [Rule] found in a file, before it gets an id.
@@ -28,7 +29,8 @@ class const Finding({
       );
 }
 
-/// An entry of the list of rules that vaixell runs.
+/// An entry of the list of rules that vaixell runs: a [Rule], or a
+/// [RuleFactory] that builds one from options.
 sealed class RuleEntry {
   /// The id used in config and in violation ids, for example
   /// `static-method`.
@@ -77,6 +79,48 @@ abstract base class const Rule() implements RuleEntry {
     return [...inherited, ...visit().nonNulls]
       ..sort((a, b) => a.offset.compareTo(b.offset));
   }
+}
+
+/// A rule that takes options, registered as what builds it from them.
+///
+/// The config loader calls [create] once for each config that enables the
+/// rule, with the rule's entry without `severity`, or with no options when
+/// it's only enabled. Readers of [OptionValue] report bad options at their
+/// position in the config file.
+final class const RuleFactory(
+  @override final String id,
+
+  /// Builds the rule from one config's options. The rule's
+  /// [RuleEntry.id] must be [id].
+  final Rule Function(OptionValue options) create, {
+  @override final Severity defaultSeverity = Severity.error,
+  @override final bool recommended = true,
+}) implements RuleEntry {
+  /// Creates a factory for the rule [id] that [create] builds. Its
+  /// [defaultSeverity] and [recommended] count, not the built rule's.
+  this;
+}
+
+/// Builds the configured rule of a [RuleEntry]. Internal: it's never
+/// exported.
+class const RuleBuilder() {
+  /// Creates the builder.
+  this;
+
+  /// The rule of [entry] with [options]: the rule itself, or what a factory
+  /// builds from [options].
+  ///
+  /// Throws a [StateError] when a factory builds a rule with another id,
+  /// which is a bug in the rule, not in config.
+  Rule build(RuleEntry entry, OptionValue options) => switch (entry) {
+    final Rule rule => rule,
+    RuleFactory(:final id, :final create) => switch (create(options)) {
+      final rule when rule.id == id => rule,
+      final rule => throw StateError(
+        'The factory for `$id` built a rule with id `${rule.id}`.',
+      ),
+    },
+  };
 }
 
 /// Calls [checkDeclaration] for every top-level declaration in the file.

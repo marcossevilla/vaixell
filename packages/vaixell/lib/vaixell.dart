@@ -6,7 +6,7 @@ export 'src/baseline/baseline.dart'
 export 'src/check/check.dart' show Check;
 export 'src/check/package_resolver.dart' show PackageResolver;
 export 'src/check/write_baseline.dart' show WriteBaseline;
-export 'src/config/config.dart' show Config, ConfigException;
+export 'src/config/config.dart' show Config;
 export 'src/config/config_loader.dart' show ConfigLoader, ConfigResolver;
 export 'src/discovery/package_discovery.dart' show PackageDiscovery;
 export 'src/engine/diff_result.dart' show DiffResult;
@@ -59,6 +59,8 @@ export 'src/model/model.dart'
         TypeAnnotation,
         TypeDeclaration,
         Use;
+export 'src/options/config_exception.dart' show ConfigException;
+export 'src/options/option_value.dart' show OptionValue;
 export 'src/report/github_reporter.dart' show GithubReporter;
 export 'src/report/json_reporter.dart' show JsonReporter;
 export 'src/report/report.dart' show Report, ReportMode;
@@ -75,6 +77,7 @@ export 'src/rules/rule.dart'
         Finding,
         Rule,
         RuleEntry,
+        RuleFactory,
         SkipsDirectories;
 export 'src/source/git_source_tree.dart'
     show ClosableSourceTree, GitSourceTree, OpenGitSourceTree;

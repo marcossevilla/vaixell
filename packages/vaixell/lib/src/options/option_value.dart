@@ -1,4 +1,4 @@
-import 'package:vaixell/src/config/config.dart';
+import 'package:vaixell/src/options/config_exception.dart';
 import 'package:yaml/yaml.dart';
 
 /// A rule's option from config, at any depth, such as the options map
@@ -8,11 +8,13 @@ import 'package:yaml/yaml.dart';
 /// the config file's path, line and column when the value doesn't match.
 final class OptionValue._({
   required final YamlNode? _node,
-  required final YamlNode _at,
   required final String _name,
   required final String _path,
+  required final int _line,
+  required final int _column,
   final String? _missing,
   final bool _isRoot = false,
+  final Set<String> _hidden = const {},
 }) {
   /// The value as a string.
   ///
@@ -27,8 +29,7 @@ final class OptionValue._({
   /// Throws a [ConfigException] when it isn't a list.
   List<OptionValue> asList() => switch (_node) {
     final YamlList list => [
-      for (final (i, item) in list.nodes.indexed)
-        OptionValue._(node: item, at: item, name: '$_name[$i]', path: _path),
+      for (final (i, item) in list.nodes.indexed) _child(item, '$_name[$i]'),
     ],
     _ => throw _mismatch('a list'),
   };
@@ -37,17 +38,9 @@ final class OptionValue._({
   ///
   /// Throws a [ConfigException] when it isn't a map, or when a key isn't a
   /// string.
-  Map<String, OptionValue> asMap() => switch (_node) {
-    final YamlMap map => {
-      for (final MapEntry(:key, :value) in map.nodes.entries)
-        _key(key as YamlNode): OptionValue._(
-          node: value,
-          at: value,
-          name: _isRoot ? _key(key) : '$_name.${_key(key)}',
-          path: _path,
-        ),
-    },
-    _ => throw _mismatch('a map'),
+  Map<String, OptionValue> asMap() => {
+    for (final (key, value) in _entries)
+      key: _child(value, _isRoot ? key : '$_name.$key'),
   };
 
   /// The value at [key] of this map.
@@ -60,9 +53,10 @@ final class OptionValue._({
       asMap()[key] ??
       OptionValue._(
         node: null,
-        at: _at,
         name: _name,
         path: _path,
+        line: _line,
+        column: _column,
         missing: key,
       );
 
@@ -71,9 +65,9 @@ final class OptionValue._({
   /// Throws a [ConfigException] at the first other key, or when this isn't a
   /// map.
   void allowOnly(Set<String> keys) {
-    asMap();
-    for (final key in (_node! as YamlMap).nodes.keys.cast<YamlNode>()) {
-      if (!keys.contains(key.value)) {
+    final map = _map;
+    for (final key in map.nodes.keys.cast<YamlNode>()) {
+      if (!_hidden.contains(key.value) && !keys.contains(key.value)) {
         throw ConfigException.at(
           key,
           'Unknown key `${key.value}` under `$_name`. '
@@ -87,7 +81,28 @@ final class OptionValue._({
   /// A [ConfigException] with [message] at this value's position, for values
   /// that read fine but aren't valid, such as a glob that doesn't parse.
   ConfigException error(String message) =>
-      ConfigException.at(_at, message, path: _path);
+      ConfigException(message, path: _path, line: _line, column: _column);
+
+  YamlMap get _map => switch (_node) {
+    final YamlMap map => map,
+    _ => throw _mismatch('a map'),
+  };
+
+  /// The entries of this map, without the hidden keys.
+  Iterable<(String, YamlNode)> get _entries sync* {
+    for (final MapEntry(:key, :value) in _map.nodes.entries) {
+      final name = _key(key as YamlNode);
+      if (!_hidden.contains(name)) yield (name, value);
+    }
+  }
+
+  OptionValue _child(YamlNode node, String name) => OptionValue._(
+    node: node,
+    name: name,
+    path: _path,
+    line: node.span.start.line + 1,
+    column: node.span.start.column + 1,
+  );
 
   String _key(YamlNode key) => switch (key.value) {
     final String name => name,
@@ -110,20 +125,36 @@ class const OptionValues() {
   /// Creates the builder.
   this;
 
-  /// The options of the rule [name] in [node], from the file at [path].
-  OptionValue of(YamlNode node, {required String name, required String path}) =>
-      OptionValue._(node: node, at: node, name: name, path: path, isRoot: true);
-
-  /// No options for the rule [name], enabled at [at] in the file at [path].
-  OptionValue empty(
-    YamlNode at, {
+  /// The options of the rule [name] in [node], from the file at [path],
+  /// without the keys in [without], such as `severity`.
+  OptionValue of(
+    YamlNode node, {
     required String name,
     required String path,
+    Set<String> without = const {},
   }) => OptionValue._(
-    node: YamlMap(),
-    at: at,
+    node: node,
     name: name,
     path: path,
+    line: node.span.start.line + 1,
+    column: node.span.start.column + 1,
+    isRoot: true,
+    hidden: without,
+  );
+
+  /// No options for the rule [name], enabled at [line] and [column] of the
+  /// file at [path].
+  OptionValue empty({
+    required String name,
+    required String path,
+    int line = 1,
+    int column = 1,
+  }) => OptionValue._(
+    node: YamlMap(),
+    name: name,
+    path: path,
+    line: line,
+    column: column,
     isRoot: true,
   );
 }

@@ -35,6 +35,23 @@ void main() {
       expect(config.rules.map((r) => r.$1.id), isNot(contains('opt-in')));
     });
 
+    test('recommended builds factories without options', () {
+      final factory = RuleFactory(
+        'named',
+        (options) => throw options['names'].error('Needs names.'),
+      );
+      expect(
+        () => Config.recommended([factory], root: 'pkg'),
+        throwsA(
+          isA<ConfigException>().having(
+            (e) => '$e',
+            'toString()',
+            'pkg/analysis_options.yaml:1:1: Needs names.',
+          ),
+        ),
+      );
+    });
+
     test('recommended keeps the given root', () {
       expect(Config.recommended(Recommended.rules, root: 'pkg').root, 'pkg');
     });

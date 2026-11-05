@@ -23,6 +23,11 @@ Future<Config> _load(String? yaml) => ConfigLoader(
   Recommended.rules,
 ).load();
 
+final class const _NamedRule(
+  final List<String> names, {
+  @override final String id = 'named',
+}) extends Rule;
+
 final class const _OptInRule() extends Rule {
   @override
   String get id => 'opt-in';
@@ -72,6 +77,23 @@ void main() {
         'empty rules and exclude': (
           'vaixell:\n  rules:\n  exclude:\n',
           _recommended,
+        ),
+        'a long-form severity': (
+          'vaixell:\n  rules:\n    top-level-function:\n'
+              '      severity: warning\n',
+          _recommendedWith({'top-level-function': Severity.warning}),
+        ),
+        'a long form without severity enables at the default': (
+          'vaixell:\n  include: []\n  rules:\n    top-level-function: {}\n',
+          {'parse-error': Severity.error, 'top-level-function': Severity.error},
+        ),
+        'a long-form off': (
+          'vaixell:\n  rules:\n    top-level-function: {severity: off}\n',
+          _recommendedWith({'top-level-function': null}),
+        ),
+        'parse-error in the long form': (
+          'vaixell:\n  rules:\n    parse-error: {severity: warning}\n',
+          _recommendedWith({'parse-error': Severity.warning}),
         ),
         'the analyzer include is ignored': (
           'include: package:very_good_analysis/analysis_options.yaml\n'
@@ -216,6 +238,24 @@ void main() {
           'vaixell:\n  rules:\n    parse-error: off\n',
           "analysis_options.yaml:3:18: `parse-error` can't be turned off.",
         ),
+        'options for a rule without options': (
+          'vaixell:\n  rules:\n    top-level-function:\n      severity: error\n'
+              '      names: [a]\n',
+          'analysis_options.yaml:5:7: `top-level-function` takes no options.',
+        ),
+        'options for parse-error': (
+          'vaixell:\n  rules:\n    parse-error: {x: 1}\n',
+          'analysis_options.yaml:3:19: `parse-error` takes no options.',
+        ),
+        'an invalid long-form severity': (
+          'vaixell:\n  rules:\n    top-level-function: {severity: info}\n',
+          'analysis_options.yaml:3:36: Invalid severity `info` for '
+              '`top-level-function`.',
+        ),
+        'parse-error turned off in the long form': (
+          'vaixell:\n  rules:\n    parse-error: {severity: off}\n',
+          "analysis_options.yaml:3:29: `parse-error` can't be turned off.",
+        ),
         'non-list exclude': (
           'vaixell:\n  exclude: lib/a.dart\n',
           'analysis_options.yaml:2:12: `exclude` must be a list of globs.',
@@ -285,6 +325,130 @@ void main() {
         );
       });
 
+      test('a factory builds its rule from the long form, once', () async {
+        final given = <Map<String, OptionValue>>[];
+        final factory = RuleFactory('named', (options) {
+          given.add(options.asMap());
+          return _NamedRule([
+            for (final name in options['names'].asList()) name.asString(),
+          ]);
+        });
+        final config = await load(
+          'vaixell:\n  rules:\n    named:\n      severity: warning\n'
+          '      names: [A, B]\n',
+          [...Recommended.rules, factory],
+        );
+        expect(given.single.keys, ['names']);
+        final (rule, severity) = config.rules.last;
+        expect((rule as _NamedRule).names, ['A', 'B']);
+        expect(severity, Severity.warning);
+      });
+
+      test('a factory enabled without options gets none', () async {
+        final given = <OptionValue>[];
+        final factory = RuleFactory('named', (options) {
+          given.add(options);
+          return const _NamedRule([]);
+        }, recommended: false);
+        for (final yaml in [
+          'vaixell:\n  rules:\n    named: error\n',
+          'vaixell:\n  rules:\n    named: {severity: error}\n',
+        ]) {
+          await load(yaml, [factory]);
+        }
+        expect(given.map((o) => o.asMap()), [isEmpty, isEmpty]);
+      });
+
+      test('a recommended factory is built without options', () async {
+        var calls = 0;
+        final factory = RuleFactory('named', (options) {
+          calls++;
+          expect(options.asMap(), isEmpty);
+          return const _NamedRule([]);
+        });
+        final config = await load('vaixell: {}\n', [factory]);
+        expect(config.rules.single.$1, isA<_NamedRule>());
+        expect(calls, 1);
+      });
+
+      test('a factory that is off is not built', () async {
+        final factory = RuleFactory(
+          'named',
+          (_) => fail('built'),
+          recommended: false,
+        );
+        expect((await load('vaixell: {}\n', [factory])).rules, isEmpty);
+      });
+
+      test('reports option errors at their position', () async {
+        final factory = RuleFactory('named', (options) {
+          options.allowOnly({'names'});
+          return const _NamedRule([]);
+        });
+        await expectLater(
+          load('vaixell:\n  rules:\n    named:\n      nmes: [A]\n', [factory]),
+          throwsA(
+            isA<ConfigException>().having(
+              (e) => '$e',
+              'toString()',
+              'analysis_options.yaml:4:7: Unknown key `nmes` under `named`. '
+                  'Expected one of: names.',
+            ),
+          ),
+        );
+      });
+
+      test('reports missing options at the rule', () async {
+        final factory = RuleFactory(
+          'named',
+          (options) => _NamedRule([options['names'].asString()]),
+          recommended: false,
+        );
+        for (final (yaml, position) in [
+          ('vaixell:\n  rules:\n    named: error\n', '3:5'),
+          ('vaixell:\n  rules:\n    named: {severity: error}\n', '3:12'),
+        ]) {
+          await expectLater(
+            load(yaml, [factory]),
+            throwsA(
+              isA<ConfigException>().having(
+                (e) => '$e',
+                'toString()',
+                'analysis_options.yaml:$position: `named` needs `names`.',
+              ),
+            ),
+          );
+        }
+      });
+
+      test('reports missing options of the preset at the section', () async {
+        final factory = RuleFactory(
+          'named',
+          (options) => _NamedRule([options['names'].asString()]),
+        );
+        await expectLater(
+          load('vaixell:\n  include: recommended\n', [factory]),
+          throwsA(
+            isA<ConfigException>().having(
+              (e) => '$e',
+              'toString()',
+              'analysis_options.yaml:2:3: `named` needs `names`.',
+            ),
+          ),
+        );
+      });
+
+      test('throws a StateError when a factory builds another rule', () async {
+        final factory = RuleFactory(
+          'named',
+          (_) => const _NamedRule([], id: 'other'),
+        );
+        await expectLater(
+          load('vaixell: {}\n', [factory]),
+          throwsA(isA<StateError>()),
+        );
+      });
+
       test('the rules follow the order of the entries', () async {
         final reversed = Recommended.rules.reversed.toList();
         final config = await load('vaixell: {}\n', reversed);
@@ -294,6 +458,22 @@ void main() {
   });
 
   group(ConfigResolver, () {
+    test('builds factory rules once per config file', () async {
+      var calls = 0;
+      final factory = RuleFactory('named', (_) {
+        calls++;
+        return const _NamedRule([]);
+      });
+      final configs = await ConfigResolver(
+        ConfigLoader(
+          MemorySourceTree({'analysis_options.yaml': 'vaixell: {}\n'}),
+          [factory],
+        ),
+      ).forPackages(['', 'packages/a', 'packages/b']);
+      expect(configs, hasLength(3));
+      expect(calls, 1);
+    });
+
     const off = 'vaixell:\n  rules:\n    top-level-function: off\n';
     const warning = 'vaixell:\n  rules:\n    top-level-function: warning\n';
 
