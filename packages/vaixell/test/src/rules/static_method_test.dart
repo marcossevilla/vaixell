@@ -1,24 +1,24 @@
 import 'package:test/test.dart';
 import 'package:vaixell/src/rules/static_method.dart';
+import 'package:vaixell/testing.dart';
 
-import '../../helpers/parse.dart';
+const _tester = RuleTester();
 
 void main() {
   group(StaticMethodRule, () {
     const rule = StaticMethodRule();
 
     List<String?> symbols(String source) =>
-        rule.check(parse(source)).map((f) => f.symbol).toList();
+        _tester.checkSource(rule, source).map((f) => f.symbol).toList();
 
     test('has the expected id', () {
       expect(rule.id, equals('static-method'));
     });
 
     test('flags public and private static methods in classes', () {
-      final findings = rule.check(
-        parse(
-          'class Foo {\n  static void bar() {}\n  static int _baz() => 1;\n}\n',
-        ),
+      final findings = _tester.checkSource(
+        rule,
+        'class Foo {\n  static void bar() {}\n  static int _baz() => 1;\n}\n',
       );
       expect(findings.map((f) => f.symbol), equals(['Foo.bar', 'Foo._baz']));
       expect(findings.first.offset, equals(26));
@@ -32,13 +32,12 @@ void main() {
     });
 
     test('flags static getters and setters', () {
-      final findings = rule.check(
-        parse(
-          'class Foo {\n'
-          '  static int get x => 1;\n'
-          '  static set x(int v) {}\n'
-          '}\n',
-        ),
+      final findings = _tester.checkSource(
+        rule,
+        'class Foo {\n'
+        '  static int get x => 1;\n'
+        '  static set x(int v) {}\n'
+        '}\n',
       );
       expect(findings.map((f) => f.symbol), equals(['Foo.x', 'Foo.x=']));
       expect(findings.map((f) => f.message), [
@@ -65,7 +64,7 @@ void main() {
     });
 
     test('ignores static fields, constructors and instance members', () {
-      final file = parse('''
+      const source = '''
 class Foo {
   Foo();
   factory Foo.create() => Foo();
@@ -74,18 +73,18 @@ class Foo {
   void c() {}
   int get d => 1;
 }
-''');
-      expect(rule.check(file), isEmpty);
+''';
+      expect(_tester.checkSource(rule, source), isEmpty);
     });
 
     test('ignores top-level functions and type aliases', () {
-      final file = parse('''
+      const source = '''
 void main() {}
 mixin M {}
 class A = Object with M;
 typedef F = void Function();
-''');
-      expect(rule.check(file), isEmpty);
+''';
+      expect(_tester.checkSource(rule, source), isEmpty);
     });
   });
 }

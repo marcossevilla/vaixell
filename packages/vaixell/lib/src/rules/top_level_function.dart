@@ -1,12 +1,11 @@
-import 'package:analyzer/dart/ast/ast.dart';
-import 'package:vaixell/src/model/model.dart' show AstBridge, DartFile;
+import 'package:vaixell/src/model/model.dart';
 import 'package:vaixell/src/rules/rule.dart';
 
 /// Reports top-level functions, getters and setters.
 ///
 /// A top-level `main` function is allowed, because apps need an entrypoint
 /// in `lib/main.dart`.
-final class const TopLevelFunctionRule() extends Rule {
+final class const TopLevelFunctionRule() extends Rule with ChecksDeclarations {
   /// Creates the rule.
   this;
 
@@ -14,28 +13,14 @@ final class const TopLevelFunctionRule() extends Rule {
   String get id => 'top-level-function';
 
   @override
-  List<Finding> check(DartFile file) => [
-    for (final declaration in const AstBridge().unitOf(file).declarations)
-      if (declaration is FunctionDeclaration && !_isMain(declaration))
-        _finding(declaration),
-  ];
-
-  bool _isMain(FunctionDeclaration declaration) =>
-      declaration.name.lexeme == 'main' &&
-      !declaration.isGetter &&
-      !declaration.isSetter;
-
-  Finding _finding(FunctionDeclaration declaration) {
-    final name = declaration.name.lexeme;
-    final kind = declaration.isGetter
-        ? 'getter'
-        : declaration.isSetter
-        ? 'setter'
-        : 'function';
-    return Finding(
-      offset: declaration.name.offset,
-      symbol: declaration.isSetter ? '$name=' : name,
-      message: 'Top-level $kind `$name` is not allowed. Move it into a class.',
-    );
-  }
+  Finding? checkDeclaration(Declaration declaration) => switch (declaration) {
+    TopLevelFunction(name: 'main', kind: FunctionKind.function) => null,
+    TopLevelFunction(:final kind, :final name) => Finding.at(
+      declaration,
+      message:
+          'Top-level ${kind.name} `$name` is not allowed. Move it into a '
+          'class.',
+    ),
+    _ => null,
+  };
 }
