@@ -341,6 +341,71 @@ class User {
       });
     });
 
+    group('non-factory fromJson constructors', () {
+      String messageOf(String source) =>
+          _tester.checkSource(rule, source).single.message;
+
+      test('are told to become factories', () {
+        expect(
+          messageOf('''
+@JsonSerializable()
+class User {
+  User.fromJson(Map<String, Object?> data) : name = data['name'] as String;
+  final String name;
+}
+'''),
+          equals(
+            "`User.fromJson` is a generative constructor, which can't "
+            'return the generated function. Make it a factory constructor, '
+            '`factory User.fromJson(Map<String, dynamic> data) => '
+            r'_$UserFromJson(data);`.',
+          ),
+        );
+      });
+
+      test('include primary constructors', () {
+        expect(
+          messageOf('''
+@JsonSerializable()
+class const User.fromJson(final Map<String, dynamic> json);
+'''),
+          startsWith(
+            "`User.fromJson` is a generative constructor, which can't "
+            'return the generated function. Make it a factory constructor,',
+          ),
+        );
+      });
+
+      test('are told to annotate an unannotated class', () {
+        expect(
+          messageOf('class User { User.fromJson(Map<String, dynamic> j); }'),
+          equals(
+            "`User.fromJson` is a generative constructor, which can't "
+            'return the generated function. Annotate `User` with '
+            '`@JsonSerializable()` and make it a factory constructor, '
+            '`factory User.fromJson(Map<String, dynamic> j) => '
+            r'_$UserFromJson(j);`.',
+          ),
+        );
+      });
+
+      test('are told to re-enable a disabled generated function', () {
+        expect(
+          messageOf('''
+@JsonSerializable(createFactory: false)
+class User { User.fromJson(Map<String, dynamic> json); }
+'''),
+          equals(
+            "`User.fromJson` is a generative constructor, which can't "
+            'return the generated function. Remove `createFactory: false` '
+            'from `@JsonSerializable` and make it a factory constructor, '
+            '`factory User.fromJson(Map<String, dynamic> json) => '
+            r'_$UserFromJson(json);`.',
+          ),
+        );
+      });
+    });
+
     test('explains how to annotate an unannotated class', () {
       final findings = _tester.checkSource(rule, '''
 class User {
