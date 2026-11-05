@@ -40,6 +40,10 @@ class const Check._({
   /// [PackageResolver] on [tree] that configures [rules]), checks them with
   /// [engine], and reads baselines with [baselineFile]. [engine] is only a
   /// test seam.
+  ///
+  /// [rules] is required so that every real caller picks its rules. A given
+  /// [packageResolver] already carries its own, so [rules] is ignored then;
+  /// like [engine], [packageResolver] is only a test seam.
   factory({
     required String root,
     required List<RuleEntry> rules,
