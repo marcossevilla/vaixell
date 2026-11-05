@@ -1,4 +1,3 @@
-import 'package:analyzer/dart/analysis/results.dart';
 import 'package:path/path.dart' as p;
 import 'package:vaixell/src/config/config.dart';
 import 'package:vaixell/src/engine/generated_files.dart';
@@ -53,7 +52,6 @@ class const Engine() {
       packageRoot: package.path,
       packageName: package.name,
     );
-    final result = const AstBridge().resultOf(file);
     final found = switch (file.errors) {
       [] => _findings(file, package.config.rules),
       final errors => [_parseError(package, errors)],
@@ -62,7 +60,7 @@ class const Engine() {
     final ids = ViolationIds();
     return [
       for (final (rule, severity, finding) in found)
-        _violation(result, path, rule, severity, finding, ids),
+        _violation(file, rule, severity, finding, ids),
     ];
   }
 
@@ -94,21 +92,20 @@ class const Engine() {
   }
 
   Violation _violation(
-    ParseStringResult result,
-    String path,
+    DartFile file,
     String rule,
     Severity severity,
     Finding finding,
     ViolationIds ids,
   ) {
-    final location = result.lineInfo.getLocation(finding.offset);
+    final (:line, :column) = const SourceLocator().locate(file, finding.offset);
     return Violation(
-      id: ids.next(rule: rule, path: path, symbol: finding.symbol),
+      id: ids.next(rule: rule, path: file.path, symbol: finding.symbol),
       rule: rule,
       severity: severity,
-      path: path,
-      line: location.lineNumber,
-      column: location.columnNumber,
+      path: file.path,
+      line: line,
+      column: column,
       message: finding.message,
     );
   }

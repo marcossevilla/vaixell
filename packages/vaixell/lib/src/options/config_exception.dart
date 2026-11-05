@@ -18,8 +18,18 @@ class const ConfigException(
   /// config file at [path].
   this;
 
-  /// Creates an exception for a problem with [node] in the file at [path].
-  factory at(YamlNode node, String message, {required String path}) =>
+  @override
+  String toString() => '$path:$line:$column: $message';
+}
+
+/// Builds [ConfigException]s from YAML. Internal: it's never exported, so
+/// no YAML type is part of the public API.
+class const ConfigErrors() {
+  /// Creates the builder.
+  this;
+
+  /// An exception for a problem with [node] in the file at [path].
+  ConfigException at(YamlNode node, String message, {required String path}) =>
       ConfigException(
         message,
         path: path,
@@ -27,8 +37,8 @@ class const ConfigException(
         column: node.span.start.column + 1,
       );
 
-  /// Creates an exception for invalid YAML in the file at [path].
-  factory yaml(YamlException error, {required String path}) {
+  /// An exception for invalid YAML in the file at [path].
+  ConfigException yaml(YamlException error, {required String path}) {
     final start = error.span?.start;
     return ConfigException(
       error.message,
@@ -37,7 +47,4 @@ class const ConfigException(
       column: (start?.column ?? 0) + 1,
     );
   }
-
-  @override
-  String toString() => '$path:$line:$column: $message';
 }

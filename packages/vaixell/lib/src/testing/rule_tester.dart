@@ -73,7 +73,7 @@ final class const RuleTester() {
         sourceUrl: Uri.file(fixture),
       );
     } on YamlException catch (error) {
-      throw ConfigException.yaml(error, path: fixture);
+      throw const ConfigErrors().yaml(error, path: fixture);
     }
     final options = node.value == null
         ? const OptionValues().empty(name: factory.id, path: fixture)
@@ -89,16 +89,13 @@ final class const RuleTester() {
       };
 
   FormatException _syntaxErrors(DartFile file) {
-    final lines = const AstBridge().resultOf(file).lineInfo;
-    final errors = [
-      for (final error in file.errors)
-        (lines.getLocation(error.offset), error.message),
-    ];
     return FormatException(
       [
         '`${file.path}` has syntax errors:',
-        for (final (location, message) in errors)
-          '  ${location.lineNumber}:${location.columnNumber}: $message',
+        for (final error in file.errors)
+          switch (const SourceLocator().locate(file, error.offset)) {
+            (:final line, :final column) => '  $line:$column: ${error.message}',
+          },
       ].join('\n'),
     );
   }

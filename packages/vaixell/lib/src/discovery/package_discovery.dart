@@ -1,6 +1,7 @@
 import 'package:glob/glob.dart';
 import 'package:path/path.dart' as p;
 import 'package:vaixell/src/config/config.dart';
+import 'package:vaixell/src/options/config_exception.dart';
 import 'package:vaixell/src/source/source_tree.dart';
 import 'package:yaml/yaml.dart';
 
@@ -77,12 +78,12 @@ class const PackageDiscovery(
         sourceUrl: Uri.file(_pubspec),
       );
     } on YamlException catch (error) {
-      throw ConfigException.yaml(error, path: _pubspec);
+      throw const ConfigErrors().yaml(error, path: _pubspec);
     }
     final workspace = root is YamlMap ? root.nodes['workspace'] : null;
     if (workspace == null) return null;
     if (workspace is! YamlList) {
-      throw ConfigException.at(
+      throw const ConfigErrors().at(
         workspace,
         '`workspace` must be a list of package paths.',
         path: _pubspec,
@@ -96,7 +97,7 @@ class const PackageDiscovery(
   Future<List<String>> _members(YamlNode item) async {
     final value = item.value;
     if (value is! String) {
-      throw ConfigException.at(
+      throw const ConfigErrors().at(
         item,
         '`workspace` must be a list of package paths.',
         path: _pubspec,
@@ -106,7 +107,7 @@ class const PackageDiscovery(
     if (member == '.' ||
         member.startsWith('..') ||
         p.posix.isAbsolute(member)) {
-      throw ConfigException.at(
+      throw const ConfigErrors().at(
         item,
         'Workspace member `$value` must be a directory inside the workspace.',
         path: _pubspec,
@@ -116,7 +117,7 @@ class const PackageDiscovery(
     try {
       glob = Glob(member, context: p.posix);
     } on FormatException catch (error) {
-      throw ConfigException.at(
+      throw const ConfigErrors().at(
         item,
         'Workspace member `$value` is not a valid glob: ${error.message}',
         path: _pubspec,
@@ -124,7 +125,7 @@ class const PackageDiscovery(
     }
     final matches = await _matching(glob);
     if (matches.isEmpty) {
-      throw ConfigException.at(
+      throw const ConfigErrors().at(
         item,
         Glob.quote(member) == member
             ? 'Workspace member `$value` has no pubspec.yaml.'

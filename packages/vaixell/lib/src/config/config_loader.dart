@@ -75,7 +75,7 @@ class const _ConfigFile(
     try {
       return loadYamlNode(content, sourceUrl: Uri.file(path));
     } on YamlException catch (error) {
-      throw ConfigException.yaml(error, path: path);
+      throw const ConfigErrors().yaml(error, path: path);
     }
   }
 
@@ -257,7 +257,7 @@ class const _ConfigFile(
   }
 
   ConfigException _error(YamlNode node, String message) =>
-      ConfigException.at(node, message, path: path);
+      const ConfigErrors().at(node, message, path: path);
 }
 
 /// How config sets one rule under `rules:`.

@@ -275,32 +275,37 @@ The caller passes a `List<RuleEntry>`. `package:vaixell` never picks the rule se
 
 `package:vaixell/testing.dart` is a second public library, not exported from `vaixell.dart`. It has no matchers, so `vaixell` takes no dependency on `package:test`. vaixell's own rule tests use only this public API, as third-party rule authors do.
 
+Its helpers are methods on a const `RuleTester`, so the library stays clear of the `top-level-function` and `static-method` rules that vaixell checks itself with.
+
 ```dart
-/// The findings of [rule] in [source], sorted by offset.
-List<Finding> checkSource(
-  Rule rule,
-  String source, {
-  String path = 'lib/a.dart',
-  TestPackage package = const TestPackage(path: '', name: null),
-});
+final class const RuleTester() {
+  /// The findings of [rule] in [source], sorted by offset.
+  List<Finding> checkSource(
+    Rule rule,
+    String source, {
+    String path = 'lib/a.dart',
+    TestPackage package = const TestPackage(path: ''),
+  });
 
-/// Where [checkSource] places its file: the package directory, relative to
-/// the repository root, and its `pubspec.yaml` name.
+  /// The rule [factory] builds from the options in the YAML file at [fixture].
+  Rule createRule(RuleFactory factory, {required String fixture});
+}
+
+/// Where [RuleTester.checkSource] places its file: the package directory,
+/// relative to the repository root, and its `pubspec.yaml` name.
 final class const TestPackage({required final String path, final String? name});
-
-/// The rule [factory] builds from the options in the YAML file at [fixture].
-Rule createRule(RuleFactory factory, {required String fixture});
 ```
 
-- **Paths** are repo-relative, the same form vaixell reports. `checkSource` throws when `path` isn't under `package.path/lib/`.
-- **Syntax errors** make `checkSource` throw, naming each with its line and column.
+- **Paths** are repo-relative, the same form vaixell reports. `checkSource` throws an `ArgumentError` when `path` isn't under `package.path/lib/`.
+- **Syntax errors** make `checkSource` throw a `FormatException`, naming each with its line and column.
 - **Fixtures** hold only the rule's options, the entry without `severity`. An empty fixture means enabled without options. Option errors throw a `ConfigException` with the fixture's path, line and column.
 
 ```dart
-final rule = createRule(forbiddenImport, fixture: 'test/fixtures/forbidden_import/domain.yaml');
+const tester = RuleTester();
+final rule = tester.createRule(forbiddenImport, fixture: 'test/fixtures/forbidden_import/domain.yaml');
 
 test('flags Flutter in the domain layer', () {
-  final findings = checkSource(
+  final findings = tester.checkSource(
     rule,
     "import 'package:flutter/material.dart';\n",
     path: 'packages/app/lib/domain/user.dart',
@@ -322,6 +327,7 @@ test('flags Flutter in the domain layer', () {
 | `Config.severities`                                            | configured `(Rule, Severity)` pairs                                                                                                               |
 | `ConfigLoader(tree)`, `PackageResolver.fromTree(root:, tree:)` | add a required `rules`                                                                                                                            |
 | `Check(root:)`, `WriteBaseline(root:)`                         | add a required `rules`                                                                                                                            |
+| `ConfigException.at`, `ConfigException.yaml`                   | removed from the public API; they took YAML types                                                                                                 |
 | —                                                              | new: `RuleEntry`, `RuleFactory`, `OptionValue`, `Finding.at`, the model, the `Checks…` mixins, `SkipsDirectories`, `package:vaixell/testing.dart` |
 
 ## Every rule, expressed

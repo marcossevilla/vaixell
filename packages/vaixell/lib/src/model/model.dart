@@ -14,7 +14,6 @@ import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/diagnostic/diagnostic.dart';
 import 'package:path/path.dart' as p;
 
-part 'ast_bridge.dart';
 part 'ast_dart_file.dart';
 part 'dart_file.dart';
 part 'declarations/annotations.dart';
@@ -34,4 +33,5 @@ part 'expressions/uses.dart';
 part 'imports/ast_import.dart';
 part 'imports/import.dart';
 part 'reportable.dart';
+part 'source_locator.dart';
 part 'syntax_error.dart';

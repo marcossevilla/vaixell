@@ -68,7 +68,7 @@ final class OptionValue._({
     final map = _map;
     for (final key in map.nodes.keys.cast<YamlNode>()) {
       if (!_hidden.contains(key.value) && !keys.contains(key.value)) {
-        throw ConfigException.at(
+        throw const ConfigErrors().at(
           key,
           'Unknown key `${key.value}` under `$_name`. '
           'Expected one of: ${keys.join(', ')}.',
@@ -106,7 +106,7 @@ final class OptionValue._({
 
   String _key(YamlNode key) => switch (key.value) {
     final String name => name,
-    _ => throw ConfigException.at(
+    _ => throw const ConfigErrors().at(
       key,
       'The keys of `$_name` must be strings.',
       path: _path,
