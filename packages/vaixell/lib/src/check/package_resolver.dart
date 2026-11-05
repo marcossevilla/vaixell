@@ -3,7 +3,7 @@ import 'package:vaixell/src/config/config.dart';
 import 'package:vaixell/src/config/config_loader.dart';
 import 'package:vaixell/src/discovery/package_discovery.dart';
 import 'package:vaixell/src/engine/package.dart';
-import 'package:vaixell/src/rules/built_in_rules.dart';
+import 'package:vaixell/src/rules/rule.dart';
 import 'package:vaixell/src/source/source_tree.dart';
 
 /// Resolves the packages to check in a repository, each with its nearest
@@ -23,13 +23,16 @@ class const PackageResolver({
   this;
 
   /// Creates a resolver for the packages in [root] that discovers them and
-  /// reads their configs in [tree].
-  factory fromTree({required String root, required SourceTree tree}) =>
-      PackageResolver(
-        root: root,
-        discovery: PackageDiscovery(tree),
-        configResolver: ConfigResolver(ConfigLoader(tree, builtInRules)),
-      );
+  /// reads their configs in [tree], which configure [rules].
+  factory fromTree({
+    required String root,
+    required SourceTree tree,
+    required List<RuleEntry> rules,
+  }) => PackageResolver(
+    root: root,
+    discovery: PackageDiscovery(tree),
+    configResolver: ConfigResolver(ConfigLoader(tree, rules)),
+  );
 
   /// Returns the packages at [paths], relative to [root], or the packages
   /// found by [discovery] when [paths] is empty.

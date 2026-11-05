@@ -1,5 +1,4 @@
 import 'package:test/test.dart';
-import 'package:vaixell/src/rules/built_in_rules.dart';
 import 'package:vaixell/vaixell.dart';
 
 void main() {

@@ -5,6 +5,7 @@ import 'package:args/command_runner.dart';
 import 'package:cli_completion/cli_completion.dart';
 import 'package:mason_logger/mason_logger.dart';
 import 'package:pub_updater/pub_updater.dart';
+import 'package:vaixell/vaixell.dart';
 import 'package:vaixell_cli/src/commands/commands.dart';
 
 /// {@template vaixell_command_runner}
@@ -20,17 +21,24 @@ class VaixellCommandRunner extends CompletionCommandRunner<int> {
   /// [interactive] controls the update check and shell completion
   /// auto-install. It defaults to `true` when stdout is a terminal and the
   /// `CI` environment variable is not set.
-  new({Logger? logger, PubUpdater? pubUpdater, bool? interactive})
-    : _logger = logger ?? Logger(),
-      _pubUpdater = pubUpdater ?? PubUpdater(),
-      _interactive =
-          interactive ??
-          (stdout.hasTerminal && !Platform.environment.containsKey('CI')),
-      super(
-        'vaixell',
-        'Checks architecture rules in Dart and Flutter repositories without '
-            'resolving types or running pub get.',
-      ) {
+  ///
+  /// `vaixell check` runs [rules], which are vaixell's [builtInRules] by
+  /// default.
+  new({
+    Logger? logger,
+    PubUpdater? pubUpdater,
+    bool? interactive,
+    List<RuleEntry> rules = builtInRules,
+  }) : _logger = logger ?? Logger(),
+       _pubUpdater = pubUpdater ?? PubUpdater(),
+       _interactive =
+           interactive ??
+           (stdout.hasTerminal && !Platform.environment.containsKey('CI')),
+       super(
+         'vaixell',
+         'Checks architecture rules in Dart and Flutter repositories without '
+             'resolving types or running pub get.',
+       ) {
     // Add root options and flags
     argParser
       ..addFlag(
@@ -45,7 +53,7 @@ class VaixellCommandRunner extends CompletionCommandRunner<int> {
       );
 
     // Add sub commands
-    addCommand(CheckCommand(logger: _logger));
+    addCommand(CheckCommand(logger: _logger, rules: rules));
     addCommand(UpdateCommand(logger: _logger, pubUpdater: _pubUpdater));
   }
 

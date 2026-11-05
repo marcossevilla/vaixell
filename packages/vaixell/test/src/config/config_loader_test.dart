@@ -1,6 +1,4 @@
 import 'package:test/test.dart';
-import 'package:vaixell/src/rules/built_in_rules.dart';
-import 'package:vaixell/src/rules/rule.dart';
 import 'package:vaixell/vaixell.dart';
 
 import '../../helpers/memory_source_tree.dart';

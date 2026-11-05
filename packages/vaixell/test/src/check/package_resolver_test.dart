@@ -1,6 +1,5 @@
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
-import 'package:vaixell/src/rules/built_in_rules.dart';
 import 'package:vaixell/vaixell.dart';
 
 import '../../helpers/memory_source_tree.dart';
@@ -26,7 +25,11 @@ void main() {
     });
 
     Future<List<Package>> resolve(List<String> paths) =>
-        PackageResolver.fromTree(root: '/repo', tree: tree)(paths);
+        PackageResolver.fromTree(
+          root: '/repo',
+          tree: tree,
+          rules: builtInRules,
+        )(paths);
 
     test('discovers the packages when there are no paths', () async {
       final packages = await resolve([]);

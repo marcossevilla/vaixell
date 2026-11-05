@@ -5,6 +5,7 @@ import 'package:vaixell/src/baseline/baseline.dart';
 import 'package:vaixell/src/check/package_resolver.dart';
 import 'package:vaixell/src/config/config.dart';
 import 'package:vaixell/src/engine/engine.dart';
+import 'package:vaixell/src/rules/rule.dart';
 import 'package:vaixell/src/source/source_tree.dart';
 
 /// {@template write_baseline}
@@ -24,11 +25,13 @@ class const WriteBaseline._({
   /// Reads the files of [root] from [tree], a [FileSystemSourceTree] on
   /// [root] by default.
   ///
-  /// Resolves the packages with [packageResolver], a [PackageResolver] on
-  /// [tree] by default, checks them with [engine], and writes the baseline
-  /// with [baselineFile].
+  /// Resolves the packages with [packageResolver] (by default, a
+  /// [PackageResolver] on [tree] that configures [rules]), checks them with
+  /// [engine], and writes the baseline with [baselineFile]. [engine] is only
+  /// a test seam.
   factory({
     required String root,
+    required List<RuleEntry> rules,
     SourceTree? tree,
     PackageResolver? packageResolver,
     Engine engine = const Engine(),
@@ -40,7 +43,11 @@ class const WriteBaseline._({
       tree: resolvedTree,
       packageResolver:
           packageResolver ??
-          PackageResolver.fromTree(root: root, tree: resolvedTree),
+          PackageResolver.fromTree(
+            root: root,
+            tree: resolvedTree,
+            rules: rules,
+          ),
       engine: engine,
       baselineFile: baselineFile,
     );

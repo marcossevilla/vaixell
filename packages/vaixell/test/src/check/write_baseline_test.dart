@@ -1,7 +1,6 @@
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 import 'package:test_descriptor/test_descriptor.dart' as d;
-import 'package:vaixell/src/rules/built_in_rules.dart';
 import 'package:vaixell/vaixell.dart';
 
 import '../../helpers/memory_source_tree.dart';
@@ -21,7 +20,10 @@ void main() {
     );
 
     test('writes the violation ids and returns the baseline', () async {
-      final baseline = await WriteBaseline(root: d.sandbox)('baseline.json');
+      final baseline = await WriteBaseline(
+        rules: builtInRules,
+        root: d.sandbox,
+      )('baseline.json');
       expect(
         baseline.ids,
         equals({
@@ -48,10 +50,10 @@ void main() {
         d.file('pubspec.yaml', 'name: b\n'),
         d.dir('lib', [d.file('b.dart', 'void b() {}\n')]),
       ]).create();
-      final baseline = await WriteBaseline(root: d.sandbox)(
-        'baseline.json',
-        paths: ['packages/b'],
-      );
+      final baseline = await WriteBaseline(
+        rules: builtInRules,
+        root: d.sandbox,
+      )('baseline.json', paths: ['packages/b']);
       expect(
         baseline.ids,
         equals({'top-level-function:packages/b/lib/b.dart:b'}),
@@ -60,9 +62,11 @@ void main() {
 
     test('reads the files from the given tree', () async {
       final tree = MemorySourceTree({'lib/c.dart': 'void c() {}\n'});
-      final baseline = await WriteBaseline(root: d.sandbox, tree: tree)(
-        'baseline.json',
-      );
+      final baseline = await WriteBaseline(
+        rules: builtInRules,
+        root: d.sandbox,
+        tree: tree,
+      )('baseline.json');
       expect(baseline.ids, equals({'top-level-function:lib/c.dart:c'}));
       expect(
         (await const BaselineFile().read(d.path('baseline.json'))).ids,
@@ -73,7 +77,7 @@ void main() {
     test('throws a $ConfigException on an invalid config', () async {
       await d.file('analysis_options.yaml', 'vaixell:\n  rulez: {}\n').create();
       await expectLater(
-        WriteBaseline(root: d.sandbox)('baseline.json'),
+        WriteBaseline(rules: builtInRules, root: d.sandbox)('baseline.json'),
         throwsA(isA<ConfigException>()),
       );
       await d.nothing('baseline.json').validate();
@@ -105,6 +109,7 @@ void main() {
       when(() => baselineFile.write(any(), any())).thenAnswer((_) async {});
 
       final baseline = await WriteBaseline(
+        rules: builtInRules,
         root: '/repo',
         tree: tree,
         packageResolver: packageResolver,

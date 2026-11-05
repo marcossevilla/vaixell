@@ -1,6 +1,5 @@
 import 'package:glob/glob.dart';
 import 'package:test/test.dart';
-import 'package:vaixell/src/rules/built_in_rules.dart';
 import 'package:vaixell/src/rules/top_level_function.dart';
 import 'package:vaixell/vaixell.dart';
 
@@ -13,6 +12,20 @@ Future<List<Violation>> _run(Map<String, String> files, {Config? config}) =>
         Package(path: '', config: config ?? Config.recommended(builtInRules)),
       ],
     );
+
+/// Reports every file at its start, unless [skips] is set.
+final class const _FileRule({final bool skips = false}) extends Rule {
+  @override
+  String get id => 'file';
+
+  @override
+  bool shouldCheck(DartFile file) => !skips;
+
+  @override
+  List<Finding> check(DartFile file) => [
+    Finding(offset: 0, message: 'File ${file.packagePath}.'),
+  ];
+}
 
 void main() {
   group(Engine, () {
@@ -220,6 +233,29 @@ class Foo {
           'top-level-function:packages/b/lib/b.dart:b error',
         ]),
       );
+    });
+
+    test('runs injected rules with their configured severity', () async {
+      final violations = await const Engine().run(
+        tree: MemorySourceTree({'packages/a/lib/a.dart': 'class A {}\n'}),
+        packages: [
+          const Package(
+            path: 'packages/a',
+            config: Config(rules: [(_FileRule(), Severity.warning)]),
+          ),
+        ],
+      );
+      expect(violations.single.id, 'file:packages/a/lib/a.dart');
+      expect(violations.single.severity, Severity.warning);
+      expect(violations.single.message, 'File lib/a.dart.');
+    });
+
+    test('does not check files a rule skips', () async {
+      final violations = await _run(
+        {'lib/a.dart': 'class A {}\n'},
+        config: const Config(rules: [(_FileRule(skips: true), Severity.error)]),
+      );
+      expect(violations, isEmpty);
     });
   });
 }
