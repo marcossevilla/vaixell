@@ -250,7 +250,7 @@ extension type T(int v) { void m() => jsonDecode(''); }
 
     test('uses only the kind outside any declaration', () {
       final file = parse("@Foo(jsonDecode(''))\nlibrary;\n");
-      expect(file.hasErrors, isFalse);
+      expect(file.errors, isEmpty);
       expect(rule.check(file).map((f) => f.symbol), equals(['@decode']));
     });
   });

@@ -1,6 +1,7 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:test/test.dart';
+import 'package:vaixell/src/model/model.dart' show AstBridge;
 import 'package:vaixell/src/rules/enclosing_declaration.dart';
 
 import '../../helpers/parse.dart';
@@ -21,7 +22,7 @@ void main() {
     /// Returns the symbol of every string literal in [source], in order.
     List<String?> symbols(String source) {
       final visitor = _StringLiterals();
-      parse(source).unit.accept(visitor);
+      const AstBridge().unitOf(parse(source)).accept(visitor);
       return visitor.literals.map(enclosing.symbolOf).toList();
     }
 
@@ -75,7 +76,9 @@ set setter(String v) { ''; }
     });
 
     test('uses the first variable for a shared type annotation', () {
-      final unit = parse('Map<String, dynamic> a = {}, b = {};\n').unit;
+      final unit = const AstBridge().unitOf(
+        parse('Map<String, dynamic> a = {}, b = {};\n'),
+      );
       final list =
           (unit.declarations.single as TopLevelVariableDeclaration).variables;
       expect(enclosing.symbolOf(list.type!), equals('a'));

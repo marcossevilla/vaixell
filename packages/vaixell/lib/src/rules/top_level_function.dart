@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:vaixell/src/model/model.dart' show AstBridge, DartFile;
 import 'package:vaixell/src/rules/rule.dart';
 
 /// Reports top-level functions, getters and setters.
@@ -13,8 +14,8 @@ final class const TopLevelFunctionRule() extends Rule {
   String get id => 'top-level-function';
 
   @override
-  List<Finding> check(ParsedFile file) => [
-    for (final declaration in file.unit.declarations)
+  List<Finding> check(DartFile file) => [
+    for (final declaration in const AstBridge().unitOf(file).declarations)
       if (declaration is FunctionDeclaration && !_isMain(declaration))
         _finding(declaration),
   ];

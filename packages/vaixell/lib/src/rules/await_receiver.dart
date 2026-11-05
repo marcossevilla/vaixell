@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
+import 'package:vaixell/src/model/model.dart' show AstBridge, DartFile;
 import 'package:vaixell/src/rules/enclosing_declaration.dart';
 import 'package:vaixell/src/rules/rule.dart';
 import 'package:vaixell/src/violation/violation.dart';
@@ -28,9 +29,9 @@ final class const AwaitReceiverRule() extends Rule {
   Severity get defaultSeverity => Severity.warning;
 
   @override
-  List<Finding> check(ParsedFile file) {
+  List<Finding> check(DartFile file) {
     final visitor = _AwaitReceiverVisitor();
-    file.unit.accept(visitor);
+    const AstBridge().unitOf(file).accept(visitor);
     return visitor.findings;
   }
 }

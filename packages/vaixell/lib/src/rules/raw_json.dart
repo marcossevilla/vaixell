@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
+import 'package:vaixell/src/model/model.dart' show AstBridge, DartFile;
 import 'package:vaixell/src/rules/enclosing_declaration.dart';
 import 'package:vaixell/src/rules/rule.dart';
 
@@ -29,11 +30,11 @@ final class const RawJsonRule() extends Rule {
   String get id => 'raw-json';
 
   @override
-  List<Finding> check(ParsedFile file) {
+  List<Finding> check(DartFile file) {
     final directories = file.path.split('/')..removeLast();
     if (directories.contains('models')) return const [];
     final visitor = _RawJsonVisitor();
-    file.unit.accept(visitor);
+    const AstBridge().unitOf(file).accept(visitor);
     return visitor.findings;
   }
 }

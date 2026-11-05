@@ -1,8 +1,5 @@
-import 'package:analyzer/dart/analysis/utilities.dart';
-import 'package:vaixell/src/rules/rule.dart';
+import 'package:vaixell/src/model/model.dart';
 
 /// Parses [content] as the file at [path].
-ParsedFile parse(String content, {String path = 'lib/a.dart'}) => ParsedFile(
-  path: path,
-  result: parseString(content: content, path: path, throwIfDiagnostics: false),
-);
+DartFile parse(String content, {String path = 'lib/a.dart'}) =>
+    const DartFileParser().parse(path: path, content: content);

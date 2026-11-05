@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:vaixell/src/model/model.dart' show AstBridge, DartFile;
 import 'package:vaixell/src/rules/enclosing_declaration.dart';
 import 'package:vaixell/src/rules/rule.dart';
 
@@ -11,8 +12,8 @@ final class const ExtensionDeclarationRule() extends Rule {
   String get id => 'extension-declaration';
 
   @override
-  List<Finding> check(ParsedFile file) => [
-    for (final declaration in file.unit.declarations)
+  List<Finding> check(DartFile file) => [
+    for (final declaration in const AstBridge().unitOf(file).declarations)
       ?switch (declaration) {
         ExtensionDeclaration(name: final name?) => Finding(
           offset: name.offset,

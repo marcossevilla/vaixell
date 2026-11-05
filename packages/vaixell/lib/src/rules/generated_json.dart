@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
+import 'package:vaixell/src/model/model.dart' show AstBridge, DartFile;
 import 'package:vaixell/src/rules/rule.dart';
 import 'package:vaixell/src/violation/violation.dart';
 
@@ -33,8 +34,8 @@ final class const GeneratedJsonRule() extends Rule {
   Severity get defaultSeverity => Severity.warning;
 
   @override
-  List<Finding> check(ParsedFile file) => [
-    for (final declaration in file.unit.declarations)
+  List<Finding> check(DartFile file) => [
+    for (final declaration in const AstBridge().unitOf(file).declarations)
       ...switch (declaration) {
         final ClassDeclaration declaration => _classFindings(declaration),
         final EnumDeclaration declaration => _enumFindings(declaration),

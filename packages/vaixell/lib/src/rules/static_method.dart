@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:vaixell/src/model/model.dart' show AstBridge, DartFile;
 import 'package:vaixell/src/rules/enclosing_declaration.dart';
 import 'package:vaixell/src/rules/rule.dart';
 
@@ -15,8 +16,8 @@ final class const StaticMethodRule() extends Rule {
   String get id => 'static-method';
 
   @override
-  List<Finding> check(ParsedFile file) => [
-    for (final declaration in file.unit.declarations)
+  List<Finding> check(DartFile file) => [
+    for (final declaration in const AstBridge().unitOf(file).declarations)
       if (_container(declaration) case (final container, final members))
         for (final member in members)
           if (member is MethodDeclaration && member.isStatic)

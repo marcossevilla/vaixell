@@ -65,7 +65,7 @@ class const Engine() {
     );
     final result = const AstBridge().resultOf(file);
     final found = switch (file.errors) {
-      [] => _findings(ParsedFile(path: path, result: result), rules),
+      [] => _findings(file, rules),
       final errors => [_parseError(package, errors)],
     }..sort((a, b) => a.$3.offset.compareTo(b.$3.offset));
 
@@ -77,11 +77,12 @@ class const Engine() {
   }
 
   List<(String, Severity, Finding)> _findings(
-    ParsedFile file,
+    DartFile file,
     List<(Rule, Severity)> rules,
   ) => [
     for (final (rule, severity) in rules)
-      for (final finding in rule.check(file)) (rule.id, severity, finding),
+      if (rule.shouldCheck(file))
+        for (final finding in rule.check(file)) (rule.id, severity, finding),
   ];
 
   /// The only finding of a file that doesn't parse, at its first error.
