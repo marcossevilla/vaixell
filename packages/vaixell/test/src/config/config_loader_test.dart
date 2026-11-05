@@ -449,6 +449,37 @@ void main() {
         );
       });
 
+      test('throws an ArgumentError for a repeated id', () async {
+        await expectLater(
+          load('vaixell: {}\n', [
+            ...Recommended.rules,
+            const _NamedRule([], id: 'raw-json'),
+          ]),
+          throwsA(
+            isA<ArgumentError>().having(
+              (e) => e.message,
+              'message',
+              'Two rules have the id `raw-json`.',
+            ),
+          ),
+        );
+      });
+
+      test('throws an ArgumentError for an entry named parse-error', () async {
+        await expectLater(
+          ConfigLoader(MemorySourceTree({}), [
+            const _NamedRule([], id: 'parse-error'),
+          ]).load(),
+          throwsA(
+            isA<ArgumentError>().having(
+              (e) => e.message,
+              'message',
+              '`parse-error` is reported by the engine, not by a rule.',
+            ),
+          ),
+        );
+      });
+
       test('the rules follow the order of the entries', () async {
         final reversed = Recommended.rules.reversed.toList();
         final config = await load('vaixell: {}\n', reversed);

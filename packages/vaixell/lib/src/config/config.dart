@@ -34,23 +34,29 @@ class const Config({
   /// It's the config used when there's no config file. Factories build
   /// their rules without options, and report errors at the start of
   /// [root]'s `analysis_options.yaml`, where options would go.
-  factory recommended(List<RuleEntry> entries, {String root = ''}) => Config(
-    rules: [
-      for (final entry in entries)
-        if (entry.recommended)
-          (
-            const RuleBuilder().build(
-              entry,
-              const OptionValues().empty(
-                name: entry.id,
-                path: p.posix.join(root, 'analysis_options.yaml'),
+  ///
+  /// Throws an [ArgumentError] when two [entries] share an id, or one is
+  /// `parse-error`.
+  factory recommended(List<RuleEntry> entries, {String root = ''}) {
+    const RuleIds().check(entries);
+    return Config(
+      rules: [
+        for (final entry in entries)
+          if (entry.recommended)
+            (
+              const RuleBuilder().build(
+                entry,
+                const OptionValues().empty(
+                  name: entry.id,
+                  path: p.posix.join(root, 'analysis_options.yaml'),
+                ),
               ),
+              entry.defaultSeverity,
             ),
-            entry.defaultSeverity,
-          ),
-    ],
-    root: root,
-  );
+      ],
+      root: root,
+    );
+  }
 
   /// The id of the syntax errors the engine reports. It isn't a rule, but
   /// its severity is set under `rules:` like one.
@@ -63,5 +69,34 @@ class const Config({
     if (!path.startsWith('$root/')) return false;
     final relative = path.substring(root.length + 1);
     return exclude.any((glob) => glob.matches(relative));
+  }
+}
+
+/// Checks the ids of the rules a caller runs. Internal: it's never exported.
+class const RuleIds() {
+  /// Creates the checker.
+  this;
+
+  /// Throws an [ArgumentError] when two of [entries] share an id, or one is
+  /// [Config.parseErrorId], since config and violation ids couldn't tell
+  /// them apart.
+  void check(List<RuleEntry> entries) {
+    final seen = <String>{};
+    for (final RuleEntry(:id) in entries) {
+      if (id == Config.parseErrorId) {
+        throw ArgumentError.value(
+          entries,
+          'rules',
+          '`$id` is reported by the engine, not by a rule.',
+        );
+      }
+      if (!seen.add(id)) {
+        throw ArgumentError.value(
+          entries,
+          'rules',
+          'Two rules have the id `$id`.',
+        );
+      }
+    }
   }
 }

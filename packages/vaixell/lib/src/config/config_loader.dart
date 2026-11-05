@@ -29,7 +29,8 @@ class const ConfigLoader(
   /// for [rules] when the file or its `vaixell:` key is missing.
   ///
   /// Throws a [ConfigException] when the file isn't valid YAML or the
-  /// `vaixell:` section is invalid.
+  /// `vaixell:` section is invalid, and an [ArgumentError] when two [rules]
+  /// share an id, or one is `parse-error`.
   Future<Config> load({String path = defaultPath}) async =>
       await loadIfPresent(path: path) ?? Config.recommended(rules);
 
@@ -37,8 +38,10 @@ class const ConfigLoader(
   /// `vaixell:` key is missing. An empty `vaixell:` key counts as present.
   ///
   /// Throws a [ConfigException] when the file isn't valid YAML or the
-  /// `vaixell:` section is invalid.
+  /// `vaixell:` section is invalid, and an [ArgumentError] when two [rules]
+  /// share an id, or one is `parse-error`.
   Future<Config?> loadIfPresent({String path = defaultPath}) async {
+    const RuleIds().check(rules);
     if (!await tree.exists(path)) return null;
     return _ConfigFile(path, rules).parse(await tree.read(path));
   }

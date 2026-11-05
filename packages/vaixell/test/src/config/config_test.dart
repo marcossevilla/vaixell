@@ -52,6 +52,16 @@ void main() {
       );
     });
 
+    test('recommended throws an ArgumentError for a repeated id', () {
+      expect(
+        () => Config.recommended([
+          ...Recommended.rules,
+          Recommended.rules.first,
+        ]),
+        throwsArgumentError,
+      );
+    });
+
     test('recommended keeps the given root', () {
       expect(Config.recommended(Recommended.rules, root: 'pkg').root, 'pkg');
     });
