@@ -53,7 +53,7 @@ class C extends B {
   C.other() : this(0);
   C.redirect() : this.other();
 }
-E g() => .named(.c, .d());
+E g() => .named(.c, .d(), const .e());
 ''');
         expect(
           [
