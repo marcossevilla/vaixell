@@ -1,7 +1,6 @@
 import 'package:vaixell/src/rules/await_receiver.dart';
 import 'package:vaixell/src/rules/extension_declaration.dart';
 import 'package:vaixell/src/rules/generated_json.dart';
-import 'package:vaixell/src/rules/parse_error.dart';
 import 'package:vaixell/src/rules/raw_json.dart';
 import 'package:vaixell/src/rules/rule.dart';
 import 'package:vaixell/src/rules/static_method.dart';
@@ -15,7 +14,6 @@ class const RuleRegistry() {
 
   /// Every rule, in reporting order.
   List<Rule> get all => const [
-    ParseErrorRule(),
     TopLevelFunctionRule(),
     TopLevelVariableRule(),
     ExtensionDeclarationRule(),

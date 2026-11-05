@@ -108,6 +108,38 @@ class Foo {
       expect(violations.map((v) => v.rule), ['parse-error']);
     });
 
+    group('parse-error', () {
+      test('reports one violation at the first error', () async {
+        final violations = await _run({'lib/a.dart': 'class A {\n'});
+        final violation = violations.single;
+        expect(violation.id, 'parse-error:lib/a.dart');
+        expect(violation.severity, Severity.error);
+        expect(violation.message, startsWith('Syntax error: '));
+        expect(violation.message, isNot(contains('more)')));
+      });
+
+      test('mentions how many more errors there are', () async {
+        final violations = await _run({
+          'lib/a.dart': 'class A { void f( }\nclass {\n',
+        });
+        expect(violations.single.message, matches(r'\(and \d+ more\)$'));
+      });
+
+      test('uses the severity from the config', () async {
+        final violations = await _run({
+          'lib/a.dart': 'class {\n',
+        }, config: const Config(severities: {'parse-error': Severity.warning}));
+        expect(violations.single.severity, Severity.warning);
+      });
+
+      test('is on even when the config leaves it out', () async {
+        final violations = await _run({
+          'lib/a.dart': 'class {\n',
+        }, config: const Config(severities: {}));
+        expect(violations.single.severity, Severity.error);
+      });
+    });
+
     test('sorts by path, line and column', () async {
       final violations = await _run({
         'lib/b.dart': 'void b() {}\n',

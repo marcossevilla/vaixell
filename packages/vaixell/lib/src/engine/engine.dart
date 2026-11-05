@@ -1,8 +1,10 @@
-import 'package:analyzer/dart/analysis/utilities.dart';
+import 'package:analyzer/dart/analysis/results.dart';
 import 'package:path/path.dart' as p;
+import 'package:vaixell/src/config/config.dart';
 import 'package:vaixell/src/engine/generated_files.dart';
 import 'package:vaixell/src/engine/package.dart';
 import 'package:vaixell/src/engine/violation_ids.dart';
+import 'package:vaixell/src/model/model.dart';
 import 'package:vaixell/src/rules/registry.dart';
 import 'package:vaixell/src/rules/rule.dart';
 import 'package:vaixell/src/source/source_tree.dart';
@@ -15,7 +17,8 @@ class const Engine() {
 
   /// Reads files from [tree] and checks every Dart file under each of the
   /// [packages]' `lib/` that isn't generated or excluded by its config, with
-  /// the rules enabled in that config.
+  /// the rules enabled in that config. A file that doesn't parse only gets a
+  /// `parse-error`, which is always on.
   ///
   /// Returns the violations, sorted by path, line and column.
   Future<List<Violation>> run({
@@ -30,7 +33,7 @@ class const Engine() {
             (rule, severity),
       ];
       for (final path in await _dartFiles(tree, package)) {
-        violations.addAll(_check(path, await tree.read(path), rules));
+        violations.addAll(_check(package, path, await tree.read(path), rules));
       }
     }
     return violations..sort(_compare);
@@ -50,42 +53,69 @@ class const Engine() {
   }
 
   List<Violation> _check(
+    Package package,
     String path,
     String content,
     List<(Rule, Severity)> rules,
   ) {
-    final result = parseString(
-      content: content,
+    final file = const DartFileParser().parse(
       path: path,
-      throwIfDiagnostics: false,
+      content: content,
+      packageRoot: package.path,
     );
-    final file = ParsedFile(path: path, result: result);
-    final found = <(Rule, Severity, Finding)>[
-      for (final (rule, severity) in rules)
-        if (!file.hasErrors || rule.checksFilesWithErrors)
-          for (final finding in rule.check(file)) (rule, severity, finding),
-    ]..sort((a, b) => a.$3.offset.compareTo(b.$3.offset));
+    final result = const AstBridge().resultOf(file);
+    final found = switch (file.errors) {
+      [] => _findings(ParsedFile(path: path, result: result), rules),
+      final errors => [_parseError(package, errors)],
+    }..sort((a, b) => a.$3.offset.compareTo(b.$3.offset));
 
     final ids = ViolationIds();
     return [
       for (final (rule, severity, finding) in found)
-        _violation(file, rule, severity, finding, ids),
+        _violation(result, path, rule, severity, finding, ids),
     ];
   }
 
-  Violation _violation(
+  List<(String, Severity, Finding)> _findings(
     ParsedFile file,
-    Rule rule,
+    List<(Rule, Severity)> rules,
+  ) => [
+    for (final (rule, severity) in rules)
+      for (final finding in rule.check(file)) (rule.id, severity, finding),
+  ];
+
+  /// The only finding of a file that doesn't parse, at its first error.
+  (String, Severity, Finding) _parseError(
+    Package package,
+    List<SyntaxError> errors,
+  ) {
+    final [first, ...rest] = errors;
+    return (
+      Config.parseErrorId,
+      package.config.severities[Config.parseErrorId] ?? Severity.error,
+      Finding(
+        offset: first.offset,
+        message:
+            'Syntax error: ${first.message}'
+            '${rest.isEmpty ? '' : ' (and ${rest.length} more)'}',
+      ),
+    );
+  }
+
+  Violation _violation(
+    ParseStringResult result,
+    String path,
+    String rule,
     Severity severity,
     Finding finding,
     ViolationIds ids,
   ) {
-    final location = file.result.lineInfo.getLocation(finding.offset);
+    final location = result.lineInfo.getLocation(finding.offset);
     return Violation(
-      id: ids.next(rule: rule.id, path: file.path, symbol: finding.symbol),
-      rule: rule.id,
+      id: ids.next(rule: rule, path: path, symbol: finding.symbol),
+      rule: rule,
       severity: severity,
-      path: file.path,
+      path: path,
       line: location.lineNumber,
       column: location.columnNumber,
       message: finding.message,

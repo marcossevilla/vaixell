@@ -1,3 +1,4 @@
+import 'package:vaixell/src/config/config.dart';
 import 'package:vaixell/src/rules/registry.dart';
 import 'package:vaixell/src/violation/violation.dart';
 
@@ -11,9 +12,11 @@ class const Presets() {
 
   /// The severities of each preset, by preset name and then rule id.
   ///
-  /// `recommended` enables every rule at its default severity.
+  /// `recommended` reports syntax errors as errors and enables every rule at
+  /// its default severity.
   Map<String, Map<String, Severity>> get all => {
     defaultPreset: {
+      Config.parseErrorId: Severity.error,
       for (final rule in const RuleRegistry().all)
         rule.id: rule.defaultSeverity,
     },

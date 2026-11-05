@@ -60,9 +60,6 @@ abstract base class const Rule() {
   /// The severity used when the config doesn't set one.
   Severity get defaultSeverity => Severity.error;
 
-  /// Whether the rule also runs on files that have syntax errors.
-  bool get checksFilesWithErrors => false;
-
   /// Returns the findings for [file].
   List<Finding> check(ParsedFile file);
 }

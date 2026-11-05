@@ -26,6 +26,10 @@ class const Config({
   factory recommended() =>
       Config(severities: const Presets().all[Presets.defaultPreset]!);
 
+  /// The id of the syntax errors the engine reports. It isn't a rule, but
+  /// its severity is set under `rules:` like one.
+  static const String parseErrorId = 'parse-error';
+
   /// Whether [path], relative to the repository root, matches one of the
   /// [exclude] globs.
   bool excludes(String path) {

@@ -9,7 +9,6 @@ void main() {
       expect(
         ids,
         equals([
-          'parse-error',
           'top-level-function',
           'top-level-variable',
           'extension-declaration',

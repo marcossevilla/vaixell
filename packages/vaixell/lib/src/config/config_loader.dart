@@ -2,7 +2,6 @@ import 'package:glob/glob.dart';
 import 'package:path/path.dart' as p;
 import 'package:vaixell/src/config/config.dart';
 import 'package:vaixell/src/config/presets.dart';
-import 'package:vaixell/src/rules/parse_error.dart';
 import 'package:vaixell/src/rules/registry.dart';
 import 'package:vaixell/src/source/source_tree.dart';
 import 'package:vaixell/src/violation/violation.dart';
@@ -114,7 +113,7 @@ class const _ConfigFile(
         severities[rule] = severity;
       }
     });
-    severities.putIfAbsent(const ParseErrorRule().id, () => Severity.error);
+    severities.putIfAbsent(Config.parseErrorId, () => Severity.error);
     return Config(severities: severities, exclude: exclude, root: _root);
   }
 
@@ -143,7 +142,10 @@ class const _ConfigFile(
     if (node is! YamlMap) {
       throw _error(node, '`rules` must be a map of rule ids to severities.');
     }
-    final ids = [for (final rule in const RuleRegistry().all) rule.id];
+    final ids = [
+      Config.parseErrorId,
+      for (final rule in const RuleRegistry().all) rule.id,
+    ];
     final result = <String, Severity?>{};
     for (final MapEntry(:key, :value) in node.nodes.entries) {
       final rule = (key as YamlNode).value;
@@ -161,7 +163,7 @@ class const _ConfigFile(
           'Expected one of: ${_severities.keys.join(', ')}.',
         );
       }
-      if (severity == 'off' && rule == const ParseErrorRule().id) {
+      if (severity == 'off' && rule == Config.parseErrorId) {
         throw _error(value, "`$rule` can't be turned off.");
       }
       result[rule] = _severities[severity];

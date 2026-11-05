@@ -14,7 +14,7 @@ const _allowedImports = <String, Set<String>>{
   'rules': {'model', 'violation'},
   'config': {'rules', 'source', 'violation'},
   'source': {'git'},
-  'engine': {'config', 'rules', 'source', 'violation'},
+  'engine': {'config', 'model', 'rules', 'source', 'violation'},
   'report': {'engine', 'violation'},
   'baseline': {},
   'discovery': {'config', 'source'},
