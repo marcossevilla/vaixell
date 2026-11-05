@@ -74,6 +74,39 @@ final class _AstConstructor(
   Expression? get returnExpression => file.returnExpression(node.body);
 }
 
+/// A primary constructor, declared in the type's header, as in
+/// `class const User.fromJson(final Map<String, dynamic> json)`. It can't be
+/// a factory or external, and it returns nothing.
+final class _AstPrimaryConstructor(
+  final _AstDartFile file,
+  final ast.PrimaryConstructorDeclaration node,
+) implements Constructor {
+  @override
+  late final String? symbol = file.symbolOf(
+    file.enclosing(node).declaration,
+    this,
+  );
+
+  @override
+  String? get name => node.constructorName?.name.lexeme;
+
+  /// The name, or the type name when it's unnamed.
+  @override
+  int get offset => (node.constructorName?.name ?? node.typeName).offset;
+
+  @override
+  bool get isFactory => false;
+
+  @override
+  bool get isExternal => false;
+
+  @override
+  List<Parameter> get parameters => file.parameters(node.formalParameters);
+
+  @override
+  Expression? get returnExpression => null;
+}
+
 final class _AstField(
   final _AstDartFile file,
   final ast.VariableDeclaration node,

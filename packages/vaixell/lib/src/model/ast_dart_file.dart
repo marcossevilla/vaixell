@@ -112,13 +112,19 @@ final class _AstDartFile(
     _ => null,
   };
 
-  /// The model of a method, a constructor or one field.
+  /// The model of a method, a constructor or one field. A primary
+  /// constructor's body gives the model of its header.
   Member? member(ast.AstNode node) => switch (node) {
     ast.MethodDeclaration() => _model(node, () => _AstMethod(this, node)),
     ast.ConstructorDeclaration() => _model(
       node,
       () => _AstConstructor(this, node),
     ),
+    ast.PrimaryConstructorDeclaration() => _model(
+      node,
+      () => _AstPrimaryConstructor(this, node),
+    ),
+    ast.PrimaryConstructorBody(:final declaration?) => member(declaration),
     ast.VariableDeclaration(
       parent: ast.VariableDeclarationList(parent: ast.FieldDeclaration()),
     ) =>

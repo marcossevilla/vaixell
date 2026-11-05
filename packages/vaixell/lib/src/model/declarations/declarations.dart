@@ -15,13 +15,14 @@ sealed class TypeDeclaration implements Declaration {
   /// The annotations, in source order.
   List<Annotation> get annotations;
 
-  /// The methods, constructors and fields, in source order.
+  /// The methods, constructors and fields, in source order, so a primary
+  /// constructor, declared in the header, comes first.
   List<Member> get members;
 
   /// The methods, in source order.
   List<Method> get methods;
 
-  /// The constructors declared in the body, in source order.
+  /// The constructors, in source order, primary constructor first.
   List<Constructor> get constructors;
 
   /// The fields, one per declared name, in source order.

@@ -153,7 +153,7 @@ extension type T(int v) { void m() {} }
             for (final member in (declaration as TypeDeclaration).members)
               member.symbol,
         ];
-        expect(symbols, ['M.m', 'E.m', '<unnamed>.m', 'T.m']);
+        expect(symbols, ['M.m', 'E.m', '<unnamed>.m', 'T.new', 'T.m']);
       });
 
       test('read their annotations', () {
@@ -341,6 +341,47 @@ class E {
           'class C { C(this.a, {required int b}); }',
         ).constructors.single;
         expect(constructor.parameters.map((p) => p.name), ['a', 'b']);
+      });
+
+      group('primary', () {
+        const source = '''
+class const C.named(final int a, {int? b}) {
+  int f = 0;
+  this : assert(a > 0);
+}
+enum const E(final int x) { a(1) }
+class D(int a);
+''';
+        final declarations = _declarations(source).cast<TypeDeclaration>();
+
+        test('come first in members, once with their body', () {
+          expect(declarations.first.members.map((m) => m.symbol), [
+            'C.named',
+            'C.f',
+          ]);
+          expect(declarations.map((d) => d.constructors.single.symbol), [
+            'C.named',
+            'E.new',
+            'D.new',
+          ]);
+        });
+
+        test('are at the name, or the type name when unnamed', () {
+          expect(declarations.map((d) => d.constructors.single.offset), [
+            source.indexOf('named'),
+            source.indexOf('E('),
+            source.indexOf('D('),
+          ]);
+        });
+
+        test('have parameters and nothing else', () {
+          final constructor = declarations.first.constructors.single;
+          expect(constructor.name, 'named');
+          expect(constructor.parameters.map((p) => p.name), ['a', 'b']);
+          expect(constructor.isFactory, isFalse);
+          expect(constructor.isExternal, isFalse);
+          expect(constructor.returnExpression, isNull);
+        });
       });
     });
 

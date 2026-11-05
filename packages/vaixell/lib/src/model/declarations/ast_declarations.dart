@@ -8,6 +8,9 @@ mixin _AstTypeDeclaration implements TypeDeclaration {
 
   List<ast.ClassMember> get body;
 
+  /// The header that holds a primary constructor, if any.
+  ast.ClassNamePart? get namePart => null;
+
   @override
   late final String? symbol = file.symbolOf(this, null);
 
@@ -18,10 +21,12 @@ mixin _AstTypeDeclaration implements TypeDeclaration {
 
   @override
   late final List<Member> members = List.unmodifiable([
+    if (namePart case final ast.PrimaryConstructorDeclaration header)
+      file.member(header)!,
     for (final member in body)
       if (member is ast.FieldDeclaration)
         for (final variable in member.fields.variables) file.member(variable)!
-      else
+      else if (member is! ast.PrimaryConstructorBody)
         ?file.member(member),
   ]);
 
@@ -48,6 +53,9 @@ final class _AstClass(
 
   @override
   int get offset => node.namePart.typeName.offset;
+
+  @override
+  ast.ClassNamePart get namePart => node.namePart;
 
   @override
   List<ast.ClassMember> get body => node.body.members;
@@ -78,6 +86,9 @@ final class _AstEnum(
   int get offset => node.namePart.typeName.offset;
 
   @override
+  ast.ClassNamePart get namePart => node.namePart;
+
+  @override
   List<ast.ClassMember> get body => node.body.members;
 }
 
@@ -104,6 +115,9 @@ final class _AstExtensionType(
 
   @override
   int get offset => node.namePart.typeName.offset;
+
+  @override
+  ast.ClassNamePart get namePart => node.namePart;
 
   @override
   List<ast.ClassMember> get body => node.body.members;

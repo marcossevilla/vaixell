@@ -326,6 +326,26 @@ class C {
       );
     });
 
+    test('is in a primary constructor, in its header or its body', () {
+      const source = '''
+class const C.named(final int x = a) {
+  this : assert(x > b);
+}
+''';
+      final file = _parse(source);
+      final type = file.declarations.single as TypeDeclaration;
+      final constructor = type.constructors.single;
+      expect(
+        [
+          for (final text in ['a)', 'b)']) whereIs(source, text, file: file),
+        ],
+        [
+          for (var i = 0; i < 2; i++)
+            (declaration: type, member: constructor, symbol: 'C.named'),
+        ],
+      );
+    });
+
     test('is in a declaration without a member', () {
       const source = '''
 @A(a)

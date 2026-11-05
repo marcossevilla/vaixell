@@ -12,7 +12,7 @@ Rules in `packages/vaixell` are written against a small model of a Dart file tha
 Constraints:
 
 - **Parse-only.** No type resolution and no `pub get`, as today.
-- **Same behavior, same ids.** Every built-in rule keeps its behavior and its violation ids, so existing baselines keep matching.
+- **Same behavior, same ids.** Every built-in rule keeps its behavior and its violation ids, so existing baselines keep matching. The one exception is code in primary constructors, which the model sees as constructors (see [Declarations and members](#declarations-and-members-35-36)).
 - **No analyzer types in the public API.** Internals may wrap or extend analyzer classes, but no `package:analyzer` or `package:yaml` type is exported or appears in a public signature.
 - **The public Dart API may break.** This is a breaking change for library users. The CLI and config stay compatible.
 
@@ -229,11 +229,11 @@ abstract interface class Import implements Reportable {
 ### Declarations and members ([#35](https://github.com/marcossevilla/vaixell/issues/35), [#36](https://github.com/marcossevilla/vaixell/issues/36))
 
 - **Sealed `Declaration`:** `ClassDeclaration`, `MixinDeclaration`, `EnumDeclaration`, `ExtensionDeclaration`, `ExtensionTypeDeclaration`, `TopLevelFunction` and `TopLevelVariable` (one per declared name, with `isConst`).
-- **Sealed `TypeDeclaration`** groups the first five: `name` (`null` only for an unnamed extension), `annotations`, `members` in source order, and `methods`, `constructors` and `fields`.
+- **Sealed `TypeDeclaration`** groups the first five: `name` (`null` only for an unnamed extension), `annotations`, `members` in source order (a primary constructor, declared in the header, first), and `methods`, `constructors` and `fields`.
 - **`TopLevelFunction`:** `name` and `kind` (`FunctionKind`: function, getter, setter or operator).
 - **Sealed `Member`:**
   - `Method`: `name`, `kind`, `isStatic`, `isAbstract` (no body), `isExternal`, `parameters`, `returnExpression`.
-  - `Constructor`: `name` (`null` when unnamed), `isFactory`, `isExternal`, `parameters`, `returnExpression`.
+  - `Constructor`: `name` (`null` when unnamed), `isFactory`, `isExternal`, `parameters`, `returnExpression`. A primary constructor is one too, and code in its header or its `this : …;` body is in it, so findings there get `Type.new` or `Type.name` symbols instead of `Type`.
   - `Field`: one per declared name, with `name` and `isStatic`.
   - `returnExpression` is `e` for `=> e;` or `{ return e; }`, otherwise `null`.
 - **`Parameter`:** `name`, `isPositional`, `isNamed`, `isFunction` (as in `T Function(Object?) fromJsonT`).

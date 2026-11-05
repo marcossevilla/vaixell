@@ -87,6 +87,16 @@ class User {
         );
       });
 
+      test('flags primary fromJson constructors', () {
+        const source = '''
+@JsonSerializable()
+class const User.fromJson(final Map<String, dynamic> json);
+''';
+        final findings = _tester.checkSource(rule, source);
+        expect(findings.map((f) => f.symbol), equals(['User.fromJson']));
+        expect(findings.single.offset, equals(source.indexOf('fromJson')));
+      });
+
       test('ignores external fromJson constructors', () {
         expect(
           symbols('''

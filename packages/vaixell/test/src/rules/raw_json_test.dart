@@ -129,6 +129,18 @@ class B {
       );
     });
 
+    test('allows primary fromJson constructors', () {
+      expect(
+        symbols('''
+class const A.fromJson(final Map<String, dynamic> json) {
+  this : assert(jsonEncode(json) != '');
+}
+class const B(final Map<String, dynamic> json);
+'''),
+        equals(['B.new@map']),
+      );
+    });
+
     test('allows JSON passed straight to fromJson', () {
       expect(
         symbols('''

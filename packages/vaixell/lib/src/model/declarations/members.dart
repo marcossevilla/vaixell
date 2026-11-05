@@ -30,8 +30,12 @@ abstract interface class Method implements Member {
   Expression? get returnExpression;
 }
 
-/// A constructor. Its offset is its name's, or the type name's or keyword's
-/// when it's unnamed.
+/// A constructor, in the body or, as a primary constructor, in the header,
+/// as in `class const User.fromJson(final Map<String, dynamic> json)`.
+///
+/// Its offset is its name's, or the type name's or keyword's when it's
+/// unnamed. Expressions in a primary constructor's header and in its
+/// `this : …;` body are in it.
 abstract interface class Constructor implements Member {
   /// The name after the type name, or `null` when unnamed.
   String? get name;
