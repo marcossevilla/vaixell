@@ -1,8 +1,10 @@
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
+import 'package:vaixell/src/rules/built_in_rules.dart';
 import 'package:vaixell/vaixell.dart';
 
 import '../../helpers/memory_source_tree.dart';
+import '../../helpers/severities.dart';
 
 class _MockPackageDiscovery extends Mock implements PackageDiscovery;
 
@@ -33,10 +35,10 @@ void main() {
 
     test('resolves each package with its nearest config', () async {
       final [root, a] = await resolve([]);
-      expect(root.config.severities, isNot(contains('top-level-variable')));
-      expect(root.config.severities, contains('top-level-function'));
-      expect(a.config.severities, isNot(contains('top-level-function')));
-      expect(a.config.severities, contains('top-level-variable'));
+      expect(severitiesOf(root.config), isNot(contains('top-level-variable')));
+      expect(severitiesOf(root.config), contains('top-level-function'));
+      expect(severitiesOf(a.config), isNot(contains('top-level-function')));
+      expect(severitiesOf(a.config), contains('top-level-variable'));
     });
 
     test('normalizes and dedupes the given paths', () async {
@@ -57,8 +59,8 @@ void main() {
     test('uses the given discovery and config resolver', () async {
       final discovery = _MockPackageDiscovery();
       final configResolver = _MockConfigResolver();
-      final a = Config.recommended();
-      const b = Config(severities: {});
+      final a = Config.recommended(builtInRules);
+      const b = Config(rules: []);
       when(discovery.discover).thenAnswer((_) async => ['x', 'y']);
       when(() => configResolver.forPackages(['x', 'y']))
           .thenAnswer((_) async => [a, b]);
@@ -76,7 +78,7 @@ void main() {
       final discovery = _MockPackageDiscovery();
       final configResolver = _MockConfigResolver();
       when(() => configResolver.forPackages(['x']))
-          .thenAnswer((_) async => [Config.recommended()]);
+          .thenAnswer((_) async => [Config.recommended(builtInRules)]);
 
       await PackageResolver(
         root: '/repo',

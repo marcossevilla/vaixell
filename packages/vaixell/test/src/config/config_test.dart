@@ -1,14 +1,41 @@
 import 'package:test/test.dart';
-import 'package:vaixell/src/config/presets.dart';
+import 'package:vaixell/src/rules/built_in_rules.dart';
+import 'package:vaixell/src/rules/rule.dart';
 import 'package:vaixell/vaixell.dart';
+
+import '../../helpers/severities.dart';
+
+final class const _OptInRule() extends Rule {
+  @override
+  String get id => 'opt-in';
+
+  @override
+  Severity get defaultSeverity => Severity.warning;
+
+  @override
+  bool get recommended => false;
+}
 
 void main() {
   group(Config, () {
-    test('recommended uses the recommended preset', () {
-      final config = Config.recommended();
-      expect(config.severities, equals(const Presets().all['recommended']));
+    test('recommended enables every rule at its default severity', () {
+      final config = Config.recommended(builtInRules);
+      expect(config.rules.map((r) => r.$1), builtInRules);
+      expect(severitiesOf(config), {
+        'parse-error': Severity.error,
+        for (final rule in builtInRules) rule.id: rule.defaultSeverity,
+      });
       expect(config.exclude, isEmpty);
       expect(config.excludes('lib/a.dart'), isFalse);
+    });
+
+    test('recommended leaves out entries that are not recommended', () {
+      final config = Config.recommended([...builtInRules, const _OptInRule()]);
+      expect(config.rules.map((r) => r.$1.id), isNot(contains('opt-in')));
+    });
+
+    test('recommended keeps the given root', () {
+      expect(Config.recommended(builtInRules, root: 'pkg').root, 'pkg');
     });
   });
 

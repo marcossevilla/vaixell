@@ -1,8 +1,7 @@
 import 'package:glob/glob.dart';
 import 'package:path/path.dart' as p;
 import 'package:vaixell/src/config/config.dart';
-import 'package:vaixell/src/config/presets.dart';
-import 'package:vaixell/src/rules/registry.dart';
+import 'package:vaixell/src/rules/rule.dart';
 import 'package:vaixell/src/source/source_tree.dart';
 import 'package:vaixell/src/violation/violation.dart';
 import 'package:yaml/yaml.dart';
@@ -14,20 +13,24 @@ import 'package:yaml/yaml.dart';
 class const ConfigLoader(
   /// The tree that holds the config files.
   final SourceTree tree,
+
+  /// The rules that configs can enable, in reporting order.
+  final List<RuleEntry> rules,
 ) {
-  /// Creates a loader that reads configs from [tree].
+  /// Creates a loader that reads configs from [tree] and configures
+  /// [rules]. Config can only name these rules and `parse-error`.
   this;
 
   /// The path of the root config file.
   static const String defaultPath = 'analysis_options.yaml';
 
-  /// Returns the config at [path] in [tree], or [Config.recommended] when
-  /// the file or its `vaixell:` key is missing.
+  /// Returns the config at [path] in [tree], or the [Config.recommended] one
+  /// for [rules] when the file or its `vaixell:` key is missing.
   ///
   /// Throws a [ConfigException] when the file isn't valid YAML or the
   /// `vaixell:` section is invalid.
   Future<Config> load({String path = defaultPath}) async =>
-      await loadIfPresent(path: path) ?? Config.recommended();
+      await loadIfPresent(path: path) ?? Config.recommended(rules);
 
   /// Returns the config at [path] in [tree], or `null` when the file or its
   /// `vaixell:` key is missing. An empty `vaixell:` key counts as present.
@@ -36,7 +39,7 @@ class const ConfigLoader(
   /// `vaixell:` section is invalid.
   Future<Config?> loadIfPresent({String path = defaultPath}) async {
     if (!await tree.exists(path)) return null;
-    return _ConfigFile(path).parse(await tree.read(path));
+    return _ConfigFile(path, rules).parse(await tree.read(path));
   }
 }
 
@@ -44,8 +47,12 @@ class const ConfigLoader(
 class const _ConfigFile(
   /// The path of the file, for error locations and the exclude root.
   final String path,
+
+  /// The rules config can enable.
+  final List<RuleEntry> entries,
 ) {
   static const List<String> _keys = ['include', 'rules', 'exclude'];
+  static const String _recommended = 'recommended';
   static const Map<String, Severity?> _severities = {
     'off': null,
     'warning': Severity.warning,
@@ -64,9 +71,7 @@ class const _ConfigFile(
     final root = _yaml(content);
     if (root is! YamlMap || !root.containsKey('vaixell')) return null;
     final section = root.nodes['vaixell']!;
-    if (section.value == null) {
-      return Config(severities: Config.recommended().severities, root: _root);
-    }
+    if (section.value == null) return Config.recommended(entries, root: _root);
     return _section(section);
   }
 
@@ -82,7 +87,7 @@ class const _ConfigFile(
     if (section is! YamlMap) {
       throw _error(section, '`vaixell` must be a map.');
     }
-    var presets = const [Presets.defaultPreset];
+    var presets = const [_recommended];
     var overrides = const <String, Severity?>{};
     var exclude = const <Glob>[];
     for (final MapEntry(:key, :value) in section.nodes.entries) {
@@ -102,24 +107,29 @@ class const _ConfigFile(
       }
     }
 
-    final all = const Presets().all;
-    final severities = <String, Severity>{
-      for (final preset in presets) ...all[preset]!,
+    final severities = <String, Severity?>{
+      if (presets.isNotEmpty)
+        for (final (rule, severity) in Config.recommended(entries).rules)
+          rule.id: severity,
+      ...overrides,
     };
-    overrides.forEach((rule, severity) {
-      if (severity == null) {
-        severities.remove(rule);
-      } else {
-        severities[rule] = severity;
-      }
-    });
-    severities.putIfAbsent(Config.parseErrorId, () => Severity.error);
-    return Config(severities: severities, exclude: exclude, root: _root);
+    return Config(
+      rules: [
+        for (final entry in entries)
+          if (severities[entry.id] case final severity?)
+            switch (entry) {
+              Rule() => (entry, severity),
+            },
+      ],
+      parseErrorSeverity: severities[Config.parseErrorId] ?? Severity.error,
+      exclude: exclude,
+      root: _root,
+    );
   }
 
   List<String> _include(YamlNode node) {
     final items = node is YamlList ? node.nodes : [node];
-    final available = const Presets().all.keys;
+    const available = [_recommended];
     return [
       for (final item in items)
         switch (item.value) {
@@ -142,10 +152,7 @@ class const _ConfigFile(
     if (node is! YamlMap) {
       throw _error(node, '`rules` must be a map of rule ids to severities.');
     }
-    final ids = [
-      Config.parseErrorId,
-      for (final rule in const RuleRegistry().all) rule.id,
-    ];
+    final ids = [Config.parseErrorId, for (final entry in entries) entry.id];
     final result = <String, Severity?>{};
     for (final MapEntry(:key, :value) in node.nodes.entries) {
       final rule = (key as YamlNode).value;
@@ -209,8 +216,9 @@ class const ConfigResolver(
   this;
 
   /// Returns the config for each package in [packages], relative to the
-  /// root, in order, or [Config.recommended] when no file up to the root has
-  /// a `vaixell:` key. Each file is read at most once per call.
+  /// root, in order, or the [Config.recommended] one for the loader's rules
+  /// when no file up to the root has a `vaixell:` key. Each file is read at
+  /// most once per call.
   ///
   /// Throws a [ConfigException] for the first invalid file on the way.
   Future<List<Config>> forPackages(List<String> packages) async {
@@ -229,7 +237,7 @@ class const ConfigResolver(
         () => loader.loadIfPresent(path: path),
       );
       if (config != null) return config;
-      if (dir.isEmpty) return Config.recommended();
+      if (dir.isEmpty) return Config.recommended(loader.rules);
     }
   }
 

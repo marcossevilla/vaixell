@@ -3,6 +3,7 @@ import 'package:vaixell/src/config/config.dart';
 import 'package:vaixell/src/config/config_loader.dart';
 import 'package:vaixell/src/discovery/package_discovery.dart';
 import 'package:vaixell/src/engine/package.dart';
+import 'package:vaixell/src/rules/built_in_rules.dart';
 import 'package:vaixell/src/source/source_tree.dart';
 
 /// Resolves the packages to check in a repository, each with its nearest
@@ -27,7 +28,7 @@ class const PackageResolver({
       PackageResolver(
         root: root,
         discovery: PackageDiscovery(tree),
-        configResolver: ConfigResolver(ConfigLoader(tree)),
+        configResolver: ConfigResolver(ConfigLoader(tree, builtInRules)),
       );
 
   /// Returns the packages at [paths], relative to [root], or the packages

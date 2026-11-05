@@ -5,7 +5,6 @@ import 'package:vaixell/src/engine/generated_files.dart';
 import 'package:vaixell/src/engine/package.dart';
 import 'package:vaixell/src/engine/violation_ids.dart';
 import 'package:vaixell/src/model/model.dart';
-import 'package:vaixell/src/rules/registry.dart';
 import 'package:vaixell/src/rules/rule.dart';
 import 'package:vaixell/src/source/source_tree.dart';
 import 'package:vaixell/src/violation/violation.dart';
@@ -27,13 +26,8 @@ class const Engine() {
   }) async {
     final violations = <Violation>[];
     for (final package in packages) {
-      final rules = [
-        for (final rule in const RuleRegistry().all)
-          if (package.config.severities[rule.id] case final severity?)
-            (rule, severity),
-      ];
       for (final path in await _dartFiles(tree, package)) {
-        violations.addAll(_check(package, path, await tree.read(path), rules));
+        violations.addAll(_check(package, path, await tree.read(path)));
       }
     }
     return violations..sort(_compare);
@@ -52,12 +46,7 @@ class const Engine() {
     ];
   }
 
-  List<Violation> _check(
-    Package package,
-    String path,
-    String content,
-    List<(Rule, Severity)> rules,
-  ) {
+  List<Violation> _check(Package package, String path, String content) {
     final file = const DartFileParser().parse(
       path: path,
       content: content,
@@ -65,7 +54,7 @@ class const Engine() {
     );
     final result = const AstBridge().resultOf(file);
     final found = switch (file.errors) {
-      [] => _findings(file, rules),
+      [] => _findings(file, package.config.rules),
       final errors => [_parseError(package, errors)],
     }..sort((a, b) => a.$3.offset.compareTo(b.$3.offset));
 
@@ -93,7 +82,7 @@ class const Engine() {
     final [first, ...rest] = errors;
     return (
       Config.parseErrorId,
-      package.config.severities[Config.parseErrorId] ?? Severity.error,
+      package.config.parseErrorSeverity,
       Finding(
         offset: first.offset,
         message:

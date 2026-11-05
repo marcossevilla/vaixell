@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 import 'package:test_descriptor/test_descriptor.dart' as d;
+import 'package:vaixell/src/rules/built_in_rules.dart';
 import 'package:vaixell/vaixell.dart';
 
 import '../../helpers/git_repo.dart';
@@ -345,7 +346,9 @@ workspace:
     });
 
     group('collaborators', () {
-      final packages = [Package(path: '', config: Config.recommended())];
+      final packages = [
+        Package(path: '', config: Config.recommended(builtInRules)),
+      ];
       const violation = Violation(
         id: 'top-level-function:lib/a.dart:foo',
         rule: 'top-level-function',

@@ -1,5 +1,7 @@
 import 'package:glob/glob.dart';
 import 'package:test/test.dart';
+import 'package:vaixell/src/rules/built_in_rules.dart';
+import 'package:vaixell/src/rules/top_level_function.dart';
 import 'package:vaixell/vaixell.dart';
 
 import '../../helpers/memory_source_tree.dart';
@@ -7,7 +9,9 @@ import '../../helpers/memory_source_tree.dart';
 Future<List<Violation>> _run(Map<String, String> files, {Config? config}) =>
     const Engine().run(
       tree: MemorySourceTree(files),
-      packages: [Package(path: '', config: config ?? Config.recommended())],
+      packages: [
+        Package(path: '', config: config ?? Config.recommended(builtInRules)),
+      ],
     );
 
 void main() {
@@ -126,16 +130,17 @@ class Foo {
       });
 
       test('uses the severity from the config', () async {
-        final violations = await _run({
-          'lib/a.dart': 'class {\n',
-        }, config: const Config(severities: {'parse-error': Severity.warning}));
+        final violations = await _run(
+          {'lib/a.dart': 'class {\n'},
+          config: const Config(rules: [], parseErrorSeverity: Severity.warning),
+        );
         expect(violations.single.severity, Severity.warning);
       });
 
-      test('is on even when the config leaves it out', () async {
+      test('is an error by default', () async {
         final violations = await _run({
           'lib/a.dart': 'class {\n',
-        }, config: const Config(severities: {}));
+        }, config: const Config(rules: []));
         expect(violations.single.severity, Severity.error);
       });
     });
@@ -157,7 +162,7 @@ class Foo {
       final violations = await _run({
         'lib/a.dart': 'void foo() {}\n',
         'lib/b.dart': 'class {\n',
-      }, config: const Config(severities: {'parse-error': Severity.error}));
+      }, config: const Config(rules: []));
       expect(violations.map((v) => v.rule), ['parse-error']);
     });
 
@@ -165,7 +170,7 @@ class Foo {
       final violations = await _run(
         {'lib/a.dart': 'void foo() {}\n'},
         config: const Config(
-          severities: {'top-level-function': Severity.warning},
+          rules: [(TopLevelFunctionRule(), Severity.warning)],
         ),
       );
       expect(violations.single.severity, equals(Severity.warning));
@@ -178,7 +183,7 @@ class Foo {
           'lib/legacy/b.dart': 'void foo() {}\n',
         },
         config: Config(
-          severities: Config.recommended().severities,
+          rules: Config.recommended(builtInRules).rules,
           exclude: [Glob('lib/legacy/**')],
         ),
       );
@@ -195,16 +200,16 @@ class Foo {
           'packages/b/test/b_test.dart': 'void t() {}\n',
         }),
         packages: [
-          Package(path: '', config: Config.recommended()),
+          Package(path: '', config: Config.recommended(builtInRules)),
           Package(
             path: 'packages/a',
             config: Config(
-              severities: const {'top-level-function': Severity.warning},
+              rules: const [(TopLevelFunctionRule(), Severity.warning)],
               exclude: [Glob('lib/legacy/**')],
               root: 'packages/a',
             ),
           ),
-          Package(path: 'packages/b', config: Config.recommended()),
+          Package(path: 'packages/b', config: Config.recommended(builtInRules)),
         ],
       );
       expect(

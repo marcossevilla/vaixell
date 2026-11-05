@@ -1,6 +1,7 @@
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 import 'package:test_descriptor/test_descriptor.dart' as d;
+import 'package:vaixell/src/rules/built_in_rules.dart';
 import 'package:vaixell/vaixell.dart';
 
 import '../../helpers/memory_source_tree.dart';
@@ -81,7 +82,9 @@ void main() {
     test('uses the given collaborators', () async {
       registerFallbackValue(Baseline([]));
       final tree = MemorySourceTree({});
-      final packages = [Package(path: 'p', config: Config.recommended())];
+      final packages = [
+        Package(path: 'p', config: Config.recommended(builtInRules)),
+      ];
       final packageResolver = _MockPackageResolver();
       final engine = _MockEngine();
       final baselineFile = _MockBaselineFile();

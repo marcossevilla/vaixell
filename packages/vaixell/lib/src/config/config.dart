@@ -1,14 +1,17 @@
 import 'package:glob/glob.dart';
-import 'package:vaixell/src/config/presets.dart';
+import 'package:vaixell/src/rules/rule.dart';
 import 'package:vaixell/src/violation/violation.dart';
 import 'package:yaml/yaml.dart';
 
 /// The resolved `vaixell:` configuration for a package.
 class const Config({
-  /// The severity of each enabled rule, by rule id.
+  /// The enabled rules, each with its severity, in reporting order.
   ///
   /// Rules that are missing are off.
-  required final Map<String, Severity> severities,
+  required final List<(Rule, Severity)> rules,
+
+  /// The severity of syntax errors, which are always reported.
+  final Severity parseErrorSeverity = Severity.error,
 
   /// Globs, relative to [root], for files that aren't checked.
   final List<Glob> exclude = const [],
@@ -17,14 +20,25 @@ class const Config({
   /// repository root, or `''` for the root itself.
   final String root = '',
 }) {
-  /// Creates a config that runs the rules in [severities] and skips files
-  /// that match any of the [exclude] globs, which are relative to [root].
+  /// Creates a config that runs [rules] and skips files that match any of
+  /// the [exclude] globs, which are relative to [root].
   this;
 
-  /// Creates the config used when there is no `vaixell:` section, which is
-  /// the `recommended` preset.
-  factory recommended() =>
-      Config(severities: const Presets().all[Presets.defaultPreset]!);
+  /// Creates the `recommended` config for the [entries] a caller runs: every
+  /// entry at its default severity, except those that aren't
+  /// [RuleEntry.recommended].
+  ///
+  /// It's the config used when there's no `vaixell:` section.
+  factory recommended(List<RuleEntry> entries, {String root = ''}) => Config(
+    rules: [
+      for (final entry in entries)
+        if (entry.recommended)
+          switch (entry) {
+            Rule() => (entry, entry.defaultSeverity),
+          },
+    ],
+    root: root,
+  );
 
   /// The id of the syntax errors the engine reports. It isn't a rule, but
   /// its severity is set under `rules:` like one.

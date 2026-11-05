@@ -1,10 +1,14 @@
 import 'package:test/test.dart';
+import 'package:vaixell/src/rules/built_in_rules.dart';
+import 'package:vaixell/src/rules/rule.dart';
 import 'package:vaixell/vaixell.dart';
 
 import '../../helpers/memory_source_tree.dart';
+import '../../helpers/severities.dart';
 
 /// The recommended severities, as a getter so each case gets its own map.
-Map<String, Severity> get _recommended => Config.recommended().severities;
+Map<String, Severity> get _recommended =>
+    severitiesOf(Config.recommended(builtInRules));
 
 /// Returns [_recommended] with [overrides] applied, where `null` turns a rule
 /// off.
@@ -14,10 +18,20 @@ Map<String, Severity> _recommendedWith(Map<String, Severity?> overrides) => {
 };
 
 ConfigResolver _resolver(Map<String, String> files) =>
-    ConfigResolver(ConfigLoader(MemorySourceTree(files)));
+    ConfigResolver(ConfigLoader(MemorySourceTree(files), builtInRules));
 
-Future<Config> _load(String? yaml) =>
-    ConfigLoader(MemorySourceTree({'analysis_options.yaml': ?yaml})).load();
+Future<Config> _load(String? yaml) => ConfigLoader(
+  MemorySourceTree({'analysis_options.yaml': ?yaml}),
+  builtInRules,
+).load();
+
+final class const _OptInRule() extends Rule {
+  @override
+  String get id => 'opt-in';
+
+  @override
+  bool get recommended => false;
+}
 
 void main() {
   group(ConfigLoader, () {
@@ -70,7 +84,7 @@ void main() {
       for (final MapEntry(key: name, value: (yaml, severities))
           in cases.entries) {
         test(name, () async {
-          expect((await _load(yaml)).severities, equals(severities));
+          expect(severitiesOf(await _load(yaml)), equals(severities));
         });
       }
 
@@ -91,7 +105,10 @@ void main() {
             {'analysis_options.yaml': 'linter: {}\n'},
           ]) {
             expect(
-              await ConfigLoader(MemorySourceTree(files)).loadIfPresent(),
+              await ConfigLoader(
+                MemorySourceTree(files),
+                builtInRules,
+              ).loadIfPresent(),
               isNull,
               reason: '$files',
             );
@@ -102,9 +119,11 @@ void main() {
           final tree = MemorySourceTree({
             'pkg/analysis_options.yaml': 'vaixell:\n',
           });
-          final config = await ConfigLoader(tree)
-              .loadIfPresent(path: 'pkg/analysis_options.yaml');
-          expect(config!.severities, equals(_recommended));
+          final config = await ConfigLoader(
+            tree,
+            builtInRules,
+          ).loadIfPresent(path: 'pkg/analysis_options.yaml');
+          expect(severitiesOf(config!), equals(_recommended));
           expect(config.root, equals('pkg'));
         });
       });
@@ -113,8 +132,10 @@ void main() {
         final tree = MemorySourceTree({
           'pkg/analysis_options.yaml': 'vaixell:\n  exclude: [lib/legacy/**]\n',
         });
-        final config = await ConfigLoader(tree)
-            .load(path: 'pkg/analysis_options.yaml');
+        final config = await ConfigLoader(
+          tree,
+          builtInRules,
+        ).load(path: 'pkg/analysis_options.yaml');
         expect(config.root, equals('pkg'));
         expect(config.excludes('pkg/lib/legacy/a.dart'), isTrue);
         expect(config.excludes('pkg/lib/a.dart'), isFalse);
@@ -127,7 +148,7 @@ void main() {
           'analysis_options.yaml':
               'include: package:foo/analysis_options.yaml\n',
         });
-        await ConfigLoader(tree).load();
+        await ConfigLoader(tree, builtInRules).load();
         expect(tree.reads, equals(['analysis_options.yaml']));
       });
 
@@ -135,9 +156,11 @@ void main() {
         final tree = MemorySourceTree({
           'pkg/analysis_options.yaml': 'vaixell:\n  include: []\n',
         });
-        final config = await ConfigLoader(tree)
-            .load(path: 'pkg/analysis_options.yaml');
-        expect(config.severities.keys, equals(['parse-error']));
+        final config = await ConfigLoader(
+          tree,
+          builtInRules,
+        ).load(path: 'pkg/analysis_options.yaml');
+        expect(severitiesOf(config).keys, equals(['parse-error']));
       });
     });
 
@@ -223,6 +246,53 @@ void main() {
         });
       }
     });
+
+    group('injected rules', () {
+      Future<Config> load(String yaml, List<RuleEntry> rules) => ConfigLoader(
+        MemorySourceTree({'analysis_options.yaml': yaml}),
+        rules,
+      ).load();
+
+      test('an entry that is not recommended is off by default', () async {
+        final config = await load('vaixell: {}\n', [
+          ...builtInRules,
+          const _OptInRule(),
+        ]);
+        expect(severitiesOf(config), isNot(contains('opt-in')));
+        expect(severitiesOf(config), contains('top-level-function'));
+      });
+
+      test('an entry that is not recommended can be enabled by id', () async {
+        final config = await load('vaixell:\n  rules:\n    opt-in: error\n', [
+          ...builtInRules,
+          const _OptInRule(),
+        ]);
+        expect(severitiesOf(config)['opt-in'], Severity.error);
+        expect(config.rules.last.$1, isA<_OptInRule>());
+      });
+
+      test('a removed entry is an unknown rule', () async {
+        await expectLater(
+          load('vaixell:\n  rules:\n    raw-json: error\n', [
+            for (final rule in builtInRules)
+              if (rule.id != 'raw-json') rule,
+          ]),
+          throwsA(
+            isA<ConfigException>().having(
+              (e) => e.message,
+              'message',
+              startsWith('Unknown rule `raw-json`.'),
+            ),
+          ),
+        );
+      });
+
+      test('the rules follow the order of the entries', () async {
+        final reversed = builtInRules.reversed.toList();
+        final config = await load('vaixell: {}\n', reversed);
+        expect(config.rules.map((r) => r.$1), reversed);
+      });
+    });
   });
 
   group(ConfigResolver, () {
@@ -232,10 +302,9 @@ void main() {
     Future<Severity?> severityFor(
       Map<String, String> files,
       String package,
-    ) async =>
-        (await _resolver(files).forPackages([package]))
-            .single
-            .severities['top-level-function'];
+    ) async => severitiesOf(
+      (await _resolver(files).forPackages([package])).single,
+    )['top-level-function'];
 
     test('uses recommended without any config', () async {
       expect(await severityFor({}, 'packages/a'), equals(Severity.error));
@@ -267,12 +336,15 @@ void main() {
       final [config] = await _resolver(files).forPackages(['packages/a']);
       expect(config.root, equals('packages'));
       expect(config.exclude, isEmpty);
-      expect(config.severities['top-level-function'], equals(Severity.warning));
+      expect(
+        severitiesOf(config)['top-level-function'],
+        equals(Severity.warning),
+      );
     });
 
     test('reads each file once', () async {
       final tree = MemorySourceTree({'analysis_options.yaml': warning});
-      final resolver = ConfigResolver(ConfigLoader(tree));
+      final resolver = ConfigResolver(ConfigLoader(tree, builtInRules));
       final configs = await resolver.forPackages([
         'packages/a',
         'packages/b',
@@ -284,11 +356,11 @@ void main() {
 
     test('reads the files again on the next call', () async {
       final tree = MemorySourceTree({'analysis_options.yaml': warning});
-      final resolver = ConfigResolver(ConfigLoader(tree));
+      final resolver = ConfigResolver(ConfigLoader(tree, builtInRules));
       await resolver.forPackages(['packages/a']);
       tree.files['analysis_options.yaml'] = off;
       final [config] = await resolver.forPackages(['packages/a']);
-      expect(config.severities, isNot(contains('top-level-function')));
+      expect(severitiesOf(config), isNot(contains('top-level-function')));
       expect(tree.reads, hasLength(2));
     });
 
