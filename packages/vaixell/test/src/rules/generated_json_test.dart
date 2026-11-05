@@ -1,15 +1,19 @@
 import 'package:test/test.dart';
 import 'package:vaixell/src/rules/generated_json.dart';
+import 'package:vaixell/testing.dart';
 import 'package:vaixell/vaixell.dart';
 
-import '../../helpers/parse.dart';
+const _tester = RuleTester();
 
 void main() {
   group(GeneratedJsonRule, () {
     const rule = GeneratedJsonRule();
 
     List<String?> symbols(String source, {String path = 'lib/a.dart'}) =>
-        rule.check(parse(source, path: path)).map((f) => f.symbol).toList();
+        _tester
+            .checkSource(rule, source, path: path)
+            .map((f) => f.symbol)
+            .toList();
 
     test('has the expected id and defaults to warning', () {
       expect(rule.id, equals('generated-json'));
@@ -24,7 +28,7 @@ class User {
   Map<String, dynamic> toJson() => {};
 }
 ''';
-        final findings = rule.check(parse(source));
+        final findings = _tester.checkSource(rule, source);
         expect(
           findings.map((f) => f.symbol),
           equals(['User.fromJson', 'User.toJson']),
@@ -41,7 +45,7 @@ class User {
   factory fromJson(Map<String, Object?> json) => User();
 }
 ''';
-        final findings = rule.check(parse(source));
+        final findings = _tester.checkSource(rule, source);
         expect(findings.map((f) => f.symbol), equals(['User.fromJson']));
         expect(findings.single.offset, equals(source.indexOf('fromJson')));
       });
@@ -121,15 +125,13 @@ abstract class Block {
       });
 
       test('explains that delegating members need the annotation', () {
-        final findings = rule.check(
-          parse(r'''
+        final findings = _tester.checkSource(rule, r'''
 @freezed
 abstract class User with _$User {
   factory User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);
   Map<String, dynamic> toJson() => _$UserToJson(this);
 }
-'''),
-        );
+''');
         expect(
           findings.first.message,
           equals(
@@ -257,14 +259,12 @@ class _User {
 '''),
           isEmpty,
         );
-        final findings = rule.check(
-          parse('''
+        final findings = _tester.checkSource(rule, '''
 @JsonSerializable()
 class __User {
   factory __User.fromJson(Map<String, dynamic> json) => __User();
 }
-'''),
-        );
+''');
         expect(findings.map((f) => f.symbol), equals(['__User.fromJson']));
         expect(
           findings.single.message,
@@ -277,15 +277,13 @@ class __User {
       });
 
       test('explains how to re-enable a disabled generated function', () {
-        final findings = rule.check(
-          parse('''
+        final findings = _tester.checkSource(rule, '''
 @JsonSerializable(createFactory: false, createToJson: false)
 class User {
   factory User.fromJson(Map<String, dynamic> json) => User();
   Map<String, dynamic> toJson() => {};
 }
-'''),
-        );
+''');
         expect(
           findings.first.message,
           equals(
@@ -307,15 +305,13 @@ class User {
       });
 
       test('explains how to delegate', () {
-        final findings = rule.check(
-          parse('''
+        final findings = _tester.checkSource(rule, '''
 @JsonSerializable()
 class User {
   factory User.fromJson(Map<String, dynamic> json) => User();
   Map<String, dynamic> toJson() => {};
 }
-'''),
-        );
+''');
         expect(
           findings.first.message,
           equals(
@@ -336,14 +332,12 @@ class User {
     });
 
     test('explains how to annotate an unannotated class', () {
-      final findings = rule.check(
-        parse('''
+      final findings = _tester.checkSource(rule, '''
 class User {
   factory User.fromJson(Map<String, dynamic> json) => User();
   Map<String, dynamic> toJson() => {};
 }
-'''),
-      );
+''');
       expect(
         findings.first.message,
         equals(
@@ -364,13 +358,11 @@ class User {
 
     group('static fromJson methods', () {
       test('are flagged on unannotated classes', () {
-        final findings = rule.check(
-          parse('''
+        final findings = _tester.checkSource(rule, '''
 class User {
   static User fromJson(Map<String, dynamic> json) => User();
 }
-'''),
-        );
+''');
         expect(findings.map((f) => f.symbol), equals(['User.fromJson']));
         expect(
           findings.single.message,
@@ -384,14 +376,12 @@ class User {
 
       test('name the generated function without leading underscores', () {
         expect(
-          rule
-              .check(
-                parse('''
+          _tester
+              .checkSource(rule, '''
 class _User {
   static _User fromJson(Map<String, dynamic> json) => _User();
 }
-'''),
-              )
+''')
               .single
               .message,
           endsWith(r'=> _$UserFromJson(json);`.'),
@@ -484,8 +474,7 @@ class D<T> {
     });
 
     test('flags fromJson and toJson in enums, even when they delegate', () {
-      final findings = rule.check(
-        parse(r'''
+      final findings = _tester.checkSource(rule, r'''
 @JsonEnum()
 enum Status {
   active;
@@ -494,8 +483,7 @@ enum Status {
   String toJson() => _$StatusToJson(this);
   String get toJson => name;
 }
-'''),
-      );
+''');
       expect(
         findings.map((f) => f.symbol),
         equals(['Status.fromJson', 'Status.fromJson', 'Status.toJson']),
