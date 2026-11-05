@@ -51,6 +51,7 @@ class const Engine() {
       path: path,
       content: content,
       packageRoot: package.path,
+      packageName: package.name,
     );
     final result = const AstBridge().resultOf(file);
     final found = switch (file.errors) {

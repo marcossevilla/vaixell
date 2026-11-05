@@ -30,6 +30,16 @@ final class const _FileRule({final bool skips = false}) extends Rule {
   ];
 }
 
+/// Reports the resolved path of every import.
+final class const _ImportRule() extends Rule with ChecksImports {
+  @override
+  String get id => 'import';
+
+  @override
+  Finding? checkImport(DartFile file, Import import) =>
+      Finding.at(import, message: '${import.path}');
+}
+
 void main() {
   group(Engine, () {
     test('reports a top-level function and a broken file', () async {
@@ -262,6 +272,27 @@ class Foo {
         config: const Config(rules: [(_FileRule(skips: true), Severity.error)]),
       );
       expect(violations, isEmpty);
+    });
+
+    test("resolves imports of the package's own name", () async {
+      final violations = await const Engine().run(
+        tree: MemorySourceTree({
+          'packages/app/lib/a.dart':
+              "import 'package:app/src/b.dart';\n"
+              "import 'package:other/c.dart';\n",
+        }),
+        packages: [
+          const Package(
+            path: 'packages/app',
+            name: 'app',
+            config: Config(rules: [(_ImportRule(), Severity.error)]),
+          ),
+        ],
+      );
+      expect(violations.map((v) => v.message), [
+        'packages/app/lib/src/b.dart',
+        'null',
+      ]);
     });
   });
 }

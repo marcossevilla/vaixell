@@ -35,7 +35,8 @@ class const PackageResolver({
   );
 
   /// Returns the packages at [paths], relative to [root], or the packages
-  /// found by [discovery] when [paths] is empty.
+  /// found by [discovery] when [paths] is empty, each with the name in its
+  /// `pubspec.yaml`.
   ///
   /// Throws a [ConfigException] when discovery or a config fails.
   Future<List<Package>> call(List<String> paths) async {
@@ -45,7 +46,11 @@ class const PackageResolver({
     final configs = await configResolver.forPackages(dirs);
     return [
       for (final (i, dir) in dirs.indexed)
-        Package(path: dir, config: configs[i]),
+        Package(
+          path: dir,
+          config: configs[i],
+          name: await discovery.nameOf(dir),
+        ),
     ];
   }
 

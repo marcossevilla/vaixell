@@ -44,6 +44,11 @@ void main() {
       expect(severitiesOf(a.config), contains('top-level-variable'));
     });
 
+    test('names each package after its pubspec', () async {
+      expect((await resolve([])).map((p) => p.name), ['w', 'a']);
+      expect((await resolve(['packages/a'])).map((p) => p.name), ['a']);
+    });
+
     test('normalizes and dedupes the given paths', () async {
       final packages = await resolve([
         'packages/a',
@@ -65,6 +70,7 @@ void main() {
       final a = Config.recommended(Recommended.rules);
       const b = Config(rules: []);
       when(discovery.discover).thenAnswer((_) async => ['x', 'y']);
+      when(() => discovery.nameOf(any())).thenAnswer((_) async => 'n');
       when(() => configResolver.forPackages(['x', 'y']))
           .thenAnswer((_) async => [a, b]);
 
@@ -74,7 +80,10 @@ void main() {
         configResolver: configResolver,
       )([]);
 
-      expect(packages.map((p) => (p.path, p.config)), [('x', a), ('y', b)]);
+      expect(packages.map((p) => (p.path, p.config, p.name)), [
+        ('x', a, 'n'),
+        ('y', b, 'n'),
+      ]);
     });
 
     test('skips discovery when paths are given', () async {
@@ -82,6 +91,7 @@ void main() {
       final configResolver = _MockConfigResolver();
       when(() => configResolver.forPackages(['x']))
           .thenAnswer((_) async => [Config.recommended(Recommended.rules)]);
+      when(() => discovery.nameOf('x')).thenAnswer((_) async => null);
 
       await PackageResolver(
         root: '/repo',

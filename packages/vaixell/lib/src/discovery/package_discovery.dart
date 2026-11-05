@@ -45,6 +45,21 @@ class const PackageDiscovery(
     return found.isEmpty ? [''] : (found.toList()..sort());
   }
 
+  /// Returns the `name` in the `pubspec.yaml` of the package at [dir], or
+  /// `null` when the file is missing or isn't valid, or has no string name.
+  Future<String?> nameOf(String dir) async {
+    final path = p.posix.join(dir, _pubspec);
+    if (!await tree.exists(path)) return null;
+    try {
+      return switch (loadYaml(await tree.read(path))) {
+        {'name': final String name} => name,
+        _ => null,
+      };
+    } on YamlException {
+      return null;
+    }
+  }
+
   /// Returns the directories under [parents] that have a `pubspec.yaml`.
   Future<List<String>> _packagesIn(List<String> parents) async => [
     for (final parent in parents)
