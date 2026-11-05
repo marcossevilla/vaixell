@@ -271,6 +271,22 @@ void main() {
     });
 
     for (final library in ['lib/vaixell.dart', 'lib/testing.dart']) {
+      test('$library shows what it exports', () {
+        final unit = parseString(content: File(library).readAsStringSync())
+            .unit;
+        final violations = [
+          for (final directive in unit.directives.whereType<ExportDirective>())
+            if (directive.combinators.whereType<ShowCombinator>().isEmpty)
+              directive.uri.stringValue,
+        ];
+
+        expect(
+          violations,
+          isEmpty,
+          reason: 'The audit below only checks the names an export shows.',
+        );
+      });
+
       test('$library exposes no analyzer or yaml types', () {
         final declared = _declaredTypes();
         final violations = <String>[];
