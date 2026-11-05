@@ -254,15 +254,15 @@ abstract interface class Import implements Reportable {
 
 ## Wiring rules in
 
-### `builtInRules` and injection ([#42](https://github.com/marcossevilla/vaixell/issues/42), [#48](https://github.com/marcossevilla/vaixell/issues/48))
+### `Recommended.rules` and injection ([#42](https://github.com/marcossevilla/vaixell/issues/42), [#48](https://github.com/marcossevilla/vaixell/issues/48))
 
 The caller passes a `List<RuleEntry>`. `package:vaixell` never picks the rule set for them.
 
-- **`builtInRules`:** a `const List<RuleEntry>` in reporting order, without `parse-error`. It replaces `RuleRegistry`. Callers extend it (`[...builtInRules, myRule]`) or filter it by `id`. Removing an entry makes its id unknown to that executable.
+- **`Recommended.rules`:** a `static const List<RuleEntry>` in reporting order, without `parse-error`, on a class so it stays clear of `top-level-variable`. The `recommended` preset enables its entries. It replaces `RuleRegistry`. Callers extend it (`[...Recommended.rules, myRule]`) or filter it by `id`. Removing an entry makes its id unknown to that executable.
 - **Required at every step:** `Check(rules:)` and `WriteBaseline(rules:)` pass it to `PackageResolver.fromTree(rules:)`, which passes it to `ConfigLoader(tree, rules)`.
 - **`Config`** holds the configured `(Rule, Severity)` pairs of a package instead of severities by id. The loader builds them, running each factory once.
 - **`Engine`** stays `const Engine()`. It runs the rules each package's config carries, plus `parse-error`. `Check` and `WriteBaseline` accept an engine only as a test seam.
-- **CLI:** `VaixellCommandRunner({List<RuleEntry> rules = builtInRules})` passes the list to `CheckCommand(rules:)`, which requires it. `bin/vaixell.dart` uses the default.
+- **CLI:** `VaixellCommandRunner({List<RuleEntry> rules = Recommended.rules})` passes the list to `CheckCommand(rules:)`, which requires it. `bin/vaixell.dart` uses the default.
 - **`Package`** also carries its `pubspec.yaml` name, so the model can resolve own-package imports.
 
 ### Presets, unknown ids and `parse-error` ([#39](https://github.com/marcossevilla/vaixell/issues/39))
@@ -317,7 +317,7 @@ test('flags Flutter in the domain layer', () {
 | `Rule.check(ParsedFile)`                                       | `Rule.check(DartFile)`                                                                                                                            |
 | `Rule.checksFilesWithErrors`                                   | removed; `parse-error` is the engine's                                                                                                            |
 | `ParsedFile`, `enclosing_declaration.dart`                     | removed, replaced by the model                                                                                                                    |
-| `RuleRegistry`                                                 | `builtInRules`                                                                                                                                    |
+| `RuleRegistry`                                                 | `Recommended.rules`                                                                                                                               |
 | `Presets`                                                      | `recommended` derived from the injected entries                                                                                                   |
 | `Config.severities`                                            | configured `(Rule, Severity)` pairs                                                                                                               |
 | `ConfigLoader(tree)`, `PackageResolver.fromTree(root:, tree:)` | add a required `rules`                                                                                                                            |

@@ -9,7 +9,10 @@ Future<List<Violation>> _run(Map<String, String> files, {Config? config}) =>
     const Engine().run(
       tree: MemorySourceTree(files),
       packages: [
-        Package(path: '', config: config ?? Config.recommended(builtInRules)),
+        Package(
+          path: '',
+          config: config ?? Config.recommended(Recommended.rules),
+        ),
       ],
     );
 
@@ -196,7 +199,7 @@ class Foo {
           'lib/legacy/b.dart': 'void foo() {}\n',
         },
         config: Config(
-          rules: Config.recommended(builtInRules).rules,
+          rules: Config.recommended(Recommended.rules).rules,
           exclude: [Glob('lib/legacy/**')],
         ),
       );
@@ -213,7 +216,7 @@ class Foo {
           'packages/b/test/b_test.dart': 'void t() {}\n',
         }),
         packages: [
-          Package(path: '', config: Config.recommended(builtInRules)),
+          Package(path: '', config: Config.recommended(Recommended.rules)),
           Package(
             path: 'packages/a',
             config: Config(
@@ -222,7 +225,10 @@ class Foo {
               root: 'packages/a',
             ),
           ),
-          Package(path: 'packages/b', config: Config.recommended(builtInRules)),
+          Package(
+            path: 'packages/b',
+            config: Config.recommended(Recommended.rules),
+          ),
         ],
       );
       expect(

@@ -22,13 +22,13 @@ class VaixellCommandRunner extends CompletionCommandRunner<int> {
   /// auto-install. It defaults to `true` when stdout is a terminal and the
   /// `CI` environment variable is not set.
   ///
-  /// `vaixell check` runs [rules], which are vaixell's [builtInRules] by
+  /// `vaixell check` runs [rules], which are vaixell's [Recommended.rules] by
   /// default.
   new({
     Logger? logger,
     PubUpdater? pubUpdater,
     bool? interactive,
-    List<RuleEntry> rules = builtInRules,
+    List<RuleEntry> rules = Recommended.rules,
   }) : _logger = logger ?? Logger(),
        _pubUpdater = pubUpdater ?? PubUpdater(),
        _interactive =

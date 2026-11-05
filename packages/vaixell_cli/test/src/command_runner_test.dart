@@ -173,7 +173,7 @@ void main() {
         () => VaixellCommandRunner(
           logger: bufferedLogger(out: out, err: StringBuffer()),
           interactive: false,
-          rules: [...builtInRules, const _ClassRule()],
+          rules: [...Recommended.rules, const _ClassRule()],
         ).run(['check']),
         getCurrentDirectory: () => Directory(d.sandbox),
       );

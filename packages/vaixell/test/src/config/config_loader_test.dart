@@ -6,7 +6,7 @@ import '../../helpers/severities.dart';
 
 /// The recommended severities, as a getter so each case gets its own map.
 Map<String, Severity> get _recommended =>
-    severitiesOf(Config.recommended(builtInRules));
+    severitiesOf(Config.recommended(Recommended.rules));
 
 /// Returns [_recommended] with [overrides] applied, where `null` turns a rule
 /// off.
@@ -16,11 +16,11 @@ Map<String, Severity> _recommendedWith(Map<String, Severity?> overrides) => {
 };
 
 ConfigResolver _resolver(Map<String, String> files) =>
-    ConfigResolver(ConfigLoader(MemorySourceTree(files), builtInRules));
+    ConfigResolver(ConfigLoader(MemorySourceTree(files), Recommended.rules));
 
 Future<Config> _load(String? yaml) => ConfigLoader(
   MemorySourceTree({'analysis_options.yaml': ?yaml}),
-  builtInRules,
+  Recommended.rules,
 ).load();
 
 final class const _OptInRule() extends Rule {
@@ -105,7 +105,7 @@ void main() {
             expect(
               await ConfigLoader(
                 MemorySourceTree(files),
-                builtInRules,
+                Recommended.rules,
               ).loadIfPresent(),
               isNull,
               reason: '$files',
@@ -119,7 +119,7 @@ void main() {
           });
           final config = await ConfigLoader(
             tree,
-            builtInRules,
+            Recommended.rules,
           ).loadIfPresent(path: 'pkg/analysis_options.yaml');
           expect(severitiesOf(config!), equals(_recommended));
           expect(config.root, equals('pkg'));
@@ -132,7 +132,7 @@ void main() {
         });
         final config = await ConfigLoader(
           tree,
-          builtInRules,
+          Recommended.rules,
         ).load(path: 'pkg/analysis_options.yaml');
         expect(config.root, equals('pkg'));
         expect(config.excludes('pkg/lib/legacy/a.dart'), isTrue);
@@ -146,7 +146,7 @@ void main() {
           'analysis_options.yaml':
               'include: package:foo/analysis_options.yaml\n',
         });
-        await ConfigLoader(tree, builtInRules).load();
+        await ConfigLoader(tree, Recommended.rules).load();
         expect(tree.reads, equals(['analysis_options.yaml']));
       });
 
@@ -156,7 +156,7 @@ void main() {
         });
         final config = await ConfigLoader(
           tree,
-          builtInRules,
+          Recommended.rules,
         ).load(path: 'pkg/analysis_options.yaml');
         expect(severitiesOf(config).keys, equals(['parse-error']));
       });
@@ -253,7 +253,7 @@ void main() {
 
       test('an entry that is not recommended is off by default', () async {
         final config = await load('vaixell: {}\n', [
-          ...builtInRules,
+          ...Recommended.rules,
           const _OptInRule(),
         ]);
         expect(severitiesOf(config), isNot(contains('opt-in')));
@@ -262,7 +262,7 @@ void main() {
 
       test('an entry that is not recommended can be enabled by id', () async {
         final config = await load('vaixell:\n  rules:\n    opt-in: error\n', [
-          ...builtInRules,
+          ...Recommended.rules,
           const _OptInRule(),
         ]);
         expect(severitiesOf(config)['opt-in'], Severity.error);
@@ -272,7 +272,7 @@ void main() {
       test('a removed entry is an unknown rule', () async {
         await expectLater(
           load('vaixell:\n  rules:\n    raw-json: error\n', [
-            for (final rule in builtInRules)
+            for (final rule in Recommended.rules)
               if (rule.id != 'raw-json') rule,
           ]),
           throwsA(
@@ -286,7 +286,7 @@ void main() {
       });
 
       test('the rules follow the order of the entries', () async {
-        final reversed = builtInRules.reversed.toList();
+        final reversed = Recommended.rules.reversed.toList();
         final config = await load('vaixell: {}\n', reversed);
         expect(config.rules.map((r) => r.$1), reversed);
       });
@@ -342,7 +342,7 @@ void main() {
 
     test('reads each file once', () async {
       final tree = MemorySourceTree({'analysis_options.yaml': warning});
-      final resolver = ConfigResolver(ConfigLoader(tree, builtInRules));
+      final resolver = ConfigResolver(ConfigLoader(tree, Recommended.rules));
       final configs = await resolver.forPackages([
         'packages/a',
         'packages/b',
@@ -354,7 +354,7 @@ void main() {
 
     test('reads the files again on the next call', () async {
       final tree = MemorySourceTree({'analysis_options.yaml': warning});
-      final resolver = ConfigResolver(ConfigLoader(tree, builtInRules));
+      final resolver = ConfigResolver(ConfigLoader(tree, Recommended.rules));
       await resolver.forPackages(['packages/a']);
       tree.files['analysis_options.yaml'] = off;
       final [config] = await resolver.forPackages(['packages/a']);

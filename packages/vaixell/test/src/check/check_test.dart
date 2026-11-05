@@ -25,7 +25,7 @@ void main() {
       String? gitDiff,
       String? baseline,
       String? root,
-    }) => Check(rules: builtInRules, root: root ?? d.sandbox)(
+    }) => Check(rules: Recommended.rules, root: root ?? d.sandbox)(
       paths: paths,
       gitDiff: gitDiff,
       baseline: baseline,
@@ -75,7 +75,7 @@ void main() {
       test('reads the files from the given tree', () async {
         final tree = MemorySourceTree({'lib/c.dart': 'void c() {}\n'});
         final report = await Check(
-          rules: builtInRules,
+          rules: Recommended.rules,
           root: d.sandbox,
           tree: tree,
         )();
@@ -202,7 +202,7 @@ workspace:
       setUp(() => writeLib({'a.dart': 'void foo() {}\nvoid bar() {}\n'}));
 
       test('a fresh baseline suppresses everything', () async {
-        await WriteBaseline(rules: builtInRules, root: d.sandbox)(
+        await WriteBaseline(rules: Recommended.rules, root: d.sandbox)(
           'baseline.json',
         );
         final report = await check(baseline: 'baseline.json');
@@ -213,7 +213,7 @@ workspace:
       });
 
       test('reports new violations and stale entries', () async {
-        await WriteBaseline(rules: builtInRules, root: d.sandbox)(
+        await WriteBaseline(rules: Recommended.rules, root: d.sandbox)(
           'baseline.json',
         );
         await writeLib({'a.dart': 'void foo() {}\nvoid baz() {}\n'});
@@ -354,7 +354,7 @@ workspace:
 
     group('collaborators', () {
       final packages = [
-        Package(path: '', config: Config.recommended(builtInRules)),
+        Package(path: '', config: Config.recommended(Recommended.rules)),
       ];
       const violation = Violation(
         id: 'top-level-function:lib/a.dart:foo',
@@ -399,7 +399,7 @@ workspace:
       });
 
       Check build() => Check(
-        rules: builtInRules,
+        rules: Recommended.rules,
         root: '/repo',
         tree: tree,
         git: git,

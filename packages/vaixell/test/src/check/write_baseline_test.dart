@@ -21,7 +21,7 @@ void main() {
 
     test('writes the violation ids and returns the baseline', () async {
       final baseline = await WriteBaseline(
-        rules: builtInRules,
+        rules: Recommended.rules,
         root: d.sandbox,
       )('baseline.json');
       expect(
@@ -51,7 +51,7 @@ void main() {
         d.dir('lib', [d.file('b.dart', 'void b() {}\n')]),
       ]).create();
       final baseline = await WriteBaseline(
-        rules: builtInRules,
+        rules: Recommended.rules,
         root: d.sandbox,
       )('baseline.json', paths: ['packages/b']);
       expect(
@@ -63,7 +63,7 @@ void main() {
     test('reads the files from the given tree', () async {
       final tree = MemorySourceTree({'lib/c.dart': 'void c() {}\n'});
       final baseline = await WriteBaseline(
-        rules: builtInRules,
+        rules: Recommended.rules,
         root: d.sandbox,
         tree: tree,
       )('baseline.json');
@@ -77,7 +77,9 @@ void main() {
     test('throws a $ConfigException on an invalid config', () async {
       await d.file('analysis_options.yaml', 'vaixell:\n  rulez: {}\n').create();
       await expectLater(
-        WriteBaseline(rules: builtInRules, root: d.sandbox)('baseline.json'),
+        WriteBaseline(rules: Recommended.rules, root: d.sandbox)(
+          'baseline.json',
+        ),
         throwsA(isA<ConfigException>()),
       );
       await d.nothing('baseline.json').validate();
@@ -87,7 +89,7 @@ void main() {
       registerFallbackValue(Baseline([]));
       final tree = MemorySourceTree({});
       final packages = [
-        Package(path: 'p', config: Config.recommended(builtInRules)),
+        Package(path: 'p', config: Config.recommended(Recommended.rules)),
       ];
       final packageResolver = _MockPackageResolver();
       final engine = _MockEngine();
@@ -109,7 +111,7 @@ void main() {
       when(() => baselineFile.write(any(), any())).thenAnswer((_) async {});
 
       final baseline = await WriteBaseline(
-        rules: builtInRules,
+        rules: Recommended.rules,
         root: '/repo',
         tree: tree,
         packageResolver: packageResolver,

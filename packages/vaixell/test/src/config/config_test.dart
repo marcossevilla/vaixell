@@ -17,23 +17,26 @@ final class const _OptInRule() extends Rule {
 void main() {
   group(Config, () {
     test('recommended enables every rule at its default severity', () {
-      final config = Config.recommended(builtInRules);
-      expect(config.rules.map((r) => r.$1), builtInRules);
+      final config = Config.recommended(Recommended.rules);
+      expect(config.rules.map((r) => r.$1), Recommended.rules);
       expect(severitiesOf(config), {
         'parse-error': Severity.error,
-        for (final rule in builtInRules) rule.id: rule.defaultSeverity,
+        for (final rule in Recommended.rules) rule.id: rule.defaultSeverity,
       });
       expect(config.exclude, isEmpty);
       expect(config.excludes('lib/a.dart'), isFalse);
     });
 
     test('recommended leaves out entries that are not recommended', () {
-      final config = Config.recommended([...builtInRules, const _OptInRule()]);
+      final config = Config.recommended([
+        ...Recommended.rules,
+        const _OptInRule(),
+      ]);
       expect(config.rules.map((r) => r.$1.id), isNot(contains('opt-in')));
     });
 
     test('recommended keeps the given root', () {
-      expect(Config.recommended(builtInRules, root: 'pkg').root, 'pkg');
+      expect(Config.recommended(Recommended.rules, root: 'pkg').root, 'pkg');
     });
   });
 

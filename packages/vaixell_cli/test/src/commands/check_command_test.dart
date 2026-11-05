@@ -82,7 +82,7 @@ void main() {
         ..addCommand(
           CheckCommand(
             logger: bufferedLogger(out: out, err: err),
-            rules: builtInRules,
+            rules: Recommended.rules,
             root: Directory(d.sandbox),
             environment: environment,
             check: check,
@@ -426,7 +426,7 @@ void main() {
         expect(
           () => CheckCommand(
             logger: bufferedLogger(out: out, err: err),
-            rules: builtInRules,
+            rules: Recommended.rules,
             reporters: {},
           ),
           throwsA(isA<AssertionError>()),
@@ -441,7 +441,7 @@ void main() {
           ..addCommand(
             CheckCommand(
               logger: bufferedLogger(out: out, err: err),
-              rules: builtInRules,
+              rules: Recommended.rules,
             ),
           );
         return runner.run([CheckCommand.commandName]);

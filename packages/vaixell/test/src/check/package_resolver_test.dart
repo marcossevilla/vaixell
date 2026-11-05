@@ -28,7 +28,7 @@ void main() {
         PackageResolver.fromTree(
           root: '/repo',
           tree: tree,
-          rules: builtInRules,
+          rules: Recommended.rules,
         )(paths);
 
     test('discovers the packages when there are no paths', () async {
@@ -62,7 +62,7 @@ void main() {
     test('uses the given discovery and config resolver', () async {
       final discovery = _MockPackageDiscovery();
       final configResolver = _MockConfigResolver();
-      final a = Config.recommended(builtInRules);
+      final a = Config.recommended(Recommended.rules);
       const b = Config(rules: []);
       when(discovery.discover).thenAnswer((_) async => ['x', 'y']);
       when(() => configResolver.forPackages(['x', 'y']))
@@ -81,7 +81,7 @@ void main() {
       final discovery = _MockPackageDiscovery();
       final configResolver = _MockConfigResolver();
       when(() => configResolver.forPackages(['x']))
-          .thenAnswer((_) async => [Config.recommended(builtInRules)]);
+          .thenAnswer((_) async => [Config.recommended(Recommended.rules)]);
 
       await PackageResolver(
         root: '/repo',

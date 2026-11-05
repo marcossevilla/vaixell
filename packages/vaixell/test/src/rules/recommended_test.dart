@@ -2,9 +2,9 @@ import 'package:test/test.dart';
 import 'package:vaixell/vaixell.dart';
 
 void main() {
-  group('builtInRules', () {
+  group('Recommended.rules', () {
     test('lists every rule with a unique id, without parse-error', () {
-      expect(builtInRules.map((r) => r.id), [
+      expect(Recommended.rules.map((r) => r.id), [
         'top-level-function',
         'top-level-variable',
         'extension-declaration',
@@ -17,7 +17,7 @@ void main() {
 
     test('each rule has the expected default severity', () {
       const warnings = {'generated-json', 'await-receiver'};
-      for (final rule in builtInRules) {
+      for (final rule in Recommended.rules) {
         expect(
           rule.defaultSeverity,
           equals(
@@ -29,7 +29,7 @@ void main() {
     });
 
     test('are all recommended', () {
-      expect(builtInRules.map((r) => r.recommended), everyElement(isTrue));
+      expect(Recommended.rules.map((r) => r.recommended), everyElement(isTrue));
     });
   });
 }

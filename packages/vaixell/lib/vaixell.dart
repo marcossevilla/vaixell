@@ -64,7 +64,7 @@ export 'src/report/json_reporter.dart' show JsonReporter;
 export 'src/report/report.dart' show Report, ReportMode;
 export 'src/report/reporter.dart' show Reporter;
 export 'src/report/text_reporter.dart' show TextReporter;
-export 'src/rules/built_in_rules.dart' show builtInRules;
+export 'src/rules/recommended.dart' show Recommended;
 export 'src/rules/rule.dart'
     show
         ChecksDeclarations,
