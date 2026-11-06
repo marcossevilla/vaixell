@@ -25,7 +25,7 @@ void main() {
       String? gitDiff,
       String? baseline,
       String? root,
-    }) => Check(root: root ?? d.sandbox)(
+    }) => Check(rules: Recommended.rules, root: root ?? d.sandbox)(
       paths: paths,
       gitDiff: gitDiff,
       baseline: baseline,
@@ -74,7 +74,11 @@ void main() {
 
       test('reads the files from the given tree', () async {
         final tree = MemorySourceTree({'lib/c.dart': 'void c() {}\n'});
-        final report = await Check(root: d.sandbox, tree: tree)();
+        final report = await Check(
+          rules: Recommended.rules,
+          root: d.sandbox,
+          tree: tree,
+        )();
         expect(ids(report.violations), ['top-level-function:lib/c.dart:c']);
       });
     });
@@ -198,7 +202,9 @@ workspace:
       setUp(() => writeLib({'a.dart': 'void foo() {}\nvoid bar() {}\n'}));
 
       test('a fresh baseline suppresses everything', () async {
-        await WriteBaseline(root: d.sandbox)('baseline.json');
+        await WriteBaseline(rules: Recommended.rules, root: d.sandbox)(
+          'baseline.json',
+        );
         final report = await check(baseline: 'baseline.json');
         expect(report.mode, equals(ReportMode.baseline));
         expect(report.violations, hasLength(2));
@@ -207,7 +213,9 @@ workspace:
       });
 
       test('reports new violations and stale entries', () async {
-        await WriteBaseline(root: d.sandbox)('baseline.json');
+        await WriteBaseline(rules: Recommended.rules, root: d.sandbox)(
+          'baseline.json',
+        );
         await writeLib({'a.dart': 'void foo() {}\nvoid baz() {}\n'});
         final report = await check(baseline: 'baseline.json');
         expect(ids(report.failing), ['top-level-function:lib/a.dart:baz']);
@@ -345,7 +353,9 @@ workspace:
     });
 
     group('collaborators', () {
-      final packages = [Package(path: '', config: Config.recommended())];
+      final packages = [
+        Package(path: '', config: Config.recommended(Recommended.rules)),
+      ];
       const violation = Violation(
         id: 'top-level-function:lib/a.dart:foo',
         rule: 'top-level-function',
@@ -389,6 +399,7 @@ workspace:
       });
 
       Check build() => Check(
+        rules: Recommended.rules,
         root: '/repo',
         tree: tree,
         git: git,

@@ -12,7 +12,7 @@ Rules in `packages/vaixell` are written against a small model of a Dart file tha
 Constraints:
 
 - **Parse-only.** No type resolution and no `pub get`, as today.
-- **Same behavior, same ids.** Every built-in rule keeps its behavior and its violation ids, so existing baselines keep matching.
+- **Same behavior, same ids.** Every built-in rule keeps its behavior and its violation ids, so existing baselines keep matching. The one exception is code in primary constructors, which the model sees as constructors (see [Declarations and members](#declarations-and-members-35-36)).
 - **No analyzer types in the public API.** Internals may wrap or extend analyzer classes, but no `package:analyzer` or `package:yaml` type is exported or appears in a public signature.
 - **The public Dart API may break.** This is a breaking change for library users. The CLI and config stay compatible.
 
@@ -229,11 +229,11 @@ abstract interface class Import implements Reportable {
 ### Declarations and members ([#35](https://github.com/marcossevilla/vaixell/issues/35), [#36](https://github.com/marcossevilla/vaixell/issues/36))
 
 - **Sealed `Declaration`:** `ClassDeclaration`, `MixinDeclaration`, `EnumDeclaration`, `ExtensionDeclaration`, `ExtensionTypeDeclaration`, `TopLevelFunction` and `TopLevelVariable` (one per declared name, with `isConst`).
-- **Sealed `TypeDeclaration`** groups the first five: `name` (`null` only for an unnamed extension), `annotations`, `members` in source order, and `methods`, `constructors` and `fields`.
+- **Sealed `TypeDeclaration`** groups the first five: `name` (`null` only for an unnamed extension), `annotations`, `members` in source order (a primary constructor, declared in the header, first), and `methods`, `constructors` and `fields`.
 - **`TopLevelFunction`:** `name` and `kind` (`FunctionKind`: function, getter, setter or operator).
 - **Sealed `Member`:**
   - `Method`: `name`, `kind`, `isStatic`, `isAbstract` (no body), `isExternal`, `parameters`, `returnExpression`.
-  - `Constructor`: `name` (`null` when unnamed), `isFactory`, `isExternal`, `parameters`, `returnExpression`.
+  - `Constructor`: `name` (`null` when unnamed), `isFactory`, `isExternal`, `parameters`, `returnExpression`. A primary constructor is one too, and code in its header or its `this : …;` body is in it, so findings there get `Type.new` or `Type.name` symbols instead of `Type`.
   - `Field`: one per declared name, with `name` and `isStatic`.
   - `returnExpression` is `e` for `=> e;` or `{ return e; }`, otherwise `null`.
 - **`Parameter`:** `name`, `isPositional`, `isNamed`, `isFunction` (as in `T Function(Object?) fromJsonT`).
@@ -243,7 +243,7 @@ abstract interface class Import implements Reportable {
 ### Code inside declarations ([#36](https://github.com/marcossevilla/vaixell/issues/36))
 
 - **Sealed `Enclosed`**, the parent of expressions and type annotations: `declaration` and `member` it's written in. `declaration` is `null` in a library directive's annotation, a top-level variable declaration's annotation and typedefs. `member` is `null` when it's in the declaration itself.
-- **Sealed `Expression`**, each with `use` and `unparenthesized`:
+- **Sealed `Expression`**, each with `use`, `unparenthesized`, `calledName` (the name of what it calls or reads, as `fetch` in `api.fetch()`) and `isPositionalArgumentOf(name)` (looking through parentheses and casts, as `json` in `User.fromJson(json)`):
   - `Await` (`operand`).
   - Sealed `Call` (`arguments`): `MethodCall` (`target`, `operator`, `name`), `InstanceCreation` (`name`, the last name before the arguments) and `FunctionCall` (`callee`). Without types, `User(…)` and `User.fromJson(…)` are method calls.
   - `Reference` (`target`, `operator`, `name`): `name`, `target.name`, `target?.name` or `..name`.
@@ -254,15 +254,15 @@ abstract interface class Import implements Reportable {
 
 ## Wiring rules in
 
-### `builtInRules` and injection ([#42](https://github.com/marcossevilla/vaixell/issues/42), [#48](https://github.com/marcossevilla/vaixell/issues/48))
+### `Recommended.rules` and injection ([#42](https://github.com/marcossevilla/vaixell/issues/42), [#48](https://github.com/marcossevilla/vaixell/issues/48))
 
 The caller passes a `List<RuleEntry>`. `package:vaixell` never picks the rule set for them.
 
-- **`builtInRules`:** a `const List<RuleEntry>` in reporting order, without `parse-error`. It replaces `RuleRegistry`. Callers extend it (`[...builtInRules, myRule]`) or filter it by `id`. Removing an entry makes its id unknown to that executable.
+- **`Recommended.rules`:** a `static const List<RuleEntry>` in reporting order, without `parse-error`, on a class so it stays clear of `top-level-variable`. The `recommended` preset enables its entries. It replaces `RuleRegistry`. Callers extend it (`[...Recommended.rules, myRule]`) or filter it by `id`. Removing an entry makes its id unknown to that executable.
 - **Required at every step:** `Check(rules:)` and `WriteBaseline(rules:)` pass it to `PackageResolver.fromTree(rules:)`, which passes it to `ConfigLoader(tree, rules)`.
-- **`Config`** holds the configured `(Rule, Severity)` pairs of a package instead of severities by id. The loader builds them, running each factory once.
+- **`Config`** holds a package's `ConfiguredRule`s, each a built `rule` with its `severity`, instead of severities by id. The loader builds them, running each factory once.
 - **`Engine`** stays `const Engine()`. It runs the rules each package's config carries, plus `parse-error`. `Check` and `WriteBaseline` accept an engine only as a test seam.
-- **CLI:** `VaixellCommandRunner({List<RuleEntry> rules = builtInRules})` passes the list to `CheckCommand(rules:)`, which requires it. `bin/vaixell.dart` uses the default.
+- **CLI:** `VaixellCommandRunner({List<RuleEntry> rules = Recommended.rules})` passes the list to `CheckCommand(rules:)`, which requires it. `bin/vaixell.dart` uses the default.
 - **`Package`** also carries its `pubspec.yaml` name, so the model can resolve own-package imports.
 
 ### Presets, unknown ids and `parse-error` ([#39](https://github.com/marcossevilla/vaixell/issues/39))
@@ -275,32 +275,37 @@ The caller passes a `List<RuleEntry>`. `package:vaixell` never picks the rule se
 
 `package:vaixell/testing.dart` is a second public library, not exported from `vaixell.dart`. It has no matchers, so `vaixell` takes no dependency on `package:test`. vaixell's own rule tests use only this public API, as third-party rule authors do.
 
+Its helpers are methods on a const `RuleTester`, so the library stays clear of the `top-level-function` and `static-method` rules that vaixell checks itself with.
+
 ```dart
-/// The findings of [rule] in [source], sorted by offset.
-List<Finding> checkSource(
-  Rule rule,
-  String source, {
-  String path = 'lib/a.dart',
-  TestPackage package = const TestPackage(path: '', name: null),
-});
+final class const RuleTester() {
+  /// The findings of [rule] in [source], sorted by offset.
+  List<Finding> checkSource(
+    Rule rule,
+    String source, {
+    String path = 'lib/a.dart',
+    TestPackage package = const TestPackage(path: ''),
+  });
 
-/// Where [checkSource] places its file: the package directory, relative to
-/// the repository root, and its `pubspec.yaml` name.
+  /// The rule [factory] builds from the options in the YAML file at [fixture].
+  Rule createRule(RuleFactory factory, {required String fixture});
+}
+
+/// Where [RuleTester.checkSource] places its file: the package directory,
+/// relative to the repository root, and its `pubspec.yaml` name.
 final class const TestPackage({required final String path, final String? name});
-
-/// The rule [factory] builds from the options in the YAML file at [fixture].
-Rule createRule(RuleFactory factory, {required String fixture});
 ```
 
-- **Paths** are repo-relative, the same form vaixell reports. `checkSource` throws when `path` isn't under `package.path/lib/`.
-- **Syntax errors** make `checkSource` throw, naming each with its line and column.
+- **Paths** are repo-relative, the same form vaixell reports. `checkSource` throws an `ArgumentError` when `path` isn't under `package.path/lib/`.
+- **Syntax errors** make `checkSource` throw a `FormatException`, naming each with its line and column.
 - **Fixtures** hold only the rule's options, the entry without `severity`. An empty fixture means enabled without options. Option errors throw a `ConfigException` with the fixture's path, line and column.
 
 ```dart
-final rule = createRule(forbiddenImport, fixture: 'test/fixtures/forbidden_import/domain.yaml');
+const tester = RuleTester();
+final rule = tester.createRule(forbiddenImport, fixture: 'test/fixtures/forbidden_import/domain.yaml');
 
 test('flags Flutter in the domain layer', () {
-  final findings = checkSource(
+  final findings = tester.checkSource(
     rule,
     "import 'package:flutter/material.dart';\n",
     path: 'packages/app/lib/domain/user.dart',
@@ -312,17 +317,18 @@ test('flags Flutter in the domain layer', () {
 
 ## Public API changes
 
-| Today                                                          | After                                                                                                                                             |
-| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Rule.check(ParsedFile)`                                       | `Rule.check(DartFile)`                                                                                                                            |
-| `Rule.checksFilesWithErrors`                                   | removed; `parse-error` is the engine's                                                                                                            |
-| `ParsedFile`, `enclosing_declaration.dart`                     | removed, replaced by the model                                                                                                                    |
-| `RuleRegistry`                                                 | `builtInRules`                                                                                                                                    |
-| `Presets`                                                      | `recommended` derived from the injected entries                                                                                                   |
-| `Config.severities`                                            | configured `(Rule, Severity)` pairs                                                                                                               |
-| `ConfigLoader(tree)`, `PackageResolver.fromTree(root:, tree:)` | add a required `rules`                                                                                                                            |
-| `Check(root:)`, `WriteBaseline(root:)`                         | add a required `rules`                                                                                                                            |
-| —                                                              | new: `RuleEntry`, `RuleFactory`, `OptionValue`, `Finding.at`, the model, the `Checks…` mixins, `SkipsDirectories`, `package:vaixell/testing.dart` |
+| Today                                                          | After                                                                                                                                                               |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Rule.check(ParsedFile)`                                       | `Rule.check(DartFile)`                                                                                                                                              |
+| `Rule.checksFilesWithErrors`                                   | removed; `parse-error` is the engine's                                                                                                                              |
+| `ParsedFile`, `enclosing_declaration.dart`                     | removed, replaced by the model                                                                                                                                      |
+| `RuleRegistry`                                                 | `Recommended.rules`                                                                                                                                                 |
+| `Presets`                                                      | `recommended` derived from the injected entries                                                                                                                     |
+| `Config.severities`                                            | `Config.rules`, a list of `ConfiguredRule`                                                                                                                          |
+| `ConfigLoader(tree)`, `PackageResolver.fromTree(root:, tree:)` | add a required `rules`                                                                                                                                              |
+| `Check(root:)`, `WriteBaseline(root:)`                         | add a required `rules`                                                                                                                                              |
+| `ConfigException.at`, `ConfigException.yaml`                   | removed from the public API; they took YAML types                                                                                                                   |
+| —                                                              | new: `RuleEntry`, `RuleFactory`, `ConfiguredRule`, `OptionValue`, `Finding.at`, the model, the `Checks…` mixins, `SkipsDirectories`, `package:vaixell/testing.dart` |
 
 ## Every rule, expressed
 

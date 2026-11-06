@@ -1,6 +1,4 @@
-import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/dart/ast/visitor.dart';
-import 'package:vaixell/src/rules/enclosing_declaration.dart';
+import 'package:vaixell/src/model/model.dart';
 import 'package:vaixell/src/rules/rule.dart';
 
 /// Reports raw JSON handling outside model classes.
@@ -21,147 +19,110 @@ import 'package:vaixell/src/rules/rule.dart';
 /// Ids use the enclosing declaration and the kind of finding, such as
 /// `ApiClient.getUser@decode`, `@encode` or `@map`, so they don't change
 /// when code moves or when a finding of another kind is removed.
-final class const RawJsonRule() extends Rule {
+final class const RawJsonRule()
+    extends Rule
+    with ChecksExpressions, ChecksTypeAnnotations, SkipsDirectories {
   /// Creates the rule.
   this;
+
+  /// The advice for each kind of call.
+  static const Map<String, String> _advice = {
+    'decode': 'Deserialize JSON in a `fromJson` constructor.',
+    'encode': 'Serialize JSON in a `toJson` method.',
+  };
 
   @override
   String get id => 'raw-json';
 
   @override
-  List<Finding> check(ParsedFile file) {
-    final directories = file.path.split('/')..removeLast();
-    if (directories.contains('models')) return const [];
-    final visitor = _RawJsonVisitor();
-    file.unit.accept(visitor);
-    return visitor.findings;
-  }
-}
+  Set<String> get skippedDirectories => const {'models'};
 
-class _RawJsonVisitor extends RecursiveAstVisitor<void> {
-  final List<Finding> findings = [];
-
-  static const String _decodeAdvice =
-      'Deserialize JSON in a `fromJson` constructor.';
-  static const String _encodeAdvice = 'Serialize JSON in a `toJson` method.';
-
-  /// The kind and advice for each flagged call, by how it's written.
-  static const Map<String, (String, String)> _calls = {
-    'jsonDecode': ('decode', _decodeAdvice),
-    'jsonEncode': ('encode', _encodeAdvice),
-    'json.decode': ('decode', _decodeAdvice),
-    'json.encode': ('encode', _encodeAdvice),
+  @override
+  Finding? checkExpression(Expression expression) => switch (expression) {
+    final MethodCall call when !_isInJsonMember(call) => _callFinding(call),
+    _ => null,
   };
 
   @override
-  void visitConstructorDeclaration(ConstructorDeclaration node) {
-    if (node.name?.lexeme != 'fromJson') {
-      super.visitConstructorDeclaration(node);
+  Finding? checkTypeAnnotation(TypeAnnotation type) {
+    if (!_isStringDynamicMap(type) ||
+        _isInJsonMember(type) ||
+        _isPassedToFromJson(type.cast)) {
+      return null;
     }
+    return Finding.at(
+      type,
+      qualifier: 'map',
+      message:
+          '`Map<String, dynamic>` is not allowed outside model classes. '
+          'Use a model class with `fromJson` and `toJson`.',
+    );
   }
 
-  @override
-  void visitMethodDeclaration(MethodDeclaration node) {
-    final name = node.name.lexeme;
-    if (name != 'fromJson' && name != 'toJson') {
-      super.visitMethodDeclaration(node);
-    }
-  }
+  Finding? _callFinding(MethodCall call) => switch (_kindOf(call)) {
+    final kind? when !_handsOffToModel(call, kind) => Finding.at(
+      call,
+      qualifier: kind,
+      message:
+          '`${_writtenAs(call)}` is not allowed outside model classes. '
+          '${_advice[kind]}',
+    ),
+    _ => null,
+  };
 
-  @override
-  void visitMethodInvocation(MethodInvocation node) {
-    final method = node.methodName.name;
-    final call = switch (node.target) {
-      SimpleIdentifier(name: 'json') ||
-      PrefixedIdentifier(
-        identifier: SimpleIdentifier(name: 'json'),
-      ) => 'json.$method',
-      null || SimpleIdentifier() => method,
-      _ => null,
-    };
-    if (_calls[call] case (final kind, final advice)
-        when !_handsOffToModel(node, kind)) {
-      _report(
-        node,
-        kind,
-        '`$call` is not allowed outside model classes. $advice',
-      );
-    }
-    super.visitMethodInvocation(node);
-  }
-
-  @override
-  void visitNamedType(NamedType node) {
-    if (_isRawJsonMap(node) && !_isCastForFromJson(node)) {
-      _report(
-        node,
-        'map',
-        '`Map<String, dynamic>` is not allowed outside model classes. '
-            'Use a model class with `fromJson` and `toJson`.',
-      );
-    }
-    super.visitNamedType(node);
-  }
-
-  /// Whether the [call] of [kind] hands JSON to or from a model class.
-  bool _handsOffToModel(MethodInvocation call, String kind) => kind == 'decode'
-      ? _feedsFromJson(call)
-      : switch (call.argumentList.arguments.firstOrNull) {
-          final Expression argument =>
-            argument.unParenthesized is! TypedLiteral,
-          _ => false,
-        };
-
-  /// Whether [type] is the target of an `as` cast passed to `fromJson`.
-  bool _isCastForFromJson(NamedType type) => switch (type.parent) {
-    final AsExpression cast => _feedsFromJson(cast),
+  /// Whether [element] is in a `fromJson` constructor or a `fromJson` or
+  /// `toJson` method, where raw JSON belongs.
+  bool _isInJsonMember(Enclosed element) => switch (element.member) {
+    Constructor(name: 'fromJson') ||
+    Method(name: 'fromJson' || 'toJson') => true,
     _ => false,
   };
 
-  /// Whether [expression], ignoring parentheses and `as` casts, is an
-  /// argument of a `fromJson` call.
-  bool _feedsFromJson(Expression expression) {
-    AstNode node = expression;
-    while (true) {
-      switch (node.parent) {
-        case final ParenthesizedExpression parent:
-          node = parent;
-        case final AsExpression parent when parent.expression == node:
-          node = parent;
-        case ArgumentList(
-          parent: MethodInvocation(methodName: SimpleIdentifier(:final name)),
-        ):
-          return name == 'fromJson';
-        case ArgumentList(
-          parent: InstanceCreationExpression(:final constructorName),
-        ):
-          // Unresolved, `new User.fromJson` reads `User.` as an import
-          // prefix and `fromJson` as the type name.
-          final name =
-              constructorName.name?.name ?? constructorName.type.name.lexeme;
-          return name == 'fromJson';
-        default:
-          return false;
-      }
-    }
-  }
+  /// `jsonDecode` for `jsonDecode(…)` or `prefix.jsonDecode(…)`, and
+  /// `json.decode` for `json.decode(…)` or `prefix.json.decode(…)`.
+  String? _writtenAs(MethodCall call) => switch (call.target) {
+    null || Reference(target: null, name: != 'json') => call.name,
+    Reference(target: null, name: 'json') ||
+    Reference(
+      target: Reference(target: null),
+      operator: AccessOperator.period,
+      name: 'json',
+    ) => 'json.${call.name}',
+    _ => null,
+  };
 
-  bool _isRawJsonMap(NamedType node) =>
-      switch (node.typeArguments?.arguments.toList()) {
-        [NamedType(name: final key), NamedType(name: final value)] =>
-          node.name.lexeme == 'Map' &&
-              key.lexeme == 'String' &&
-              value.lexeme == 'dynamic',
+  /// `decode` or `encode` for a call to dart:convert's JSON functions.
+  String? _kindOf(MethodCall call) => switch (_writtenAs(call)) {
+    'jsonDecode' || 'json.decode' => 'decode',
+    'jsonEncode' || 'json.encode' => 'encode',
+    _ => null,
+  };
+
+  /// Whether [call] of [kind] hands JSON straight to or from a model: a
+  /// decode passed to `fromJson`, or an encode of something other than a
+  /// collection literal, which calls its `toJson`.
+  bool _handsOffToModel(MethodCall call, String kind) =>
+      switch ((kind, call.arguments)) {
+        ('decode', _) => _isPassedToFromJson(call),
+        (_, [Argument(name: null, :final value), ...]) =>
+          value.unparenthesized is! CollectionLiteral,
         _ => false,
       };
 
-  void _report(AstNode node, String kind, String message) {
-    findings.add(
-      Finding(
-        offset: node.offset,
-        message: message,
-        symbol: '${const EnclosingDeclaration().symbolOf(node) ?? ''}@$kind',
-      ),
-    );
-  }
+  /// Whether [expression], looking through parentheses and casts, is a
+  /// positional argument of a `fromJson` call.
+  bool _isPassedToFromJson(Expression? expression) =>
+      expression?.isPositionalArgumentOf('fromJson') ?? false;
+
+  bool _isStringDynamicMap(TypeAnnotation type) => switch (type) {
+    TypeAnnotation(
+      name: 'Map',
+      typeArguments: [
+        TypeAnnotation(name: 'String'),
+        TypeAnnotation(name: 'dynamic'),
+      ],
+    ) =>
+      true,
+    _ => false,
+  };
 }

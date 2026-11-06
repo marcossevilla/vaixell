@@ -6,7 +6,11 @@ import 'package:mason_logger/mason_logger.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:pub_updater/pub_updater.dart';
 import 'package:test/test.dart';
+import 'package:test_descriptor/test_descriptor.dart' as d;
+import 'package:vaixell/vaixell.dart';
 import 'package:vaixell_cli/vaixell_cli.dart';
+
+import '../helpers/buffered_logger.dart';
 
 class _MockLogger extends Mock implements Logger;
 
@@ -21,6 +25,18 @@ final _updatePrompt =
     // ignore: leading_newlines_in_multiline_strings
     '''${lightYellow.wrap('Update available!')} ${lightCyan.wrap(VaixellCommandRunner.packageVersion)} \u2192 ${lightCyan.wrap(_latestVersion)}
 Run ${lightCyan.wrap('vaixell update')} to update''';
+
+/// Reports every class.
+final class const _ClassRule() extends Rule with ChecksDeclarations {
+  @override
+  String get id => 'no-class';
+
+  @override
+  Finding? checkDeclaration(Declaration declaration) => switch (declaration) {
+    ClassDeclaration() => Finding.at(declaration, message: 'A class.'),
+    _ => null,
+  };
+}
 
 void main() {
   group(VaixellCommandRunner, () {
@@ -148,6 +164,24 @@ void main() {
 
       await commandRunner.run(['check']);
       verify(() => logger.info(_updatePrompt)).called(1);
+    });
+
+    test('checks with the given rules', () async {
+      await d.dir('lib', [d.file('a.dart', 'class A {}\n')]).create();
+      final out = StringBuffer();
+      final code = await IOOverrides.runZoned(
+        () => VaixellCommandRunner(
+          logger: bufferedLogger(out: out, err: StringBuffer()),
+          interactive: false,
+          rules: [...Recommended.rules, const _ClassRule()],
+        ).run(['check']),
+        getCurrentDirectory: () => Directory(d.sandbox),
+      );
+      expect(code, equals(1));
+      expect(
+        out.toString(),
+        startsWith('lib/a.dart:1:7: error: A class. [no-class:lib/a.dart:A]'),
+      );
     });
 
     test(
