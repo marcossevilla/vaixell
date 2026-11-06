@@ -45,15 +45,16 @@ class const PackageResolver({
   Future<List<Package>> call(List<String> paths) async {
     final dirs = paths.isEmpty
         ? await discovery.discover()
-        : {for (final path in paths) _relative(path)}.toList();
-    final configs = await configResolver.forPackages(dirs);
+        : [
+            for (final path in {for (final path in paths) _relative(path)})
+              await discovery.at(path),
+          ];
+    final configs = await configResolver.forPackages([
+      for (final dir in dirs) dir.path,
+    ]);
     return [
       for (final (i, dir) in dirs.indexed)
-        Package(
-          path: dir,
-          config: configs[i],
-          name: await discovery.nameOf(dir),
-        ),
+        Package(path: dir.path, config: configs[i], name: dir.name),
     ];
   }
 

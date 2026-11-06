@@ -8,7 +8,7 @@ export 'src/check/package_resolver.dart' show PackageResolver;
 export 'src/check/write_baseline.dart' show WriteBaseline;
 export 'src/config/config.dart' show Config, ConfiguredRule, RuleSet;
 export 'src/config/config_loader.dart' show ConfigLoader, ConfigResolver;
-export 'src/discovery/package_discovery.dart' show PackageDiscovery;
+export 'src/discovery/package_discovery.dart' show PackageDir, PackageDiscovery;
 export 'src/engine/diff_result.dart' show DiffResult;
 export 'src/engine/engine.dart' show Engine;
 export 'src/engine/package.dart' show Package;
