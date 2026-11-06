@@ -300,7 +300,7 @@ void f() {}
   });
 
   group('RuleEntry.build', () {
-    final options = const OptionValues().empty(name: 'named', path: 'a.yaml');
+    final options = YamlOptionValue.empty(name: 'named', path: 'a.yaml');
 
     test('builds a plain rule as itself', () {
       const rule = _PlainRule();

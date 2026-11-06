@@ -78,13 +78,12 @@ class const PackageDiscovery(
         sourceUrl: Uri.file(_pubspec),
       );
     } on YamlException catch (error) {
-      throw const ConfigErrors().yaml(error, path: _pubspec);
+      throw error.toConfigException(path: _pubspec);
     }
     final workspace = root is YamlMap ? root.nodes['workspace'] : null;
     if (workspace == null) return null;
     if (workspace is! YamlList) {
-      throw const ConfigErrors().at(
-        workspace,
+      throw workspace.configError(
         '`workspace` must be a list of package paths.',
         path: _pubspec,
       );
@@ -97,8 +96,7 @@ class const PackageDiscovery(
   Future<List<String>> _members(YamlNode item) async {
     final value = item.value;
     if (value is! String) {
-      throw const ConfigErrors().at(
-        item,
+      throw item.configError(
         '`workspace` must be a list of package paths.',
         path: _pubspec,
       );
@@ -107,8 +105,7 @@ class const PackageDiscovery(
     if (member == '.' ||
         member.startsWith('..') ||
         p.posix.isAbsolute(member)) {
-      throw const ConfigErrors().at(
-        item,
+      throw item.configError(
         'Workspace member `$value` must be a directory inside the workspace.',
         path: _pubspec,
       );
@@ -117,16 +114,14 @@ class const PackageDiscovery(
     try {
       glob = Glob(member, context: p.posix);
     } on FormatException catch (error) {
-      throw const ConfigErrors().at(
-        item,
+      throw item.configError(
         'Workspace member `$value` is not a valid glob: ${error.message}',
         path: _pubspec,
       );
     }
     final matches = await _matching(glob);
     if (matches.isEmpty) {
-      throw const ConfigErrors().at(
-        item,
+      throw item.configError(
         Glob.quote(member) == member
             ? 'Workspace member `$value` has no pubspec.yaml.'
             : 'Workspace member `$value` matches no directory with a '

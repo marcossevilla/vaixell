@@ -6,7 +6,7 @@ import 'package:yaml/yaml.dart';
 const _path = 'analysis_options.yaml';
 
 /// The options of `my-rule` in [yaml].
-OptionValue _options(String yaml) => const OptionValues().of(
+OptionValue _options(String yaml) => YamlOptionValue.of(
   loadYamlNode(yaml, sourceUrl: Uri.file(_path)),
   name: 'my-rule',
   path: _path,
@@ -131,10 +131,10 @@ void main() {
     });
   });
 
-  group(OptionValues, () {
+  group(YamlOptionValue, () {
     test('empty options are an empty map at the given position', () {
       final root = loadYamlNode('a:\n  b: x\n') as YamlMap;
-      final options = const OptionValues().empty(
+      final options = YamlOptionValue.empty(
         name: 'my-rule',
         path: _path,
         at: root.nodes['a'],
@@ -148,7 +148,7 @@ void main() {
     });
 
     test('empty options default to the start of the file', () {
-      final options = const OptionValues().empty(name: 'my-rule', path: _path);
+      final options = YamlOptionValue.empty(name: 'my-rule', path: _path);
       _throws(
         () => options['a'].asString(),
         '$_path:1:1: `my-rule` needs `a`.',
@@ -156,7 +156,7 @@ void main() {
     });
 
     test('hides the given keys', () {
-      final options = const OptionValues().of(
+      final options = YamlOptionValue.of(
         loadYamlNode('severity: error\na: x\n', sourceUrl: Uri.file(_path)),
         name: 'my-rule',
         path: _path,
