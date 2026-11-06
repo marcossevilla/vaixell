@@ -9,6 +9,7 @@ void main() {
         'top-level-variable',
         'extension-declaration',
         'static-method',
+        'throwaway-instance',
         'raw-json',
         'generated-json',
         'await-receiver',
@@ -16,7 +17,11 @@ void main() {
     });
 
     test('each rule has the expected default severity', () {
-      const warnings = {'generated-json', 'await-receiver'};
+      const warnings = {
+        'throwaway-instance',
+        'generated-json',
+        'await-receiver',
+      };
       for (final rule in Recommended.rules) {
         expect(
           rule.defaultSeverity,

@@ -15,7 +15,8 @@ Put the behavior on the type it works on, as an instance member, or in an
 extension when you don't own the type. When callers need to swap it out in
 tests, put it in a class passed through a constructor. Don't keep the
 member in a class only to call it on a throwaway instance, as in
-`const DateUtils().isWeekend(date)`: that call can't be swapped out either.
+`const DateUtils().isWeekend(date)`: that call can't be swapped out either,
+and [`throwaway-instance`](throwaway-instance.md) reports it.
 
 Static fields and factory constructors aren't methods, so they aren't
 reported.

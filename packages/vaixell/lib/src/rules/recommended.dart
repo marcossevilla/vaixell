@@ -4,6 +4,7 @@ import 'package:vaixell/src/rules/generated_json.dart';
 import 'package:vaixell/src/rules/raw_json.dart';
 import 'package:vaixell/src/rules/rule.dart';
 import 'package:vaixell/src/rules/static_method.dart';
+import 'package:vaixell/src/rules/throwaway_instance.dart';
 import 'package:vaixell/src/rules/top_level_function.dart';
 import 'package:vaixell/src/rules/top_level_variable.dart';
 
@@ -19,6 +20,7 @@ abstract final class Recommended {
     TopLevelVariableRule(),
     ExtensionDeclarationRule(),
     StaticMethodRule(),
+    ThrowawayInstanceRule(),
     RawJsonRule(),
     GeneratedJsonRule(),
     AwaitReceiverRule(),
