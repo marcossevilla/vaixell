@@ -230,6 +230,7 @@ abstract interface class Import implements Reportable {
 
 - **Sealed `Declaration`:** `ClassDeclaration`, `MixinDeclaration`, `EnumDeclaration`, `ExtensionDeclaration`, `ExtensionTypeDeclaration`, `TopLevelFunction` and `TopLevelVariable` (one per declared name, with `isConst`).
 - **Sealed `TypeDeclaration`** groups the first five: `name` (`null` only for an unnamed extension), `annotations`, `members` in source order (a primary constructor, declared in the header, first), and `methods`, `constructors` and `fields`.
+- **`ExtensionDeclaration`:** `extendedType`, the `TypeAnnotation` after `on`.
 - **`TopLevelFunction`:** `name` and `kind` (`FunctionKind`: function, getter, setter or operator).
 - **Sealed `Member`:**
   - `Method`: `name`, `kind`, `isStatic`, `isAbstract` (no body), `isExternal`, `parameters`, `returnExpression`.

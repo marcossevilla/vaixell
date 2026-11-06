@@ -103,6 +103,10 @@ final class _AstExtension(
   int get offset => (node.name ?? node.extensionKeyword).offset;
 
   @override
+  TypeAnnotation? get extendedType =>
+      file.typeOrNull(node.onClause?.extendedType);
+
+  @override
   List<ast.ClassMember> get body => node.body.members;
 }
 

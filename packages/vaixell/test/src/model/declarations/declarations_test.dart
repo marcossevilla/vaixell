@@ -58,6 +58,17 @@ typedef J = int;
       ]);
     });
 
+    test('give an extension its extended type, as in the file', () {
+      final file = const DartFileParser().parse(
+        path: 'lib/a.dart',
+        content: 'extension X on core.Map<String, int> {}\n',
+      );
+      final extension = file.declarations.single as ExtensionDeclaration;
+      expect(extension.extendedType?.name, equals('Map'));
+      expect(extension.extendedType?.prefix, equals('core'));
+      expect(extension.extendedType, same(file.typeAnnotations.first));
+    });
+
     test('are at their name, or the keyword when unnamed', () {
       const source = '''
 class C {}
