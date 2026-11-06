@@ -142,19 +142,18 @@ class const OptionValues() {
     hidden: without,
   );
 
-  /// No options for the rule [name], enabled at [line] and [column] of the
-  /// file at [path].
+  /// No options for the rule [name] in the file at [path], enabled at [at],
+  /// or at the start of the file when [at] is `null`.
   OptionValue empty({
     required String name,
     required String path,
-    int line = 1,
-    int column = 1,
+    YamlNode? at,
   }) => OptionValue._(
     node: YamlMap(),
     name: name,
     path: path,
-    line: line,
-    column: column,
+    line: (at?.span.start.line ?? 0) + 1,
+    column: (at?.span.start.column ?? 0) + 1,
     isRoot: true,
   );
 }

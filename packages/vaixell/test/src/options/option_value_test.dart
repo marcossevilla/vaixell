@@ -133,11 +133,11 @@ void main() {
 
   group(OptionValues, () {
     test('empty options are an empty map at the given position', () {
+      final root = loadYamlNode('a:\n  b: x\n') as YamlMap;
       final options = const OptionValues().empty(
         name: 'my-rule',
         path: _path,
-        line: 2,
-        column: 3,
+        at: root.nodes['a'],
       );
       expect(options.asMap(), isEmpty);
       expect(() => options.allowOnly({}), returnsNormally);

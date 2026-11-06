@@ -129,7 +129,7 @@ class const _ConfigFile(
           ConfiguredRule(
             const RuleBuilder().build(
               entry,
-              overrides[entry.id]?.options(path) ?? _noOptions(entry.id, at),
+              _options(entry.id, overrides[entry.id], at),
             ),
             severity,
           ),
@@ -152,13 +152,23 @@ class const _ConfigFile(
     null => null,
   };
 
-  OptionValue _noOptions(String rule, YamlNode at) =>
-      const OptionValues().empty(
-        name: rule,
-        path: path,
-        line: at.span.start.line + 1,
-        column: at.span.start.column + 1,
-      );
+  /// The options of the rule [id] from [override], without `severity`.
+  /// A rule without the long form gets none, at its key or else at [at].
+  OptionValue _options(String id, _RuleConfig? override, YamlNode at) =>
+      switch (override) {
+        _RuleConfig(:final entry?) => const OptionValues().of(
+          entry,
+          name: id,
+          path: path,
+          without: const {'severity'},
+        ),
+        _RuleConfig(:final key) => const OptionValues().empty(
+          name: id,
+          path: path,
+          at: key,
+        ),
+        null => const OptionValues().empty(name: id, path: path, at: at),
+      };
 
   List<String> _include(YamlNode node) {
     final items = node is YamlList ? node.nodes : [node];
@@ -285,22 +295,6 @@ class const _RuleConfig(
   Severity? severity(Severity byDefault) => switch (severityName) {
     null => byDefault,
     final name => severities[name],
-  };
-
-  /// The rule's options in the config file at [path], without `severity`.
-  OptionValue options(String path) => switch (entry) {
-    final entry? => const OptionValues().of(
-      entry,
-      name: key.value as String,
-      path: path,
-      without: const {'severity'},
-    ),
-    null => const OptionValues().empty(
-      name: key.value as String,
-      path: path,
-      line: key.span.start.line + 1,
-      column: key.span.start.column + 1,
-    ),
   };
 }
 
