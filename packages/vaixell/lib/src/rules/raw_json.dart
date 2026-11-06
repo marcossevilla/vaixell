@@ -44,18 +44,20 @@ final class const RawJsonRule()
   };
 
   @override
-  Finding? checkTypeAnnotation(TypeAnnotation type) =>
-      _isInJsonMember(type) ||
-          !_isStringDynamicMap(type) ||
-          _isPassedToFromJson(type.cast)
-      ? null
-      : Finding.at(
-          type,
-          qualifier: 'map',
-          message:
-              '`Map<String, dynamic>` is not allowed outside model classes. '
-              'Use a model class with `fromJson` and `toJson`.',
-        );
+  Finding? checkTypeAnnotation(TypeAnnotation type) {
+    if (!_isStringDynamicMap(type) ||
+        _isInJsonMember(type) ||
+        _isPassedToFromJson(type.cast)) {
+      return null;
+    }
+    return Finding.at(
+      type,
+      qualifier: 'map',
+      message:
+          '`Map<String, dynamic>` is not allowed outside model classes. '
+          'Use a model class with `fromJson` and `toJson`.',
+    );
+  }
 
   Finding? _callFinding(MethodCall call) => switch (_kindOf(call)) {
     final kind? when !_handsOffToModel(call, kind) => Finding.at(
