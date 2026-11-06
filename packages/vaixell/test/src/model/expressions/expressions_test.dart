@@ -224,6 +224,59 @@ void g() { void h() {} }
         );
       });
     });
+
+    group('calledName', () {
+      Expression awaited(String source) =>
+          _first<Await>('f() async => $source;').operand;
+
+      test('is the name of what is called or read', () {
+        const sources = {
+          'await g()': 'g',
+          'await api.fetch()': 'fetch',
+          'await value': 'value',
+          'await api.value': 'value',
+          'await (api.fetch())': 'fetch',
+          'await api.fetch()()': 'fetch',
+        };
+        for (final MapEntry(key: source, value: name) in sources.entries) {
+          expect(awaited(source).calledName, name, reason: source);
+        }
+      });
+
+      test('is null when nothing is named', () {
+        expect(awaited('await [g]').calledName, isNull);
+        expect(awaited('await (() => g)()').calledName, isNull);
+      });
+    });
+
+    group('isPositionalArgumentOf', () {
+      bool isArgument(String source, String text, String call) =>
+          _expressions(source)
+              .firstWhere((e) => e.offset == source.indexOf(text))
+              .isPositionalArgumentOf(call);
+
+      test('is true for a positional argument of the named call', () {
+        expect(isArgument('f() => A.fromJson(v);', 'v', 'fromJson'), isTrue);
+        expect(
+          isArgument('f() => new A.fromJson(v);', 'v', 'fromJson'),
+          isTrue,
+        );
+        expect(
+          isArgument('f() => A.fromJson((v as T));', 'v', 'fromJson'),
+          isTrue,
+        );
+      });
+
+      test('is false otherwise', () {
+        expect(isArgument('f() => A.fromJson(v);', 'v', 'toJson'), isFalse);
+        expect(
+          isArgument('f() => A.fromJson(n: v);', 'v', 'fromJson'),
+          isFalse,
+        );
+        expect(isArgument('f() => g()(v);', 'v', 'g'), isFalse);
+        expect(isArgument('f() => v;', 'v', 'fromJson'), isFalse);
+      });
+    });
   });
 
   group(Use, () {

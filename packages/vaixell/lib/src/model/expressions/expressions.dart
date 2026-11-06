@@ -10,6 +10,16 @@ sealed class Expression implements Enclosed {
 
   /// This expression without any parentheses around it.
   Expression get unparenthesized;
+
+  /// The name of the method, function, getter or variable this calls or
+  /// reads, looking through parentheses, as `fetch` in `api.fetch()` or
+  /// `api.fetch()()`, or `null` when it has none.
+  String? get calledName;
+
+  /// Whether this, looking through parentheses and `as` casts, is a
+  /// positional argument of a [MethodCall] or [InstanceCreation] named
+  /// [name], as `json` in `User.fromJson(json)`.
+  bool isPositionalArgumentOf(String name);
 }
 
 /// `await operand`.

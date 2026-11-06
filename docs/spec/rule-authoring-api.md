@@ -243,7 +243,7 @@ abstract interface class Import implements Reportable {
 ### Code inside declarations ([#36](https://github.com/marcossevilla/vaixell/issues/36))
 
 - **Sealed `Enclosed`**, the parent of expressions and type annotations: `declaration` and `member` it's written in. `declaration` is `null` in a library directive's annotation, a top-level variable declaration's annotation and typedefs. `member` is `null` when it's in the declaration itself.
-- **Sealed `Expression`**, each with `use` and `unparenthesized`:
+- **Sealed `Expression`**, each with `use`, `unparenthesized`, `calledName` (the name of what it calls or reads, as `fetch` in `api.fetch()`) and `isPositionalArgumentOf(name)` (looking through parentheses and casts, as `json` in `User.fromJson(json)`):
   - `Await` (`operand`).
   - Sealed `Call` (`arguments`): `MethodCall` (`target`, `operator`, `name`), `InstanceCreation` (`name`, the last name before the arguments) and `FunctionCall` (`callee`). Without types, `User(…)` and `User.fromJson(…)` are method calls.
   - `Reference` (`target`, `operator`, `name`): `name`, `target.name`, `target?.name` or `..name`.

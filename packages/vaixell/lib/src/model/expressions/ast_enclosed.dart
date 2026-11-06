@@ -31,6 +31,24 @@ mixin _AstExpression on _AstEnclosed implements Expression {
   Expression get unparenthesized => file.expression(node.unParenthesized);
 
   @override
+  String? get calledName => switch (unparenthesized) {
+    MethodCall(:final name) || Reference(:final name) => name,
+    FunctionCall(:final callee) => callee.calledName,
+    _ => null,
+  };
+
+  @override
+  bool isPositionalArgumentOf(String name) => switch (use) {
+    ArgumentUse(
+      name: null,
+      call: MethodCall(name: final callName) ||
+          InstanceCreation(name: final callName),
+    ) =>
+      callName == name,
+    _ => false,
+  };
+
+  @override
   Use get use {
     ast.AstNode current = node;
     while (_wraps(current.parent, current)) {

@@ -29,21 +29,11 @@ final class const AwaitReceiverRule() extends Rule with ChecksExpressions {
   Finding? checkExpression(Expression expression) => switch (expression) {
     Await(use: ReceiverUse() || NullCheckUse(), :final operand) => Finding.at(
       expression,
-      qualifier: _calledName(operand),
+      qualifier: operand.calledName,
       message:
           '`await` result is used as a receiver. '
           'Assign it to a local variable first.',
     ),
     _ => null,
   };
-
-  /// The name of the method, function, getter or variable that [expression]
-  /// calls or reads, as `fetch` in `api.fetch()`, or `null` when it has
-  /// none.
-  String? _calledName(Expression expression) =>
-      switch (expression.unparenthesized) {
-        MethodCall(:final name) || Reference(:final name) => name,
-        FunctionCall(:final callee) => _calledName(callee),
-        _ => null,
-      };
 }

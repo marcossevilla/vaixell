@@ -111,14 +111,8 @@ final class const RawJsonRule()
 
   /// Whether [expression], looking through parentheses and casts, is a
   /// positional argument of a `fromJson` call.
-  bool _isPassedToFromJson(Expression? expression) => switch (expression?.use) {
-    ArgumentUse(
-      name: null,
-      call: MethodCall(name: 'fromJson') || InstanceCreation(name: 'fromJson'),
-    ) =>
-      true,
-    _ => false,
-  };
+  bool _isPassedToFromJson(Expression? expression) =>
+      expression?.isPositionalArgumentOf('fromJson') ?? false;
 
   bool _isStringDynamicMap(TypeAnnotation type) => switch (type) {
     TypeAnnotation(
