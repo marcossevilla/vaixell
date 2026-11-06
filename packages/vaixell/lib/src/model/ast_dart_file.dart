@@ -42,17 +42,20 @@ final class _AstDartFile(
   /// The parser doesn't report errors in source order, so they're sorted,
   /// keeping the parser's order among errors at the same offset.
   @override
-  late final List<SyntaxError> errors = List.unmodifiable(
-    (result.errors.indexed.toList()..sort(_bySourceOrder)).map(
-      (entry) => _AstSyntaxError(entry.$2.offset, entry.$2.message),
-    ),
-  );
+  late final List<SyntaxError> errors = List.unmodifiable([
+    for (final (_, error)
+        in result.errors.indexed.toList()..sort(_bySourceOrder))
+      _AstSyntaxError(error.offset, error.message),
+  ]);
 
-  int _bySourceOrder((int, Diagnostic) a, (int, Diagnostic) b) =>
-      switch (a.$2.offset.compareTo(b.$2.offset)) {
-        0 => a.$1.compareTo(b.$1),
-        final order => order,
-      };
+  int _bySourceOrder((int, Diagnostic) a, (int, Diagnostic) b) {
+    final (ia, errorA) = a;
+    final (ib, errorB) = b;
+    return switch (errorA.offset.compareTo(errorB.offset)) {
+      0 => ia.compareTo(ib),
+      final order => order,
+    };
+  }
 
   @override
   late final List<Import> imports = List.unmodifiable([

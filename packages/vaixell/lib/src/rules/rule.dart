@@ -117,13 +117,15 @@ class const FindingOrder() {
   /// for equal offsets, which [List.sort] doesn't promise.
   List<T> byOffset<T>(Iterable<T> items, Finding Function(T item) findingOf) {
     final indexed = items.indexed.toList()
-      ..sort(
-        (a, b) =>
-            switch (findingOf(a.$2).offset.compareTo(findingOf(b.$2).offset)) {
-              0 => a.$1.compareTo(b.$1),
-              final order => order,
-            },
-      );
+      ..sort((a, b) {
+        final (ia, itemA) = a;
+        final (ib, itemB) = b;
+        return switch (findingOf(itemA).offset
+            .compareTo(findingOf(itemB).offset)) {
+          0 => ia.compareTo(ib),
+          final order => order,
+        };
+      });
     return [for (final (_, item) in indexed) item];
   }
 }

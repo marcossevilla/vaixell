@@ -39,7 +39,7 @@ final class OptionValue._({
   /// Throws a [ConfigException] when it isn't a map, or when a key isn't a
   /// string.
   Map<String, OptionValue> asMap() => {
-    for (final (key, value) in _entries)
+    for (final MapEntry(:key, :value) in _entries)
       key: _child(value, _isRoot ? key : '$_name.$key'),
   };
 
@@ -89,10 +89,10 @@ final class OptionValue._({
   };
 
   /// The entries of this map, without the hidden keys.
-  Iterable<(String, YamlNode)> get _entries sync* {
+  Iterable<MapEntry<String, YamlNode>> get _entries sync* {
     for (final MapEntry(:key, :value) in _map.nodes.entries) {
       final name = _key(key as YamlNode);
-      if (!_hidden.contains(name)) yield (name, value);
+      if (!_hidden.contains(name)) yield MapEntry(name, value);
     }
   }
 
