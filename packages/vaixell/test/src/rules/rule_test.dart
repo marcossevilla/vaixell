@@ -299,12 +299,12 @@ void f() {}
     });
   });
 
-  group(RuleBuilder, () {
+  group('RuleEntry.build', () {
     final options = const OptionValues().empty(name: 'named', path: 'a.yaml');
 
     test('builds a plain rule as itself', () {
       const rule = _PlainRule();
-      expect(const RuleBuilder().build(rule, options), same(rule));
+      expect(rule.build(options), same(rule));
     });
 
     test("builds a factory's rule from the options", () {
@@ -313,7 +313,7 @@ void f() {}
         expect(given, same(options));
         return rule;
       });
-      expect(const RuleBuilder().build(factory, options), same(rule));
+      expect(factory.build(options), same(rule));
     });
 
     test('throws when the built rule has another id', () {
@@ -322,7 +322,7 @@ void f() {}
         (_) => const _NamedRule([], id: 'x'),
       );
       expect(
-        () => const RuleBuilder().build(factory, options),
+        () => factory.build(options),
         throwsA(
           isA<StateError>().having(
             (e) => e.message,

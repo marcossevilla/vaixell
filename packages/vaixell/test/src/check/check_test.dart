@@ -354,7 +354,10 @@ workspace:
 
     group('collaborators', () {
       final packages = [
-        Package(path: '', config: Config.recommended(Recommended.rules)),
+        Package(
+          path: '',
+          config: Config.recommended(RuleSet(Recommended.rules)),
+        ),
       ];
       const violation = Violation(
         id: 'top-level-function:lib/a.dart:foo',

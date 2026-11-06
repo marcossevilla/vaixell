@@ -11,7 +11,7 @@ Future<List<Violation>> _run(Map<String, String> files, {Config? config}) =>
       packages: [
         Package(
           path: '',
-          config: config ?? Config.recommended(Recommended.rules),
+          config: config ?? Config.recommended(RuleSet(Recommended.rules)),
         ),
       ],
     );
@@ -233,7 +233,7 @@ class Foo {
           'lib/legacy/b.dart': 'void foo() {}\n',
         },
         config: Config(
-          rules: Config.recommended(Recommended.rules).rules,
+          rules: Config.recommended(RuleSet(Recommended.rules)).rules,
           exclude: [Glob('lib/legacy/**')],
         ),
       );
@@ -250,7 +250,10 @@ class Foo {
           'packages/b/test/b_test.dart': 'void t() {}\n',
         }),
         packages: [
-          Package(path: '', config: Config.recommended(Recommended.rules)),
+          Package(
+            path: '',
+            config: Config.recommended(RuleSet(Recommended.rules)),
+          ),
           Package(
             path: 'packages/a',
             config: Config(
@@ -263,7 +266,7 @@ class Foo {
           ),
           Package(
             path: 'packages/b',
-            config: Config.recommended(Recommended.rules),
+            config: Config.recommended(RuleSet(Recommended.rules)),
           ),
         ],
       );

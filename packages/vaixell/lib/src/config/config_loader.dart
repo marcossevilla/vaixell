@@ -16,7 +16,7 @@ class const ConfigLoader(
   final SourceTree tree,
 
   /// The rules that configs can enable, in reporting order.
-  final List<RuleEntry> rules,
+  final RuleSet rules,
 ) {
   /// Creates a loader that reads configs from [tree] and configures
   /// [rules]. Config can only name these rules and `parse-error`.
@@ -29,8 +29,7 @@ class const ConfigLoader(
   /// for [rules] when the file or its `vaixell:` key is missing.
   ///
   /// Throws a [ConfigException] when the file isn't valid YAML or the
-  /// `vaixell:` section is invalid, and an [ArgumentError] when two [rules]
-  /// share an id, or one is `parse-error`.
+  /// `vaixell:` section is invalid.
   Future<Config> load({String path = defaultPath}) async =>
       await loadIfPresent(path: path) ?? Config.recommended(rules);
 
@@ -38,10 +37,8 @@ class const ConfigLoader(
   /// `vaixell:` key is missing. An empty `vaixell:` key counts as present.
   ///
   /// Throws a [ConfigException] when the file isn't valid YAML or the
-  /// `vaixell:` section is invalid, and an [ArgumentError] when two [rules]
-  /// share an id, or one is `parse-error`.
+  /// `vaixell:` section is invalid.
   Future<Config?> loadIfPresent({String path = defaultPath}) async {
-    const RuleIds().check(rules);
     if (!await tree.exists(path)) return null;
     return _ConfigFile(path, rules).parse(await tree.read(path));
   }
@@ -53,7 +50,7 @@ class const _ConfigFile(
   final String path,
 
   /// The rules config can enable.
-  final List<RuleEntry> entries,
+  final RuleSet rules,
 ) {
   static const List<String> _keys = ['include', 'rules', 'exclude'];
   static const String _recommended = 'recommended';
@@ -123,14 +120,11 @@ class const _ConfigFile(
     List<Glob> exclude = const [],
   }) => Config(
     rules: [
-      for (final entry in entries)
+      for (final entry in rules.entries)
         if (_severity(entry, overrides[entry.id], recommended: recommended)
             case final severity?)
           ConfiguredRule(
-            const RuleBuilder().build(
-              entry,
-              _options(entry.id, overrides[entry.id], at),
-            ),
+            entry.build(_options(entry.id, overrides[entry.id], at)),
             severity,
           ),
     ],
@@ -195,7 +189,7 @@ class const _ConfigFile(
     if (node is! YamlMap) {
       throw _error(node, '`rules` must be a map of rule ids to severities.');
     }
-    final ids = [Config.parseErrorId, for (final entry in entries) entry.id];
+    final ids = rules.configIds;
     return {
       for (final MapEntry(:key, :value) in node.nodes.entries)
         _id(key as YamlNode, ids): _rule(key, value),
@@ -217,9 +211,7 @@ class const _ConfigFile(
     if (value is! YamlMap) {
       return _RuleConfig(key, _severityName(value, id), null);
     }
-    final takesOptions = entries.any(
-      (entry) => entry is RuleFactory && entry.id == id,
-    );
+    final takesOptions = rules[id] is RuleFactory;
     for (final option in value.nodes.keys.cast<YamlNode>()) {
       if (option.value != 'severity' && !takesOptions) {
         throw _error(option, '`$id` takes no options.');

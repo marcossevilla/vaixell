@@ -24,6 +24,9 @@ class const PackageResolver({
 
   /// Creates a resolver for the packages in [root] that discovers them and
   /// reads their configs in [tree], which configure [rules].
+  ///
+  /// Throws an [ArgumentError] when two [rules] share an id, or one is
+  /// `parse-error`.
   factory fromTree({
     required String root,
     required SourceTree tree,
@@ -31,7 +34,7 @@ class const PackageResolver({
   }) => PackageResolver(
     root: root,
     discovery: PackageDiscovery(tree),
-    configResolver: ConfigResolver(ConfigLoader(tree, rules)),
+    configResolver: ConfigResolver(ConfigLoader(tree, RuleSet(rules))),
   );
 
   /// Returns the packages at [paths], relative to [root], or the packages

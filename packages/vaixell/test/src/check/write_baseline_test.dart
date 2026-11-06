@@ -89,7 +89,10 @@ void main() {
       registerFallbackValue(Baseline([]));
       final tree = MemorySourceTree({});
       final packages = [
-        Package(path: 'p', config: Config.recommended(Recommended.rules)),
+        Package(
+          path: 'p',
+          config: Config.recommended(RuleSet(Recommended.rules)),
+        ),
       ];
       final packageResolver = _MockPackageResolver();
       final engine = _MockEngine();

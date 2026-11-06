@@ -42,6 +42,12 @@ sealed class RuleEntry {
 
   /// Whether `recommended` enables it.
   bool get recommended;
+
+  /// The rule that runs for one config, built with its [options].
+  ///
+  /// Throws a [StateError] when the rule has another [id], which is a bug in
+  /// the rule, not in config.
+  Rule build(OptionValue options);
 }
 
 /// An architecture rule.
@@ -60,6 +66,10 @@ abstract base class const Rule() implements RuleEntry {
 
   @override
   bool get recommended => true;
+
+  /// This rule itself, since it takes no options.
+  @override
+  Rule build(OptionValue options) => this;
 
   /// Whether to check [file] at all. When it's `false`, vaixell and
   /// `RuleTester` don't call [check].
@@ -106,6 +116,15 @@ final class const RuleFactory(
   /// Creates a factory for the rule [id] that [create] builds. Its
   /// [defaultSeverity] and [recommended] count, not the built rule's.
   this;
+
+  /// The rule that [create] builds from [options].
+  @override
+  Rule build(OptionValue options) => switch (create(options)) {
+    final rule when rule.id == id => rule,
+    final rule => throw StateError(
+      'The factory for `$id` built a rule with id `${rule.id}`.',
+    ),
+  };
 }
 
 /// Sorts findings in source order. Internal: it's never exported.
@@ -128,28 +147,6 @@ class const FindingOrder() {
       });
     return [for (final (_, item) in indexed) item];
   }
-}
-
-/// Builds the configured rule of a [RuleEntry]. Internal: it's never
-/// exported.
-class const RuleBuilder() {
-  /// Creates the builder.
-  this;
-
-  /// The rule of [entry] with [options]: the rule itself, or what a factory
-  /// builds from [options].
-  ///
-  /// Throws a [StateError] when a factory builds a rule with another id,
-  /// which is a bug in the rule, not in config.
-  Rule build(RuleEntry entry, OptionValue options) => switch (entry) {
-    final Rule rule => rule,
-    RuleFactory(:final id, :final create) => switch (create(options)) {
-      final rule when rule.id == id => rule,
-      final rule => throw StateError(
-        'The factory for `$id` built a rule with id `${rule.id}`.',
-      ),
-    },
-  };
 }
 
 /// Calls [checkDeclaration] for every top-level declaration in the file.

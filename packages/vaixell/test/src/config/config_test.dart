@@ -14,10 +14,15 @@ final class const _OptInRule() extends Rule {
   bool get recommended => false;
 }
 
+final class const _ParseErrorRule() extends Rule {
+  @override
+  String get id => 'parse-error';
+}
+
 void main() {
   group(Config, () {
     test('recommended enables every rule at its default severity', () {
-      final config = Config.recommended(Recommended.rules);
+      final config = Config.recommended(RuleSet(Recommended.rules));
       expect(config.rules.map((r) => r.rule), Recommended.rules);
       expect(severitiesOf(config), {
         'parse-error': Severity.error,
@@ -28,10 +33,9 @@ void main() {
     });
 
     test('recommended leaves out entries that are not recommended', () {
-      final config = Config.recommended([
-        ...Recommended.rules,
-        const _OptInRule(),
-      ]);
+      final config = Config.recommended(
+        RuleSet([...Recommended.rules, const _OptInRule()]),
+      );
       expect(config.rules.map((r) => r.rule.id), isNot(contains('opt-in')));
     });
 
@@ -41,7 +45,7 @@ void main() {
         (options) => throw options['names'].error('Needs names.'),
       );
       expect(
-        () => Config.recommended([factory], root: 'pkg'),
+        () => Config.recommended(RuleSet([factory]), root: 'pkg'),
         throwsA(
           isA<ConfigException>().having(
             (e) => '$e',
@@ -52,16 +56,68 @@ void main() {
       );
     });
 
-    test('recommended throws an ArgumentError for a repeated id', () {
+    test('recommended keeps the given root', () {
       expect(
-        () =>
-            Config.recommended([...Recommended.rules, Recommended.rules.first]),
-        throwsArgumentError,
+        Config.recommended(RuleSet(Recommended.rules), root: 'pkg').root,
+        'pkg',
+      );
+    });
+  });
+
+  group(RuleSet, () {
+    test('keeps the rules in order', () {
+      final reversed = Recommended.rules.reversed.toList();
+      expect(RuleSet(reversed).entries, reversed);
+    });
+
+    test('lists parse-error, then each rule, as the ids config can name', () {
+      expect(RuleSet(Recommended.rules).configIds, [
+        'parse-error',
+        for (final rule in Recommended.rules) rule.id,
+      ]);
+    });
+
+    test('finds a rule by id', () {
+      final rules = RuleSet(Recommended.rules);
+      expect(
+        rules['raw-json'],
+        same(Recommended.rules.firstWhere((r) => r.id == 'raw-json')),
+      );
+      expect(rules['missing'], isNull);
+    });
+
+    test("can't be changed", () {
+      final rules = RuleSet(Recommended.rules);
+      expect(
+        () => rules.entries.add(const _OptInRule()),
+        throwsUnsupportedError,
       );
     });
 
-    test('recommended keeps the given root', () {
-      expect(Config.recommended(Recommended.rules, root: 'pkg').root, 'pkg');
+    test('throws an ArgumentError for a repeated id', () {
+      expect(
+        () => RuleSet([...Recommended.rules, Recommended.rules.first]),
+        throwsA(
+          isA<ArgumentError>().having(
+            (e) => e.message,
+            'message',
+            'Two rules have the id `top-level-function`.',
+          ),
+        ),
+      );
+    });
+
+    test('throws an ArgumentError for a rule named parse-error', () {
+      expect(
+        () => RuleSet([...Recommended.rules, const _ParseErrorRule()]),
+        throwsA(
+          isA<ArgumentError>().having(
+            (e) => e.message,
+            'message',
+            '`parse-error` is reported by the engine, not by a rule.',
+          ),
+        ),
+      );
     });
   });
 
