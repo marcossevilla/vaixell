@@ -126,7 +126,7 @@ class const _ConfigFile(
       for (final entry in entries)
         if (_severity(entry, overrides[entry.id], recommended: recommended)
             case final severity?)
-          (
+          ConfiguredRule(
             const RuleBuilder().build(
               entry,
               overrides[entry.id]?.options(path) ?? _noOptions(entry.id, at),

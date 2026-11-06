@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:path/path.dart' as p;
 import 'package:vaixell/src/config/config.dart';
 import 'package:vaixell/src/engine/generated_files.dart';
@@ -24,14 +26,13 @@ class const Engine() {
     required SourceTree tree,
     required List<Package> packages,
   }) async {
-    final files = <(String, List<Violation>)>[];
+    final byPath = SplayTreeMap<String, List<Violation>>();
     for (final package in packages) {
       for (final path in await _dartFiles(tree, package)) {
-        files.add((path, _check(package, path, await tree.read(path))));
+        byPath[path] = _check(package, path, await tree.read(path));
       }
     }
-    files.sort((a, b) => a.$1.compareTo(b.$1));
-    return [for (final (_, violations) in files) ...violations];
+    return [for (final violations in byPath.values) ...violations];
   }
 
   Future<List<String>> _dartFiles(SourceTree tree, Package package) async {
@@ -57,31 +58,23 @@ class const Engine() {
     final found = const FindingOrder().byOffset(switch (file.errors) {
       [] => _findings(file, package.config.rules),
       final errors => [_parseError(package, errors)],
-    }, (found) => found.$3);
+    }, (found) => found.finding);
 
     final ids = ViolationIds();
-    return [
-      for (final (rule, severity, finding) in found)
-        _violation(file, rule, severity, finding, ids),
-    ];
+    return [for (final finding in found) finding.violation(file, ids)];
   }
 
-  List<(String, Severity, Finding)> _findings(
-    DartFile file,
-    List<(Rule, Severity)> rules,
-  ) => [
-    for (final (rule, severity) in rules)
+  List<_Found> _findings(DartFile file, List<ConfiguredRule> rules) => [
+    for (final ConfiguredRule(:rule, :severity) in rules)
       if (rule.shouldCheck(file))
-        for (final finding in rule.check(file)) (rule.id, severity, finding),
+        for (final finding in rule.check(file))
+          _Found(rule.id, severity, finding),
   ];
 
   /// The only finding of a file that doesn't parse, at its first error.
-  (String, Severity, Finding) _parseError(
-    Package package,
-    List<SyntaxError> errors,
-  ) {
+  _Found _parseError(Package package, List<SyntaxError> errors) {
     final [first, ...rest] = errors;
-    return (
+    return _Found(
       Config.parseErrorId,
       package.config.parseErrorSeverity,
       Finding(
@@ -92,14 +85,16 @@ class const Engine() {
       ),
     );
   }
+}
 
-  Violation _violation(
-    DartFile file,
-    String rule,
-    Severity severity,
-    Finding finding,
-    ViolationIds ids,
-  ) {
+/// A [finding] of the rule [rule] in a file, reported at [severity].
+final class const _Found(
+  final String rule,
+  final Severity severity,
+  final Finding finding,
+) {
+  /// The violation in [file], with the next id from [ids].
+  Violation violation(DartFile file, ViolationIds ids) {
     final (:line, :column) = const SourceLocator().locate(file, finding.offset);
     return Violation(
       id: ids.next(rule: rule, path: file.path, symbol: finding.symbol),

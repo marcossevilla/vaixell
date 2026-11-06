@@ -18,7 +18,7 @@ void main() {
   group(Config, () {
     test('recommended enables every rule at its default severity', () {
       final config = Config.recommended(Recommended.rules);
-      expect(config.rules.map((r) => r.$1), Recommended.rules);
+      expect(config.rules.map((r) => r.rule), Recommended.rules);
       expect(severitiesOf(config), {
         'parse-error': Severity.error,
         for (final rule in Recommended.rules) rule.id: rule.defaultSeverity,
@@ -32,7 +32,7 @@ void main() {
         ...Recommended.rules,
         const _OptInRule(),
       ]);
-      expect(config.rules.map((r) => r.$1.id), isNot(contains('opt-in')));
+      expect(config.rules.map((r) => r.rule.id), isNot(contains('opt-in')));
     });
 
     test('recommended builds factories without options', () {

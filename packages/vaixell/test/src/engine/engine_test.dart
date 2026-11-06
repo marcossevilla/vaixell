@@ -197,8 +197,8 @@ class Foo {
         {'lib/a.dart': 'void a() {}\n'},
         config: const Config(
           rules: [
-            (_RepeatRule('first'), Severity.error),
-            (_RepeatRule('second'), Severity.error),
+            ConfiguredRule(_RepeatRule('first'), Severity.error),
+            ConfiguredRule(_RepeatRule('second'), Severity.error),
           ],
         ),
       );
@@ -220,7 +220,7 @@ class Foo {
       final violations = await _run(
         {'lib/a.dart': 'void foo() {}\n'},
         config: const Config(
-          rules: [(TopLevelFunctionRule(), Severity.warning)],
+          rules: [ConfiguredRule(TopLevelFunctionRule(), Severity.warning)],
         ),
       );
       expect(violations.single.severity, equals(Severity.warning));
@@ -254,7 +254,9 @@ class Foo {
           Package(
             path: 'packages/a',
             config: Config(
-              rules: const [(TopLevelFunctionRule(), Severity.warning)],
+              rules: const [
+                ConfiguredRule(TopLevelFunctionRule(), Severity.warning),
+              ],
               exclude: [Glob('lib/legacy/**')],
               root: 'packages/a',
             ),
@@ -281,7 +283,9 @@ class Foo {
         packages: [
           const Package(
             path: 'packages/a',
-            config: Config(rules: [(_FileRule(), Severity.warning)]),
+            config: Config(
+              rules: [ConfiguredRule(_FileRule(), Severity.warning)],
+            ),
           ),
         ],
       );
@@ -293,7 +297,9 @@ class Foo {
     test('does not check files a rule skips', () async {
       final violations = await _run(
         {'lib/a.dart': 'class A {}\n'},
-        config: const Config(rules: [(_FileRule(skips: true), Severity.error)]),
+        config: const Config(
+          rules: [ConfiguredRule(_FileRule(skips: true), Severity.error)],
+        ),
       );
       expect(violations, isEmpty);
     });
@@ -309,7 +315,9 @@ class Foo {
           const Package(
             path: 'packages/app',
             name: 'app',
-            config: Config(rules: [(_ImportRule(), Severity.error)]),
+            config: Config(
+              rules: [ConfiguredRule(_ImportRule(), Severity.error)],
+            ),
           ),
         ],
       );

@@ -4,5 +4,6 @@ import 'package:vaixell/vaixell.dart';
 /// id, in reporting order.
 Map<String, Severity> severitiesOf(Config config) => {
   'parse-error': config.parseErrorSeverity,
-  for (final (rule, severity) in config.rules) rule.id: severity,
+  for (final ConfiguredRule(:rule, :severity) in config.rules)
+    rule.id: severity,
 };

@@ -6,12 +6,24 @@ import 'package:vaixell/src/violation/violation.dart';
 
 export 'package:vaixell/src/options/config_exception.dart';
 
+/// A rule that a [Config] enables, with the severity of its violations.
+final class const ConfiguredRule(
+  /// The rule, built with the config's options.
+  final Rule rule,
+
+  /// The severity of the rule's violations.
+  final Severity severity,
+) {
+  /// Creates the [rule] that config enables at [severity].
+  this;
+}
+
 /// The resolved `vaixell:` configuration for a package.
 class const Config({
   /// The enabled rules, each with its severity, in reporting order.
   ///
   /// Rules that are missing are off.
-  required final List<(Rule, Severity)> rules,
+  required final List<ConfiguredRule> rules,
 
   /// The severity of syntax errors, which are always reported.
   final Severity parseErrorSeverity = Severity.error,
@@ -43,7 +55,7 @@ class const Config({
       rules: [
         for (final entry in entries)
           if (entry.recommended)
-            (
+            ConfiguredRule(
               const RuleBuilder().build(
                 entry,
                 const OptionValues().empty(

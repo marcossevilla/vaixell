@@ -260,7 +260,7 @@ The caller passes a `List<RuleEntry>`. `package:vaixell` never picks the rule se
 
 - **`Recommended.rules`:** a `static const List<RuleEntry>` in reporting order, without `parse-error`, on a class so it stays clear of `top-level-variable`. The `recommended` preset enables its entries. It replaces `RuleRegistry`. Callers extend it (`[...Recommended.rules, myRule]`) or filter it by `id`. Removing an entry makes its id unknown to that executable.
 - **Required at every step:** `Check(rules:)` and `WriteBaseline(rules:)` pass it to `PackageResolver.fromTree(rules:)`, which passes it to `ConfigLoader(tree, rules)`.
-- **`Config`** holds the configured `(Rule, Severity)` pairs of a package instead of severities by id. The loader builds them, running each factory once.
+- **`Config`** holds a package's `ConfiguredRule`s, each a built `rule` with its `severity`, instead of severities by id. The loader builds them, running each factory once.
 - **`Engine`** stays `const Engine()`. It runs the rules each package's config carries, plus `parse-error`. `Check` and `WriteBaseline` accept an engine only as a test seam.
 - **CLI:** `VaixellCommandRunner({List<RuleEntry> rules = Recommended.rules})` passes the list to `CheckCommand(rules:)`, which requires it. `bin/vaixell.dart` uses the default.
 - **`Package`** also carries its `pubspec.yaml` name, so the model can resolve own-package imports.
@@ -317,18 +317,18 @@ test('flags Flutter in the domain layer', () {
 
 ## Public API changes
 
-| Today                                                          | After                                                                                                                                             |
-| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Rule.check(ParsedFile)`                                       | `Rule.check(DartFile)`                                                                                                                            |
-| `Rule.checksFilesWithErrors`                                   | removed; `parse-error` is the engine's                                                                                                            |
-| `ParsedFile`, `enclosing_declaration.dart`                     | removed, replaced by the model                                                                                                                    |
-| `RuleRegistry`                                                 | `Recommended.rules`                                                                                                                               |
-| `Presets`                                                      | `recommended` derived from the injected entries                                                                                                   |
-| `Config.severities`                                            | configured `(Rule, Severity)` pairs                                                                                                               |
-| `ConfigLoader(tree)`, `PackageResolver.fromTree(root:, tree:)` | add a required `rules`                                                                                                                            |
-| `Check(root:)`, `WriteBaseline(root:)`                         | add a required `rules`                                                                                                                            |
-| `ConfigException.at`, `ConfigException.yaml`                   | removed from the public API; they took YAML types                                                                                                 |
-| —                                                              | new: `RuleEntry`, `RuleFactory`, `OptionValue`, `Finding.at`, the model, the `Checks…` mixins, `SkipsDirectories`, `package:vaixell/testing.dart` |
+| Today                                                          | After                                                                                                                                                               |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Rule.check(ParsedFile)`                                       | `Rule.check(DartFile)`                                                                                                                                              |
+| `Rule.checksFilesWithErrors`                                   | removed; `parse-error` is the engine's                                                                                                                              |
+| `ParsedFile`, `enclosing_declaration.dart`                     | removed, replaced by the model                                                                                                                                      |
+| `RuleRegistry`                                                 | `Recommended.rules`                                                                                                                                                 |
+| `Presets`                                                      | `recommended` derived from the injected entries                                                                                                                     |
+| `Config.severities`                                            | `Config.rules`, a list of `ConfiguredRule`                                                                                                                          |
+| `ConfigLoader(tree)`, `PackageResolver.fromTree(root:, tree:)` | add a required `rules`                                                                                                                                              |
+| `Check(root:)`, `WriteBaseline(root:)`                         | add a required `rules`                                                                                                                                              |
+| `ConfigException.at`, `ConfigException.yaml`                   | removed from the public API; they took YAML types                                                                                                                   |
+| —                                                              | new: `RuleEntry`, `RuleFactory`, `ConfiguredRule`, `OptionValue`, `Finding.at`, the model, the `Checks…` mixins, `SkipsDirectories`, `package:vaixell/testing.dart` |
 
 ## Every rule, expressed
 

@@ -306,7 +306,7 @@ void main() {
           const _OptInRule(),
         ]);
         expect(severitiesOf(config)['opt-in'], Severity.error);
-        expect(config.rules.last.$1, isA<_OptInRule>());
+        expect(config.rules.last.rule, isA<_OptInRule>());
       });
 
       test('a removed entry is an unknown rule', () async {
@@ -339,7 +339,7 @@ void main() {
           [...Recommended.rules, factory],
         );
         expect(given.single.keys, ['names']);
-        final (rule, severity) = config.rules.last;
+        final ConfiguredRule(:rule, :severity) = config.rules.last;
         expect((rule as _NamedRule).names, ['A', 'B']);
         expect(severity, Severity.warning);
       });
@@ -367,7 +367,7 @@ void main() {
           return const _NamedRule([]);
         });
         final config = await load('vaixell: {}\n', [factory]);
-        expect(config.rules.single.$1, isA<_NamedRule>());
+        expect(config.rules.single.rule, isA<_NamedRule>());
         expect(calls, 1);
       });
 
@@ -483,7 +483,7 @@ void main() {
       test('the rules follow the order of the entries', () async {
         final reversed = Recommended.rules.reversed.toList();
         final config = await load('vaixell: {}\n', reversed);
-        expect(config.rules.map((r) => r.$1), reversed);
+        expect(config.rules.map((r) => r.rule), reversed);
       });
     });
   });
