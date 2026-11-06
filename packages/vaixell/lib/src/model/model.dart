@@ -33,5 +33,4 @@ part 'expressions/uses.dart';
 part 'imports/ast_import.dart';
 part 'imports/import.dart';
 part 'reportable.dart';
-part 'source_locator.dart';
 part 'syntax_error.dart';

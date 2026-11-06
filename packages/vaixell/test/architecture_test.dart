@@ -91,6 +91,7 @@ const _allowedForeignTypes = {
   'Set',
   'Map',
   'Iterable',
+  'Comparable',
   'Future',
   'Stream',
   'Function',

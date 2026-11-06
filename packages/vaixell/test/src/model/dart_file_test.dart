@@ -6,7 +6,7 @@ DartFile _parse(
   String path = 'lib/a.dart',
   String packageRoot = '',
   String? packageName,
-}) => const DartFileParser().parse(
+}) => DartFile.parse(
   path: path,
   content: content,
   packageRoot: packageRoot,
@@ -15,6 +15,14 @@ DartFile _parse(
 
 void main() {
   group(DartFile, () {
+    test('gives the 1-based line and column of an offset', () {
+      const source = 'class A {}\nclass B {}\n';
+      final file = _parse(source);
+      final offset = source.indexOf('B');
+      expect((file.lineAt(offset), file.columnAt(offset)), (2, 7));
+      expect((file.lineAt(0), file.columnAt(0)), (1, 1));
+    });
+
     group('paths', () {
       test('keeps the repo-relative path', () {
         expect(_parse('', path: 'lib/src/a.dart').path, 'lib/src/a.dart');
