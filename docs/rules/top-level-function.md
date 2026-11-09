@@ -7,7 +7,16 @@ Don't declare top-level functions, getters or setters.
 ## Details
 
 Top-level functions can't be mocked or swapped out in tests, and they grow
-into grab bags of unrelated helpers. Put behavior in a class instead.
+into grab bags of unrelated helpers. Put behavior where its data lives:
+
+- **On the type it works on**, as an instance member. Use an extension when
+  you don't own the type.
+- **In a dependency**, a class passed through a constructor, when callers
+  need to swap it out in tests.
+
+Don't move a function into a class only to call it on a throwaway instance,
+as in `const PriceFormatter().format(cents)`. That call can't be swapped out
+any more than the function could.
 
 A top-level `main` function is allowed, because apps and scripts need an
 entrypoint.
@@ -23,10 +32,16 @@ String get appName => 'Vaixell';
 **GOOD:**
 
 ```dart
-class PriceFormatter {
-  const PriceFormatter();
+extension type const Price(int cents) {
+  String format() => '\$${cents / 100}';
+}
 
-  String format(int cents) => '\$${cents / 100}';
+class Checkout {
+  const Checkout({required this.clock});
+
+  final Clock clock;
+
+  bool get isOpen => clock.now().hour < 22;
 }
 
 void main() {}
