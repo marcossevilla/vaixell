@@ -1,10 +1,11 @@
 import 'package:vaixell/src/model/model.dart';
 import 'package:vaixell/src/rules/rule.dart';
 
-/// Reports extensions, named or unnamed, and extension types.
-final class const ExtensionDeclarationRule()
-    extends Rule
-    with ChecksDeclarations {
+/// Reports extensions on a type that the same file declares, whose members
+/// belong on the type itself.
+///
+/// Extensions on other types and extension types are allowed.
+final class const ExtensionDeclarationRule() extends Rule {
   /// Creates the rule.
   this;
 
@@ -12,19 +13,31 @@ final class const ExtensionDeclarationRule()
   String get id => 'extension-declaration';
 
   @override
-  Finding? checkDeclaration(Declaration declaration) => switch (declaration) {
-    ExtensionDeclaration(name: null) => Finding.at(
-      declaration,
-      message: 'Unnamed extensions are not allowed. Use a class instead.',
-    ),
-    ExtensionDeclaration(:final name?) => Finding.at(
-      declaration,
-      message: 'Extension `$name` is not allowed. Use a class instead.',
-    ),
-    ExtensionTypeDeclaration(:final name) => Finding.at(
-      declaration,
-      message: 'Extension type `$name` is not allowed. Use a class instead.',
-    ),
-    _ => null,
-  };
+  List<Finding> check(DartFile file) {
+    final declared = {
+      for (final declaration in file.declarations)
+        if (declaration case TypeDeclaration(:final name?)
+            when declaration is! ExtensionDeclaration)
+          name,
+    };
+    return [
+      for (final declaration in file.declarations)
+        if (declaration
+            case ExtensionDeclaration(
+              extendedType: TypeAnnotation(prefix: null, name: final type?),
+            )
+            when declared.contains(type))
+          Finding.at(
+            declaration,
+            message: switch (declaration.name) {
+              null =>
+                'This extension adds members to `$type`, which this '
+                    'file declares. Add them to `$type` instead.',
+              final name =>
+                'Extension `$name` adds members to `$type`, which '
+                    'this file declares. Add them to `$type` instead.',
+            },
+          ),
+    ];
+  }
 }

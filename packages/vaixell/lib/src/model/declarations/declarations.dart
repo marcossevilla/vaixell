@@ -48,7 +48,11 @@ abstract interface class EnumDeclaration implements TypeDeclaration {
 }
 
 /// An `extension`, which may be unnamed.
-abstract interface class ExtensionDeclaration implements TypeDeclaration;
+abstract interface class ExtensionDeclaration implements TypeDeclaration {
+  /// The type after `on`, which the extension adds members to, or `null`
+  /// when the extension has no `on` clause.
+  TypeAnnotation? get extendedType;
+}
 
 /// An `extension type`.
 abstract interface class ExtensionTypeDeclaration implements TypeDeclaration {

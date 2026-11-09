@@ -92,17 +92,17 @@ void main() {
       final violations = await _run({
         'lib/a.dart': '''
 const limit = 1;
-extension on int { static void a() {} }
-extension on String {}
 class Foo { static void bar() {} }
+extension on Foo { static void a() {} }
+extension on Foo {}
 ''',
       });
       expect(violations.map((v) => v.id), [
         'top-level-variable:lib/a.dart:limit',
+        'static-method:lib/a.dart:Foo.bar',
         'extension-declaration:lib/a.dart:<unnamed>',
         'static-method:lib/a.dart:<unnamed>.a',
         'extension-declaration:lib/a.dart:<unnamed>#2',
-        'static-method:lib/a.dart:Foo.bar',
       ]);
     });
 

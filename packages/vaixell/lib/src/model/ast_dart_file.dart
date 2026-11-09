@@ -161,6 +161,9 @@ final class _AstDartFile(
   TypeAnnotation type(ast.TypeAnnotation node) =>
       _model(node, () => _AstTypeAnnotation(this, node));
 
+  TypeAnnotation? typeOrNull(ast.TypeAnnotation? node) =>
+      node == null ? null : type(node);
+
   /// The declaration and member around [node]. A node in a variable
   /// declaration list, such as a type shared by several variables, belongs
   /// to the first variable.

@@ -230,6 +230,7 @@ abstract interface class Import implements Reportable {
 
 - **Sealed `Declaration`:** `ClassDeclaration`, `MixinDeclaration`, `EnumDeclaration`, `ExtensionDeclaration`, `ExtensionTypeDeclaration`, `TopLevelFunction` and `TopLevelVariable` (one per declared name, with `isConst`).
 - **Sealed `TypeDeclaration`** groups the first five: `name` (`null` only for an unnamed extension), `annotations`, `members` in source order (a primary constructor, declared in the header, first), and `methods`, `constructors` and `fields`.
+- **`ExtensionDeclaration`:** `extendedType`, the `TypeAnnotation` after `on`.
 - **`TopLevelFunction`:** `name` and `kind` (`FunctionKind`: function, getter, setter or operator).
 - **Sealed `Member`:**
   - `Method`: `name`, `kind`, `isStatic`, `isAbstract` (no body), `isExternal`, `parameters`, `returnExpression`.
@@ -339,7 +340,7 @@ The map is done when every built-in rule and #32's `forbidden-import` fit this s
 | `parse-error`           | engine                              | error   | —                                                                         | `DartFile.errors`                                                                                          | none                                |
 | `top-level-function`    | `Rule`                              | error   | `ChecksDeclarations`                                                      | `TopLevelFunction` `name`, `kind`                                                                          | `name`, `name=`                     |
 | `top-level-variable`    | `Rule`                              | error   | `ChecksDeclarations`                                                      | `TopLevelVariable` `name`, `isConst`                                                                       | `name`                              |
-| `extension-declaration` | `Rule`                              | error   | `ChecksDeclarations`                                                      | `ExtensionDeclaration`, `ExtensionTypeDeclaration`                                                         | `Name`, `<unnamed>`                 |
+| `extension-declaration` | `Rule`                              | error   | `check`                                                                   | `ExtensionDeclaration` `extendedType`, `TypeDeclaration` `name`                                            | `Name`, `<unnamed>`                 |
 | `static-method`         | `Rule`                              | error   | `ChecksMembers`                                                           | `Method` `isStatic`, `kind`                                                                                | `Type.member`                       |
 | `raw-json`              | `Rule`                              | error   | `ChecksExpressions`, `ChecksTypeAnnotations`, `SkipsDirectories {models}` | `MethodCall`, `Reference`, `ArgumentUse`, `CollectionLiteral`, `Cast`, `TypeAnnotation`, `Enclosed.member` | `<where>@decode`, `@encode`, `@map` |
 | `generated-json`        | `Rule`                              | warning | `ChecksMembers`                                                           | `Constructor`, `Method`, `parameters`, `returnExpression`, `Annotation` literals                           | `Type.fromJson`, `Type.toJson`      |
