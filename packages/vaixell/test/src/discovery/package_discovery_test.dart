@@ -5,8 +5,10 @@ import 'package:vaixell/vaixell.dart';
 import '../../helpers/git_repo.dart';
 import '../../helpers/memory_source_tree.dart';
 
-Future<List<String>> _discover(Map<String, String> files) =>
-    PackageDiscovery(MemorySourceTree(files)).discover();
+Future<List<String>> _discover(Map<String, String> files) async => [
+  for (final dir in await PackageDiscovery(MemorySourceTree(files)).discover())
+    dir.path,
+];
 
 void main() {
   group(PackageDiscovery, () {
@@ -200,10 +202,49 @@ void main() {
 
       final tree = GitSourceTree(git: GitRunner(d.sandbox), commit: commit);
       addTearDown(tree.close);
-      expect(
-        await PackageDiscovery(tree).discover(),
-        equals(['', 'packages/a']),
-      );
+      expect([
+        for (final dir in await PackageDiscovery(tree).discover()) dir.path,
+      ], equals(['', 'packages/a']));
+    });
+
+    test('names each package after its pubspec', () async {
+      final dirs = await PackageDiscovery(
+        MemorySourceTree({
+          'pubspec.yaml': 'name: w\nworkspace:\n  - packages/a\n',
+          'packages/a/pubspec.yaml': 'name: a\n',
+        }),
+      ).discover();
+      expect(dirs.map((dir) => (dir.path, dir.name)), [
+        ('', 'w'),
+        ('packages/a', 'a'),
+      ]);
+    });
+
+    group('at', () {
+      Future<PackageDir> at(String path, Map<String, String> files) =>
+          PackageDiscovery(MemorySourceTree(files)).at(path);
+
+      test("reads the package's pubspec name", () async {
+        final root = await at('', {'pubspec.yaml': 'name: app\n'});
+        expect((root.path, root.name), ('', 'app'));
+        final a = await at('packages/a', {
+          'packages/a/pubspec.yaml': 'name: a\n',
+        });
+        expect((a.path, a.name), ('packages/a', 'a'));
+      });
+
+      test('has no name without a valid one', () async {
+        for (final files in [
+          <String, String>{},
+          {'pubspec.yaml': 'name: [\n'},
+          {'pubspec.yaml': '- a\n'},
+          {'pubspec.yaml': 'name: 1\n'},
+          {'pubspec.yaml': 'version: 1.0.0\n'},
+        ]) {
+          final dir = await at('', files);
+          expect((dir.path, dir.name), ('', null), reason: '$files');
+        }
+      });
     });
   });
 }

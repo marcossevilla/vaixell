@@ -22,6 +22,9 @@ generates that code from the class itself. This rule reports:
 - A static `fromJson` method, since json_serializable expects a factory
   constructor. `static-method` reports it too. Make it a factory
   constructor rather than an instance method, which neither rule checks.
+- A generative `fromJson` constructor, including a primary one such as
+  `class const User.fromJson(...)`, since it can't return the generated
+  function. Make it a factory constructor.
 - The same members in an enum, whatever their body. Annotate the enum with
   `@JsonEnum()` and its values with `@JsonValue` instead.
 

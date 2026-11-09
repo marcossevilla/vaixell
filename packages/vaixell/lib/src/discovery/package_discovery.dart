@@ -1,8 +1,24 @@
 import 'package:glob/glob.dart';
 import 'package:path/path.dart' as p;
 import 'package:vaixell/src/config/config.dart';
+import 'package:vaixell/src/options/config_exception.dart';
 import 'package:vaixell/src/source/source_tree.dart';
 import 'package:yaml/yaml.dart';
+
+/// A package directory that [PackageDiscovery] found, with its
+/// `pubspec.yaml` name.
+final class const PackageDir({
+  /// The directory, relative to the repository root, in POSIX style, where
+  /// `''` is the root itself.
+  required final String path,
+
+  /// The `name` in the directory's `pubspec.yaml`, or `null` when the file
+  /// is missing or isn't valid, or has no string name.
+  final String? name,
+}) {
+  /// Creates the package directory at [path], named [name].
+  this;
+}
 
 /// Finds the packages to check in a [SourceTree].
 ///
@@ -26,11 +42,34 @@ class const PackageDiscovery(
   static const String _pubspec = 'pubspec.yaml';
   static const List<String> _packageParents = ['packages', 'pkgs'];
 
-  /// Returns the sorted package directories.
+  /// Returns the package directories, sorted by path.
   ///
   /// Throws a [ConfigException] when the root `pubspec.yaml` isn't valid
   /// YAML or its `workspace:` is invalid.
-  Future<List<String>> discover() async {
+  Future<List<PackageDir>> discover() async {
+    final paths = await _discoverPaths();
+    return [for (final path in paths) await at(path)];
+  }
+
+  /// Returns the package directory at [path], relative to the root in POSIX
+  /// style, with the name in its `pubspec.yaml`.
+  Future<PackageDir> at(String path) async {
+    final pubspec = p.posix.join(path, _pubspec);
+    if (!await tree.exists(pubspec)) return PackageDir(path: path);
+    try {
+      return PackageDir(
+        path: path,
+        name: switch (loadYaml(await tree.read(pubspec))) {
+          {'name': final String name} => name,
+          _ => null,
+        },
+      );
+    } on YamlException {
+      return PackageDir(path: path);
+    }
+  }
+
+  Future<List<String>> _discoverPaths() async {
     if (await tree.exists(_pubspec)) {
       final members = await _workspaceMembers();
       return {
@@ -62,13 +101,12 @@ class const PackageDiscovery(
         sourceUrl: Uri.file(_pubspec),
       );
     } on YamlException catch (error) {
-      throw ConfigException.yaml(error, path: _pubspec);
+      throw error.toConfigException(path: _pubspec);
     }
     final workspace = root is YamlMap ? root.nodes['workspace'] : null;
     if (workspace == null) return null;
     if (workspace is! YamlList) {
-      throw ConfigException.at(
-        workspace,
+      throw workspace.configError(
         '`workspace` must be a list of package paths.',
         path: _pubspec,
       );
@@ -81,8 +119,7 @@ class const PackageDiscovery(
   Future<List<String>> _members(YamlNode item) async {
     final value = item.value;
     if (value is! String) {
-      throw ConfigException.at(
-        item,
+      throw item.configError(
         '`workspace` must be a list of package paths.',
         path: _pubspec,
       );
@@ -91,8 +128,7 @@ class const PackageDiscovery(
     if (member == '.' ||
         member.startsWith('..') ||
         p.posix.isAbsolute(member)) {
-      throw ConfigException.at(
-        item,
+      throw item.configError(
         'Workspace member `$value` must be a directory inside the workspace.',
         path: _pubspec,
       );
@@ -101,16 +137,14 @@ class const PackageDiscovery(
     try {
       glob = Glob(member, context: p.posix);
     } on FormatException catch (error) {
-      throw ConfigException.at(
-        item,
+      throw item.configError(
         'Workspace member `$value` is not a valid glob: ${error.message}',
         path: _pubspec,
       );
     }
     final matches = await _matching(glob);
     if (matches.isEmpty) {
-      throw ConfigException.at(
-        item,
+      throw item.configError(
         Glob.quote(member) == member
             ? 'Workspace member `$value` has no pubspec.yaml.'
             : 'Workspace member `$value` matches no directory with a '

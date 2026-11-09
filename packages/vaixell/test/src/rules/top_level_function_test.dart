@@ -1,7 +1,8 @@
 import 'package:test/test.dart';
 import 'package:vaixell/src/rules/top_level_function.dart';
+import 'package:vaixell/testing.dart';
 
-import '../../helpers/parse.dart';
+const _tester = RuleTester();
 
 void main() {
   group(TopLevelFunctionRule, () {
@@ -12,7 +13,10 @@ void main() {
     });
 
     test('flags top-level functions', () {
-      final findings = rule.check(parse('void foo() {}\nint bar() => 1;\n'));
+      final findings = _tester.checkSource(
+        rule,
+        'void foo() {}\nint bar() => 1;\n',
+      );
       expect(findings.map((f) => f.symbol), equals(['foo', 'bar']));
       expect(
         findings.first.message,
@@ -24,8 +28,9 @@ void main() {
     });
 
     test('flags top-level getters and setters', () {
-      final findings = rule.check(
-        parse('int get foo => 1;\nset foo(int v) {}\n'),
+      final findings = _tester.checkSource(
+        rule,
+        'int get foo => 1;\nset foo(int v) {}\n',
       );
       expect(findings.map((f) => f.symbol), equals(['foo', 'foo=']));
       expect(findings.map((f) => f.message), [
@@ -35,19 +40,23 @@ void main() {
     });
 
     test('allows a top-level main function', () {
-      expect(rule.check(parse('void main() {}\n')), isEmpty);
-      expect(rule.check(parse('void main(List<String> args) {}\n')), isEmpty);
+      expect(_tester.checkSource(rule, 'void main() {}\n'), isEmpty);
+      expect(
+        _tester.checkSource(rule, 'void main(List<String> args) {}\n'),
+        isEmpty,
+      );
     });
 
     test('flags getters and setters named main', () {
-      final findings = rule.check(
-        parse('int get main => 1;\nset main(int v) {}\n'),
+      final findings = _tester.checkSource(
+        rule,
+        'int get main => 1;\nset main(int v) {}\n',
       );
       expect(findings.map((f) => f.symbol), equals(['main', 'main=']));
     });
 
     test('ignores members, local functions and other declarations', () {
-      final file = parse('''
+      const source = '''
 class A {
   void a() {}
   static void b() {}
@@ -58,8 +67,8 @@ void main() {
 }
 final x = () {};
 typedef F = void Function();
-''');
-      expect(rule.check(file), isEmpty);
+''';
+      expect(_tester.checkSource(rule, source), isEmpty);
     });
   });
 }

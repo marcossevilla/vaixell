@@ -1,7 +1,8 @@
 import 'package:test/test.dart';
 import 'package:vaixell/src/rules/top_level_variable.dart';
+import 'package:vaixell/testing.dart';
 
-import '../../helpers/parse.dart';
+const _tester = RuleTester();
 
 void main() {
   group(TopLevelVariableRule, () {
@@ -12,16 +13,14 @@ void main() {
     });
 
     test('flags final, var, const, late and typed variables', () {
-      final findings = rule.check(
-        parse('''
+      final findings = _tester.checkSource(rule, '''
 final a = 1;
 var b = 2;
 const c = 3;
 late final int d;
 int? e;
 String _f = '';
-'''),
-      );
+''');
       expect(
         findings.map((f) => f.symbol),
         equals(['a', 'b', 'c', 'd', 'e', '_f']),
@@ -30,12 +29,15 @@ String _f = '';
     });
 
     test('flags every variable in a declaration list', () {
-      final findings = rule.check(parse('var a = 1, b = 2;\n'));
+      final findings = _tester.checkSource(rule, 'var a = 1, b = 2;\n');
       expect(findings.map((f) => f.symbol), equals(['a', 'b']));
     });
 
     test('says constant for const declarations', () {
-      final findings = rule.check(parse('const a = 1;\nfinal b = 2;\n'));
+      final findings = _tester.checkSource(
+        rule,
+        'const a = 1;\nfinal b = 2;\n',
+      );
       expect(findings.map((f) => f.message), [
         'Top-level constant `a` is not allowed. Move it into a class.',
         'Top-level variable `b` is not allowed. Move it into a class.',
@@ -43,7 +45,7 @@ String _f = '';
     });
 
     test('ignores fields, locals and functions', () {
-      final file = parse('''
+      const source = '''
 class A {
   static const a = 1;
   final b = 2;
@@ -51,8 +53,8 @@ class A {
 void main() {
   final c = 3;
 }
-''');
-      expect(rule.check(file), isEmpty);
+''';
+      expect(_tester.checkSource(rule, source), isEmpty);
     });
   });
 }

@@ -12,6 +12,7 @@ import 'package:vaixell/vaixell.dart';
 /// {@endtemplate}
 class CheckCommand({
   required final Logger _logger,
+  required List<RuleEntry> rules,
   Directory? root,
   Map<String, String>? environment,
   Check? check,
@@ -21,10 +22,10 @@ class CheckCommand({
   /// {@macro check_command}
   ///
   /// Checks the packages in [root] (the current directory by default) with
-  /// [check], and writes baselines with [writeBaseline], both on [root] by
-  /// default. Given ones must check the same [root], which the paths are
-  /// validated against. The report goes to stdout and diagnostics go to
-  /// stderr, both through the logger.
+  /// [check], and writes baselines with [writeBaseline], both on [root] with
+  /// [rules] by default. Given ones must check the same [root], which the
+  /// paths are validated against. The report goes to stdout and diagnostics
+  /// go to stderr, both through the logger.
   ///
   /// [reporters] maps each `--format` value to its [Reporter], and the first
   /// one is the default. It must not be empty. Formats other than a
@@ -67,9 +68,11 @@ class CheckCommand({
   static const int _violationsExitCode = 1;
 
   final Directory _root = root ?? Directory.current;
-  final Check _check = check ?? Check(root: (root ?? Directory.current).path);
+  final Check _check =
+      check ?? Check(root: (root ?? Directory.current).path, rules: rules);
   final WriteBaseline _writeBaseline =
-      writeBaseline ?? WriteBaseline(root: (root ?? Directory.current).path);
+      writeBaseline ??
+      WriteBaseline(root: (root ?? Directory.current).path, rules: rules);
   final Map<String, Reporter> _reporters =
       reporters ??
       {

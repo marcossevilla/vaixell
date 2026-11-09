@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:isolate';
 
 import 'package:args/command_runner.dart';
 import 'package:cli_completion/cli_completion.dart';
@@ -7,7 +6,11 @@ import 'package:mason_logger/mason_logger.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:pub_updater/pub_updater.dart';
 import 'package:test/test.dart';
+import 'package:test_descriptor/test_descriptor.dart' as d;
+import 'package:vaixell/vaixell.dart';
 import 'package:vaixell_cli/vaixell_cli.dart';
+
+import '../helpers/buffered_logger.dart';
 
 class _MockLogger extends Mock implements Logger;
 
@@ -22,6 +25,18 @@ final _updatePrompt =
     // ignore: leading_newlines_in_multiline_strings
     '''${lightYellow.wrap('Update available!')} ${lightCyan.wrap(VaixellCommandRunner.packageVersion)} \u2192 ${lightCyan.wrap(_latestVersion)}
 Run ${lightCyan.wrap('vaixell update')} to update''';
+
+/// Reports every class.
+final class const _ClassRule() extends Rule with ChecksDeclarations {
+  @override
+  String get id => 'no-class';
+
+  @override
+  Finding? checkDeclaration(Declaration declaration) => switch (declaration) {
+    ClassDeclaration() => Finding.at(declaration, message: 'A class.'),
+    _ => null,
+  };
+}
 
 void main() {
   group(VaixellCommandRunner, () {
@@ -151,6 +166,24 @@ void main() {
       verify(() => logger.info(_updatePrompt)).called(1);
     });
 
+    test('checks with the given rules', () async {
+      await d.dir('lib', [d.file('a.dart', 'class A {}\n')]).create();
+      final out = StringBuffer();
+      final code = await IOOverrides.runZoned(
+        () => VaixellCommandRunner(
+          logger: bufferedLogger(out: out, err: StringBuffer()),
+          interactive: false,
+          rules: [...Recommended.rules, const _ClassRule()],
+        ).run(['check']),
+        getCurrentDirectory: () => Directory(d.sandbox),
+      );
+      expect(code, equals(1));
+      expect(
+        out.toString(),
+        startsWith('lib/a.dart:1:7: error: A class. [no-class:lib/a.dart:A]'),
+      );
+    });
+
     test(
       'can be instantiated without an explicit analytics/logger instance',
       () {
@@ -199,12 +232,11 @@ void main() {
             .called(1);
       });
 
-      test('matches the pubspec version', () async {
-        final lib = await Isolate.resolvePackageUri(
-          Uri.parse('package:vaixell_cli/'),
-        );
-        final pubspec = File.fromUri(lib!.resolve('../pubspec.yaml'))
-            .readAsStringSync();
+      test('matches the pubspec version', () {
+        // Tests run from the package root, so read the pubspec directly
+        // rather than resolving `package:` URIs, which `very_good test`
+        // does not support.
+        final pubspec = File('pubspec.yaml').readAsStringSync();
         final version = RegExp(
           r'^version: (\S+)$',
           multiLine: true,

@@ -67,6 +67,8 @@ class const BaselineFile() {
   /// Creates a handle for reading and writing baseline files.
   this;
 
+  static const JsonDecoder _decoder = JsonDecoder();
+
   /// Reads the baseline at [path].
   ///
   /// Throws a [BaselineException] when the file is missing or malformed.
@@ -76,7 +78,7 @@ class const BaselineFile() {
       throw BaselineException('Baseline file `$path` not found.');
     }
     try {
-      return switch (const JsonDecoder().convert(await file.readAsString())) {
+      return switch (_decoder.convert(await file.readAsString())) {
         final Map<String, Object?> json => Baseline.fromJson(json),
         _ => throw const FormatException('Expected a JSON object.'),
       };

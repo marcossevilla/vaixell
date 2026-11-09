@@ -1,5 +1,4 @@
-import 'package:analyzer/dart/ast/ast.dart';
-import 'package:vaixell/src/rules/enclosing_declaration.dart';
+import 'package:vaixell/src/model/model.dart';
 import 'package:vaixell/src/rules/rule.dart';
 
 /// Reports static methods, getters and setters, public or private, in
@@ -7,7 +6,7 @@ import 'package:vaixell/src/rules/rule.dart';
 ///
 /// Static fields and factory constructors aren't methods, so they aren't
 /// reported.
-final class const StaticMethodRule() extends Rule {
+final class const StaticMethodRule() extends Rule with ChecksMembers {
   /// Creates the rule.
   this;
 
@@ -15,52 +14,13 @@ final class const StaticMethodRule() extends Rule {
   String get id => 'static-method';
 
   @override
-  List<Finding> check(ParsedFile file) => [
-    for (final declaration in file.unit.declarations)
-      if (_container(declaration) case (final container, final members))
-        for (final member in members)
-          if (member is MethodDeclaration && member.isStatic)
-            _finding(container, member),
-  ];
-
-  (String, List<ClassMember>)? _container(CompilationUnitMember node) =>
-      switch (node) {
-        ClassDeclaration(:final namePart, :final body) => (
-          namePart.typeName.lexeme,
-          body.members,
-        ),
-        MixinDeclaration(:final name, :final body) => (
-          name.lexeme,
-          body.members,
-        ),
-        EnumDeclaration(:final namePart, :final body) => (
-          namePart.typeName.lexeme,
-          body.members,
-        ),
-        ExtensionDeclaration(:final name, :final body) => (
-          name?.lexeme ?? EnclosingDeclaration.unnamed,
-          body.members,
-        ),
-        ExtensionTypeDeclaration(:final namePart, :final body) => (
-          namePart.typeName.lexeme,
-          body.members,
-        ),
-        _ => null,
-      };
-
-  Finding _finding(String container, MethodDeclaration method) {
-    final name = '$container.${method.name.lexeme}';
-    final kind = method.isGetter
-        ? 'getter'
-        : method.isSetter
-        ? 'setter'
-        : 'method';
-    return Finding(
-      offset: method.name.offset,
-      symbol: method.isSetter ? '$name=' : name,
+  Finding? checkMember(TypeDeclaration type, Member member) => switch (member) {
+    Method(isStatic: true, :final kind, :final name) => Finding.at(
+      member,
       message:
-          'Static $kind `$name` is not allowed. '
-          'Use an instance member instead.',
-    );
-  }
+          'Static ${kind.asMember} `${type.name ?? '<unnamed>'}.$name` is not '
+          'allowed. Use an instance member instead.',
+    ),
+    _ => null,
+  };
 }

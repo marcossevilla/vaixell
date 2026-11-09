@@ -1,5 +1,6 @@
 import 'package:glob/glob.dart';
 import 'package:test/test.dart';
+import 'package:vaixell/src/rules/top_level_function.dart';
 import 'package:vaixell/vaixell.dart';
 
 import '../../helpers/memory_source_tree.dart';
@@ -7,8 +8,45 @@ import '../../helpers/memory_source_tree.dart';
 Future<List<Violation>> _run(Map<String, String> files, {Config? config}) =>
     const Engine().run(
       tree: MemorySourceTree(files),
-      packages: [Package(path: '', config: config ?? Config.recommended())],
+      packages: [
+        Package(
+          path: '',
+          config: config ?? Config.recommended(RuleSet(Recommended.rules)),
+        ),
+      ],
     );
+
+/// Reports every file at its start, unless [skips] is set.
+final class const _FileRule({final bool skips = false}) extends Rule {
+  @override
+  String get id => 'file';
+
+  @override
+  bool shouldCheck(DartFile file) => !skips;
+
+  @override
+  List<Finding> check(DartFile file) => [
+    Finding(offset: 0, message: 'File ${file.packagePath}.'),
+  ];
+}
+
+/// Reports 20 findings at the start of every file.
+final class const _RepeatRule(@override final String id) extends Rule {
+  @override
+  List<Finding> check(DartFile file) => [
+    for (var i = 0; i < 20; i++) Finding(offset: 0, message: '$id $i'),
+  ];
+}
+
+/// Reports the resolved path of every import.
+final class const _ImportRule() extends Rule with ChecksImports {
+  @override
+  String get id => 'import';
+
+  @override
+  Finding? checkImport(DartFile file, Import import) =>
+      Finding.at(import, message: '${import.path}');
+}
 
 void main() {
   group(Engine, () {
@@ -54,17 +92,17 @@ void main() {
       final violations = await _run({
         'lib/a.dart': '''
 const limit = 1;
-extension on int { static void a() {} }
-extension on String {}
 class Foo { static void bar() {} }
+extension on Foo { static void a() {} }
+extension on Foo {}
 ''',
       });
       expect(violations.map((v) => v.id), [
         'top-level-variable:lib/a.dart:limit',
+        'static-method:lib/a.dart:Foo.bar',
         'extension-declaration:lib/a.dart:<unnamed>',
         'static-method:lib/a.dart:<unnamed>.a',
         'extension-declaration:lib/a.dart:<unnamed>#2',
-        'static-method:lib/a.dart:Foo.bar',
       ]);
     });
 
@@ -108,6 +146,39 @@ class Foo {
       expect(violations.map((v) => v.rule), ['parse-error']);
     });
 
+    group('parse-error', () {
+      test('reports one violation at the first error', () async {
+        final violations = await _run({'lib/a.dart': 'class A {\n'});
+        final violation = violations.single;
+        expect(violation.id, 'parse-error:lib/a.dart');
+        expect(violation.severity, Severity.error);
+        expect(violation.message, startsWith('Syntax error: '));
+        expect(violation.message, isNot(contains('more)')));
+      });
+
+      test('mentions how many more errors there are', () async {
+        final violations = await _run({
+          'lib/a.dart': 'class A { void f( }\nclass {\n',
+        });
+        expect(violations.single.message, matches(r'\(and \d+ more\)$'));
+      });
+
+      test('uses the severity from the config', () async {
+        final violations = await _run(
+          {'lib/a.dart': 'class {\n'},
+          config: const Config(rules: [], parseErrorSeverity: Severity.warning),
+        );
+        expect(violations.single.severity, Severity.warning);
+      });
+
+      test('is an error by default', () async {
+        final violations = await _run({
+          'lib/a.dart': 'class {\n',
+        }, config: const Config(rules: []));
+        expect(violations.single.severity, Severity.error);
+      });
+    });
+
     test('sorts by path, line and column', () async {
       final violations = await _run({
         'lib/b.dart': 'void b() {}\n',
@@ -121,11 +192,27 @@ class Foo {
       ]);
     });
 
+    test('keeps the rule order for findings at the same position', () async {
+      final violations = await _run(
+        {'lib/a.dart': 'void a() {}\n'},
+        config: const Config(
+          rules: [
+            ConfiguredRule(_RepeatRule('first'), Severity.error),
+            ConfiguredRule(_RepeatRule('second'), Severity.error),
+          ],
+        ),
+      );
+      expect(violations.map((v) => v.message), [
+        for (final rule in ['first', 'second'])
+          for (var i = 0; i < 20; i++) '$rule $i',
+      ]);
+    });
+
     test('runs only the rules enabled in the config', () async {
       final violations = await _run({
         'lib/a.dart': 'void foo() {}\n',
         'lib/b.dart': 'class {\n',
-      }, config: const Config(severities: {'parse-error': Severity.error}));
+      }, config: const Config(rules: []));
       expect(violations.map((v) => v.rule), ['parse-error']);
     });
 
@@ -133,7 +220,7 @@ class Foo {
       final violations = await _run(
         {'lib/a.dart': 'void foo() {}\n'},
         config: const Config(
-          severities: {'top-level-function': Severity.warning},
+          rules: [ConfiguredRule(TopLevelFunctionRule(), Severity.warning)],
         ),
       );
       expect(violations.single.severity, equals(Severity.warning));
@@ -146,7 +233,7 @@ class Foo {
           'lib/legacy/b.dart': 'void foo() {}\n',
         },
         config: Config(
-          severities: Config.recommended().severities,
+          rules: Config.recommended(RuleSet(Recommended.rules)).rules,
           exclude: [Glob('lib/legacy/**')],
         ),
       );
@@ -163,16 +250,24 @@ class Foo {
           'packages/b/test/b_test.dart': 'void t() {}\n',
         }),
         packages: [
-          Package(path: '', config: Config.recommended()),
+          Package(
+            path: '',
+            config: Config.recommended(RuleSet(Recommended.rules)),
+          ),
           Package(
             path: 'packages/a',
             config: Config(
-              severities: const {'top-level-function': Severity.warning},
+              rules: const [
+                ConfiguredRule(TopLevelFunctionRule(), Severity.warning),
+              ],
               exclude: [Glob('lib/legacy/**')],
               root: 'packages/a',
             ),
           ),
-          Package(path: 'packages/b', config: Config.recommended()),
+          Package(
+            path: 'packages/b',
+            config: Config.recommended(RuleSet(Recommended.rules)),
+          ),
         ],
       );
       expect(
@@ -183,6 +278,56 @@ class Foo {
           'top-level-function:packages/b/lib/b.dart:b error',
         ]),
       );
+    });
+
+    test('runs injected rules with their configured severity', () async {
+      final violations = await const Engine().run(
+        tree: MemorySourceTree({'packages/a/lib/a.dart': 'class A {}\n'}),
+        packages: [
+          const Package(
+            path: 'packages/a',
+            config: Config(
+              rules: [ConfiguredRule(_FileRule(), Severity.warning)],
+            ),
+          ),
+        ],
+      );
+      expect(violations.single.id, 'file:packages/a/lib/a.dart');
+      expect(violations.single.severity, Severity.warning);
+      expect(violations.single.message, 'File lib/a.dart.');
+    });
+
+    test('does not check files a rule skips', () async {
+      final violations = await _run(
+        {'lib/a.dart': 'class A {}\n'},
+        config: const Config(
+          rules: [ConfiguredRule(_FileRule(skips: true), Severity.error)],
+        ),
+      );
+      expect(violations, isEmpty);
+    });
+
+    test("resolves imports of the package's own name", () async {
+      final violations = await const Engine().run(
+        tree: MemorySourceTree({
+          'packages/app/lib/a.dart':
+              "import 'package:app/src/b.dart';\n"
+              "import 'package:other/c.dart';\n",
+        }),
+        packages: [
+          const Package(
+            path: 'packages/app',
+            name: 'app',
+            config: Config(
+              rules: [ConfiguredRule(_ImportRule(), Severity.error)],
+            ),
+          ),
+        ],
+      );
+      expect(violations.map((v) => v.message), [
+        'packages/app/lib/src/b.dart',
+        'null',
+      ]);
     });
   });
 }
