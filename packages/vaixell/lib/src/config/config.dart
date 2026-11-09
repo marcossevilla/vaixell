@@ -39,6 +39,39 @@ class const Config({
   /// the [exclude] globs, which are relative to [root].
   this;
 
+  /// Creates the config that runs each of [rules] at its severity in
+  /// [severities], or else, when [recommended], at its default severity if
+  /// it's [RuleEntry.recommended]. Each rule is built with the [options] for
+  /// its id, once.
+  ///
+  /// [severities] maps the ids that config sets, including [parseErrorId],
+  /// to their severity, or to `null` when they're off.
+  factory configure(
+    RuleSet rules, {
+    required OptionValue Function(String id) options,
+    Map<String, Severity?> severities = const {},
+    bool recommended = true,
+    List<Glob> exclude = const [],
+    String root = '',
+  }) {
+    Severity? severityOf(RuleEntry entry) =>
+        switch (severities.containsKey(entry.id)) {
+          true => severities[entry.id],
+          false when recommended && entry.recommended => entry.defaultSeverity,
+          false => null,
+        };
+    return Config(
+      rules: [
+        for (final entry in rules.entries)
+          if (severityOf(entry) case final severity?)
+            ConfiguredRule(entry.build(options(entry.id)), severity),
+      ],
+      parseErrorSeverity: severities[parseErrorId] ?? Severity.error,
+      exclude: exclude,
+      root: root,
+    );
+  }
+
   /// Creates the `recommended` config for the [rules] a caller runs: every
   /// rule at its default severity, except those that aren't
   /// [RuleEntry.recommended].
@@ -46,20 +79,12 @@ class const Config({
   /// It's the config used when there's no config file. Factories build
   /// their rules without options, and report errors at the start of
   /// [root]'s `analysis_options.yaml`, where options would go.
-  factory recommended(RuleSet rules, {String root = ''}) => Config(
-    rules: [
-      for (final entry in rules.entries)
-        if (entry.recommended)
-          ConfiguredRule(
-            entry.build(
-              const OptionValues().empty(
-                name: entry.id,
-                path: p.posix.join(root, 'analysis_options.yaml'),
-              ),
-            ),
-            entry.defaultSeverity,
-          ),
-    ],
+  factory recommended(RuleSet rules, {String root = ''}) => Config.configure(
+    rules,
+    options: (id) => YamlOptionValue.empty(
+      name: id,
+      path: p.posix.join(root, 'analysis_options.yaml'),
+    ),
     root: root,
   );
 

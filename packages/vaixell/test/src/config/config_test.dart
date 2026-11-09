@@ -1,3 +1,5 @@
+import 'package:glob/glob.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 import 'package:vaixell/vaixell.dart';
 
@@ -14,13 +16,87 @@ final class const _OptInRule() extends Rule {
   bool get recommended => false;
 }
 
+final class const _NamedRule() extends Rule {
+  @override
+  String get id => 'named';
+}
+
 final class const _ParseErrorRule() extends Rule {
   @override
   String get id => 'parse-error';
 }
 
+class _MockOptionValue extends Mock implements OptionValue;
+
 void main() {
   group(Config, () {
+    group('configure', () {
+      final options = _MockOptionValue();
+      final rules = RuleSet([...Recommended.rules, const _OptInRule()]);
+
+      test('enables the recommended rules by default', () {
+        final config = Config.configure(rules, options: (_) => options);
+        expect(config.rules.map((r) => r.rule), Recommended.rules);
+        expect(config.parseErrorSeverity, Severity.error);
+      });
+
+      test('applies the given severities, where null is off', () {
+        final config = Config.configure(
+          rules,
+          options: (_) => options,
+          severities: {
+            'parse-error': Severity.warning,
+            'top-level-function': null,
+            'raw-json': Severity.warning,
+            'opt-in': Severity.error,
+          },
+        );
+        final severities = severitiesOf(config);
+        expect(severities['parse-error'], Severity.warning);
+        expect(severities, isNot(contains('top-level-function')));
+        expect(severities['raw-json'], Severity.warning);
+        expect(severities['opt-in'], Severity.error);
+      });
+
+      test('only enables the set rules when not recommended', () {
+        final config = Config.configure(
+          rules,
+          options: (_) => options,
+          severities: const {'raw-json': Severity.error},
+          recommended: false,
+        );
+        expect(config.rules.map((r) => r.rule.id), ['raw-json']);
+      });
+
+      test('builds each enabled rule once with the options for its id', () {
+        final built = <String>[];
+        final factory = RuleFactory('named', (given) {
+          expect(given, same(options));
+          return const _NamedRule();
+        });
+        Config.configure(
+          RuleSet([factory, const _OptInRule()]),
+          options: (id) {
+            built.add(id);
+            return options;
+          },
+        );
+        expect(built, ['named']);
+      });
+
+      test('keeps the given exclude and root', () {
+        final exclude = [Glob('lib/legacy/**')];
+        final config = Config.configure(
+          rules,
+          options: (_) => options,
+          exclude: exclude,
+          root: 'pkg',
+        );
+        expect(config.exclude, same(exclude));
+        expect(config.root, 'pkg');
+      });
+    });
+
     test('recommended enables every rule at its default severity', () {
       final config = Config.recommended(RuleSet(Recommended.rules));
       expect(config.rules.map((r) => r.rule), Recommended.rules);

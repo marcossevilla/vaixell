@@ -131,7 +131,7 @@ A rule only sees its own entry, without `severity`.
 
 ### `OptionValue` ([#38](https://github.com/marcossevilla/vaixell/issues/38), [#46](https://github.com/marcossevilla/vaixell/issues/46))
 
-One type at every depth wraps a YAML node, without exposing `package:yaml`. Its typed readers throw a `ConfigException` with path, line and column whenever the value doesn't match.
+One interface at every depth, implemented by an internal type that wraps a YAML node, so `package:yaml` stays out of the public API and factories can be tested with a fake. Its typed readers throw a `ConfigException` with path, line and column whenever the value doesn't match.
 
 | Member             | Returns                    | Throws when                                                                                                     |
 | ------------------ | -------------------------- | --------------------------------------------------------------------------------------------------------------- |
@@ -262,7 +262,7 @@ The caller passes a `List<RuleEntry>`. `package:vaixell` never picks the rule se
 - **`Recommended.rules`:** a `static const List<RuleEntry>` in reporting order, without `parse-error`, on a class so it stays clear of `top-level-variable`. The `recommended` preset enables its entries. It replaces `RuleRegistry`. Callers extend it (`[...Recommended.rules, myRule]`) or filter it by `id`. Removing an entry makes its id unknown to that executable.
 - **Required at every step:** `Check(rules:)` and `WriteBaseline(rules:)` pass it to `PackageResolver.fromTree(rules:)`, which wraps it in a `RuleSet` for `ConfigLoader(tree, rules)`.
 - **`RuleSet`** is the config layer's view of the list: `RuleSet(entries)` throws an `ArgumentError` when two entries share an id or one is `parse-error`, so `ConfigLoader` and `Config.recommended` never see a bad list. Each entry builds its rule with `RuleEntry.build(options)`.
-- **`Config`** holds a package's `ConfiguredRule`s, each a built `rule` with its `severity`, instead of severities by id. The loader builds them, running each factory once.
+- **`Config`** holds a package's `ConfiguredRule`s, each a built `rule` with its `severity`, instead of severities by id. `Config.configure(rules, options:, severities:, recommended:)` builds them, running each factory once, for both the loader and `Config.recommended`.
 - **`Engine`** stays `const Engine()`. It runs the rules each package's config carries, plus `parse-error`. `Check` and `WriteBaseline` accept an engine only as a test seam.
 - **CLI:** `VaixellCommandRunner({List<RuleEntry> rules = Recommended.rules})` passes the list to `CheckCommand(rules:)`, which requires it. `bin/vaixell.dart` uses the default.
 - **`Package`** also carries its `pubspec.yaml` name, so the model can resolve own-package imports.

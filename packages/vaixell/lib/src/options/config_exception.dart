@@ -22,26 +22,27 @@ class const ConfigException(
   String toString() => '$path:$line:$column: $message';
 }
 
-/// Builds [ConfigException]s from YAML. Internal: it's never exported, so
-/// no YAML type is part of the public API.
-class const ConfigErrors() {
-  /// Creates the builder.
-  this;
-
-  /// An exception for a problem with [node] in the file at [path].
-  ConfigException at(YamlNode node, String message, {required String path}) =>
+/// Builds a [ConfigException] at a YAML node. Internal: it's never
+/// exported, so no YAML type is part of the public API.
+extension YamlNodeConfigErrors on YamlNode {
+  /// An exception for a problem with this node in the file at [path].
+  ConfigException configError(String message, {required String path}) =>
       ConfigException(
         message,
         path: path,
-        line: node.span.start.line + 1,
-        column: node.span.start.column + 1,
+        line: span.start.line + 1,
+        column: span.start.column + 1,
       );
+}
 
-  /// An exception for invalid YAML in the file at [path].
-  ConfigException yaml(YamlException error, {required String path}) {
-    final start = error.span?.start;
+/// Turns invalid YAML into a [ConfigException]. Internal: it's never
+/// exported, so no YAML type is part of the public API.
+extension YamlExceptionConfigErrors on YamlException {
+  /// An exception for this invalid YAML in the file at [path].
+  ConfigException toConfigException({required String path}) {
+    final start = span?.start;
     return ConfigException(
-      error.message,
+      message,
       path: path,
       line: (start?.line ?? 0) + 1,
       column: (start?.column ?? 0) + 1,

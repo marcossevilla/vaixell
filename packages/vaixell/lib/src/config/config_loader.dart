@@ -40,18 +40,31 @@ class const ConfigLoader(
   /// `vaixell:` section is invalid.
   Future<Config?> loadIfPresent({String path = defaultPath}) async {
     if (!await tree.exists(path)) return null;
-    return _ConfigFile(path, rules).parse(await tree.read(path));
+    return _ConfigFile.parse(path, await tree.read(path)).config(rules);
   }
 }
 
-/// The `vaixell:` section of one config file at [path].
-class const _ConfigFile(
+/// One config file at [path], with its `vaixell:` [section].
+final class _ConfigFile(
   /// The path of the file, for error locations and the exclude root.
   final String path,
 
-  /// The rules config can enable.
-  final RuleSet rules,
+  /// The `vaixell:` section, or `null` when the file has no `vaixell:` key.
+  final YamlNode? section,
 ) {
+  /// Parses [content] as the config file at [path].
+  ///
+  /// Throws a [ConfigException] when [content] isn't valid YAML.
+  factory parse(String path, String content) {
+    final YamlNode root;
+    try {
+      root = loadYamlNode(content, sourceUrl: Uri.file(path));
+    } on YamlException catch (error) {
+      throw error.toConfigException(path: path);
+    }
+    return _ConfigFile(path, root is YamlMap ? root.nodes['vaixell'] : null);
+  }
+
   static const List<String> _keys = ['include', 'rules', 'exclude'];
   static const String _recommended = 'recommended';
 
@@ -61,28 +74,21 @@ class const _ConfigFile(
     final dir => dir,
   };
 
-  /// Returns the config in [content], or `null` when its `vaixell:` key is
-  /// missing.
-  Config? parse(String content) {
-    final root = _yaml(content);
-    if (root is! YamlMap || !root.containsKey('vaixell')) return null;
-    final section = root.nodes['vaixell']!;
-    if (section.value == null) return _config(section);
-    return _section(section);
-  }
+  /// The config that the [section] sets for [rules], or `null` when there's
+  /// no section. An empty section enables the recommended rules.
+  ///
+  /// Throws a [ConfigException] when the section is invalid.
+  Config? config(RuleSet rules) => switch (section) {
+    null => null,
+    final section when section.value == null => _configure(rules, section),
+    final YamlMap section => _section(rules, section),
+    final section => throw section.configError(
+      '`vaixell` must be a map.',
+      path: path,
+    ),
+  };
 
-  YamlNode _yaml(String content) {
-    try {
-      return loadYamlNode(content, sourceUrl: Uri.file(path));
-    } on YamlException catch (error) {
-      throw const ConfigErrors().yaml(error, path: path);
-    }
-  }
-
-  Config _section(YamlNode section) {
-    if (section is! YamlMap) {
-      throw _error(section, '`vaixell` must be a map.');
-    }
+  Config _section(RuleSet rules, YamlMap section) {
     var presets = const [_recommended];
     var overrides = const <String, _RuleConfig>{};
     var exclude = const <Glob>[];
@@ -91,19 +97,20 @@ class const _ConfigFile(
         case 'include':
           presets = _include(value);
         case 'rules':
-          overrides = _rules(value);
+          overrides = _rules(rules, value);
         case 'exclude':
           exclude = _exclude(value);
         case final name:
-          throw _error(
-            key,
+          throw key.configError(
             'Unknown key `$name` under `vaixell`. '
             'Expected one of: ${_keys.join(', ')}.',
+            path: path,
           );
       }
     }
 
-    return _config(
+    return _configure(
+      rules,
       section,
       recommended: presets.isNotEmpty,
       overrides: overrides,
@@ -112,57 +119,27 @@ class const _ConfigFile(
   }
 
   /// The config that enables the recommended rules, when [recommended], and
-  /// applies [overrides]. Rules without options in config get none, at [at].
-  Config _config(
-    YamlNode at, {
+  /// applies [overrides]. Rules without options in config get none, at
+  /// [section].
+  Config _configure(
+    RuleSet rules,
+    YamlNode section, {
     bool recommended = true,
     Map<String, _RuleConfig> overrides = const {},
     List<Glob> exclude = const [],
-  }) => Config(
-    rules: [
-      for (final entry in rules.entries)
-        if (_severity(entry, overrides[entry.id], recommended: recommended)
-            case final severity?)
-          ConfiguredRule(
-            entry.build(_options(entry.id, overrides[entry.id], at)),
-            severity,
-          ),
-    ],
-    parseErrorSeverity:
-        overrides[Config.parseErrorId]?.severity(Severity.error) ??
-        Severity.error,
+  }) => Config.configure(
+    rules,
+    severities: {
+      for (final MapEntry(key: id, value: override) in overrides.entries)
+        id: override.severityFor(rules[id]),
+    },
+    options: (id) =>
+        overrides[id]?.options(path) ??
+        YamlOptionValue.empty(name: id, path: path, at: section),
+    recommended: recommended,
     exclude: exclude,
     root: _root,
   );
-
-  /// The severity of [entry] with [override], or `null` when it's off.
-  Severity? _severity(
-    RuleEntry entry,
-    _RuleConfig? override, {
-    required bool recommended,
-  }) => switch (override) {
-    final override? => override.severity(entry.defaultSeverity),
-    null when recommended && entry.recommended => entry.defaultSeverity,
-    null => null,
-  };
-
-  /// The options of the rule [id] from [override], without `severity`.
-  /// A rule without the long form gets none, at its key or else at [at].
-  OptionValue _options(String id, _RuleConfig? override, YamlNode at) =>
-      switch (override) {
-        _RuleConfig(:final entry?) => const OptionValues().of(
-          entry,
-          name: id,
-          path: path,
-          without: const {'severity'},
-        ),
-        _RuleConfig(:final key) => const OptionValues().empty(
-          name: id,
-          path: path,
-          at: key,
-        ),
-        null => const OptionValues().empty(name: id, path: path, at: at),
-      };
 
   List<String> _include(YamlNode node) {
     final items = node is YamlList ? node.nodes : [node];
@@ -171,50 +148,59 @@ class const _ConfigFile(
       for (final item in items)
         switch (item.value) {
           final String name when available.contains(name) => name,
-          final String name => throw _error(
-            item,
+          final String name => throw item.configError(
             'Unknown preset `$name`. '
             'Available presets: ${available.join(', ')}.',
+            path: path,
           ),
-          _ => throw _error(
-            item,
+          _ => throw item.configError(
             '`include` must be a preset name or a list of preset names.',
+            path: path,
           ),
         },
     ];
   }
 
-  Map<String, _RuleConfig> _rules(YamlNode node) {
+  Map<String, _RuleConfig> _rules(RuleSet rules, YamlNode node) {
     if (node.value == null) return const {};
     if (node is! YamlMap) {
-      throw _error(node, '`rules` must be a map of rule ids to severities.');
+      throw node.configError(
+        '`rules` must be a map of rule ids to severities.',
+        path: path,
+      );
     }
-    final ids = rules.configIds;
     return {
       for (final MapEntry(:key, :value) in node.nodes.entries)
-        _id(key as YamlNode, ids): _rule(key, value),
+        _id(key as YamlNode, rules.configIds): _rule(
+          key,
+          value,
+          takesOptions: rules[key.value as String] is RuleFactory,
+        ),
     };
   }
 
   String _id(YamlNode key, List<String> ids) => switch (key.value) {
     final String id when ids.contains(id) => id,
-    final id => throw _error(
-      key,
+    final id => throw key.configError(
       'Unknown rule `$id`. Available rules: ${ids.join(', ')}.',
+      path: path,
     ),
   };
 
   /// The config of the rule at [key]: `id: severity`, or
-  /// `id: {severity: …, <options>}`.
-  _RuleConfig _rule(YamlNode key, YamlNode value) {
+  /// `id: {severity: …, <options>}` when it [takesOptions].
+  _RuleConfig _rule(
+    YamlNode key,
+    YamlNode value, {
+    required bool takesOptions,
+  }) {
     final id = key.value as String;
     if (value is! YamlMap) {
       return _RuleConfig(key, _severityName(value, id), null);
     }
-    final takesOptions = rules[id] is RuleFactory;
     for (final option in value.nodes.keys.cast<YamlNode>()) {
       if (option.value != 'severity' && !takesOptions) {
-        throw _error(option, '`$id` takes no options.');
+        throw option.configError('`$id` takes no options.', path: path);
       }
     }
     return _RuleConfig(key, switch (value.nodes['severity']) {
@@ -227,14 +213,14 @@ class const _ConfigFile(
   String _severityName(YamlNode node, String id) {
     final severity = node.value;
     if (severity is! String || !_RuleConfig.severities.containsKey(severity)) {
-      throw _error(
-        node,
+      throw node.configError(
         'Invalid severity `$severity` for `$id`. '
         'Expected one of: ${_RuleConfig.severities.keys.join(', ')}.',
+        path: path,
       );
     }
     if (severity == 'off' && id == Config.parseErrorId) {
-      throw _error(node, "`$id` can't be turned off.");
+      throw node.configError("`$id` can't be turned off.", path: path);
     }
     return severity;
   }
@@ -242,13 +228,16 @@ class const _ConfigFile(
   List<Glob> _exclude(YamlNode node) {
     if (node.value == null) return const [];
     if (node is! YamlList) {
-      throw _error(node, '`exclude` must be a list of globs.');
+      throw node.configError('`exclude` must be a list of globs.', path: path);
     }
     return [
       for (final item in node.nodes)
         switch (item.value) {
           final String pattern => _glob(item, pattern),
-          _ => throw _error(item, '`exclude` must be a list of globs.'),
+          _ => throw item.configError(
+            '`exclude` must be a list of globs.',
+            path: path,
+          ),
         },
     ];
   }
@@ -257,12 +246,12 @@ class const _ConfigFile(
     try {
       return Glob(pattern, context: p.posix);
     } on FormatException catch (error) {
-      throw _error(node, 'Invalid glob `$pattern`: ${error.message}');
+      throw node.configError(
+        'Invalid glob `$pattern`: ${error.message}',
+        path: path,
+      );
     }
   }
-
-  ConfigException _error(YamlNode node, String message) =>
-      const ConfigErrors().at(node, message, path: path);
 }
 
 /// How config sets one rule under `rules:`.
@@ -282,11 +271,28 @@ class const _RuleConfig(
     'error': Severity.error,
   };
 
-  /// The severity, [byDefault] when config leaves it out, or `null` when the
-  /// rule is off.
-  Severity? severity(Severity byDefault) => switch (severityName) {
-    null => byDefault,
+  /// The severity, the default of [rule] when config leaves it out, or
+  /// `null` when it's off. `parse-error` has no [rule], and is an error by
+  /// default.
+  Severity? severityFor(RuleEntry? rule) => switch (severityName) {
+    null => rule?.defaultSeverity ?? Severity.error,
     final name => severities[name],
+  };
+
+  /// The rule's options from the file at [path], without `severity`: the
+  /// long form's map, or none at its key for the short form.
+  OptionValue options(String path) => switch (entry) {
+    final entry? => YamlOptionValue.of(
+      entry,
+      name: key.value as String,
+      path: path,
+      without: const {'severity'},
+    ),
+    null => YamlOptionValue.empty(
+      name: key.value as String,
+      path: path,
+      at: key,
+    ),
   };
 }
 

@@ -69,11 +69,11 @@ final class const RuleTester() {
         sourceUrl: Uri.file(fixture),
       );
     } on YamlException catch (error) {
-      throw const ConfigErrors().yaml(error, path: fixture);
+      throw error.toConfigException(path: fixture);
     }
     final options = node.value == null
-        ? const OptionValues().empty(name: factory.id, path: fixture)
-        : const OptionValues().of(node, name: factory.id, path: fixture);
+        ? YamlOptionValue.empty(name: factory.id, path: fixture)
+        : YamlOptionValue.of(node, name: factory.id, path: fixture);
     return factory.build(options);
   }
 
