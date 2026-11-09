@@ -14,6 +14,7 @@ Files with a generated suffix, such as `.g.dart`, `.freezed.dart` or
 | [`top-level-variable`](rules/top-level-variable.md)       | error   | Don't declare top-level variables or constants.        |
 | [`extension-declaration`](rules/extension-declaration.md) | error   | Don't extend a type that the same file declares.       |
 | [`static-method`](rules/static-method.md)                 | error   | Don't declare static methods, getters or setters.      |
+| [`throwaway-instance`](rules/throwaway-instance.md)       | warning | Don't create an instance only to call a method on it.  |
 | [`raw-json`](rules/raw-json.md)                           | error   | Keep raw JSON handling inside model classes.           |
 | [`generated-json`](rules/generated-json.md)               | warning | Use json_serializable for `fromJson` and `toJson`.     |
 | [`await-receiver`](rules/await-receiver.md)               | warning | Name an awaited value before using it.                 |

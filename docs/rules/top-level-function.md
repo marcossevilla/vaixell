@@ -16,7 +16,8 @@ into grab bags of unrelated helpers. Put behavior where its data lives:
 
 Don't move a function into a class only to call it on a throwaway instance,
 as in `const PriceFormatter().format(cents)`. That call can't be swapped out
-any more than the function could.
+any more than the function could, and
+[`throwaway-instance`](throwaway-instance.md) reports it.
 
 A top-level `main` function is allowed, because apps and scripts need an
 entrypoint.
