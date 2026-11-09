@@ -2,6 +2,24 @@ part of 'model.dart';
 
 /// A Dart file, parsed without type resolution.
 abstract interface class DartFile {
+  /// Parses [content] as the file at [path], a POSIX path relative to the
+  /// repository root, without resolving types.
+  ///
+  /// The file is in the package at [packageRoot], relative to the repository
+  /// root, where `''` is the root itself. [packageName] is the package's
+  /// `pubspec.yaml` name, used to resolve imports of the package itself.
+  factory parse({
+    required String path,
+    required String content,
+    String packageRoot = '',
+    String? packageName,
+  }) => _AstDartFile(
+    path,
+    parseString(content: content, path: path, throwIfDiagnostics: false),
+    packageRoot,
+    packageName,
+  );
+
   /// The POSIX path, relative to the repository root.
   String get path;
 
@@ -27,4 +45,10 @@ abstract interface class DartFile {
   /// Every type annotation, at any depth, including type arguments, in
   /// source order.
   List<TypeAnnotation> get typeAnnotations;
+
+  /// The 1-based line of [offset].
+  int lineAt(int offset);
+
+  /// The 1-based column of [offset].
+  int columnAt(int offset);
 }

@@ -5,7 +5,7 @@ import 'package:vaixell/src/rules/rule.dart';
 import 'package:vaixell/src/violation/violation.dart';
 
 DartFile _parse(String source, {String path = 'lib/a.dart'}) =>
-    const DartFileParser().parse(path: path, content: source);
+    DartFile.parse(path: path, content: source);
 
 /// Reports every expression, by whether it's a name read from a target.
 final class const _ReferenceRule() extends Rule with ChecksExpressions {
@@ -154,16 +154,24 @@ final class const _NamedRule(
 
 void main() {
   group(Finding, () {
+    test('orders by offset', () {
+      const a = Finding(offset: 1, message: 'a');
+      const b = Finding(offset: 2, message: 'b');
+      expect(a.compareTo(b), isNegative);
+      expect(b.compareTo(a), isPositive);
+      expect(a.compareTo(const Finding(offset: 1, message: 'c')), 0);
+    });
+
     group('at', () {
       const source = "import 'dart:async';\n";
-      final import = const DartFileParser()
-          .parse(path: 'lib/a.dart', content: source)
-          .imports
-          .single;
-      final error = const DartFileParser()
-          .parse(path: 'lib/a.dart', content: 'class A {\n')
-          .errors
-          .first;
+      final import = DartFile.parse(
+        path: 'lib/a.dart',
+        content: source,
+      ).imports.single;
+      final error = DartFile.parse(
+        path: 'lib/a.dart',
+        content: 'class A {\n',
+      ).errors.first;
 
       test("takes the element's offset and symbol", () {
         final finding = Finding.at(import, message: 'm');

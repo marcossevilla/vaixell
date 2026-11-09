@@ -1,5 +1,6 @@
 import 'dart:collection';
 
+import 'package:collection/collection.dart';
 import 'package:path/path.dart' as p;
 import 'package:vaixell/src/config/config.dart';
 import 'package:vaixell/src/engine/generated_files.dart';
@@ -49,16 +50,17 @@ class const Engine() {
   }
 
   List<Violation> _check(Package package, String path, String content) {
-    final file = const DartFileParser().parse(
+    final file = DartFile.parse(
       path: path,
       content: content,
       packageRoot: package.path,
       packageName: package.name,
     );
-    final found = const FindingOrder().byOffset(switch (file.errors) {
+    final found = switch (file.errors) {
       [] => _findings(file, package.config.rules),
       final errors => [_parseError(package, errors)],
-    }, (found) => found.finding);
+    };
+    mergeSort(found, compare: (a, b) => a.finding.compareTo(b.finding));
 
     final ids = ViolationIds();
     return [for (final finding in found) finding.violation(file, ids)];
@@ -95,14 +97,13 @@ final class const _Found(
 ) {
   /// The violation in [file], with the next id from [ids].
   Violation violation(DartFile file, ViolationIds ids) {
-    final (:line, :column) = const SourceLocator().locate(file, finding.offset);
     return Violation(
       id: ids.next(rule: rule, path: file.path, symbol: finding.symbol),
       rule: rule,
       severity: severity,
       path: file.path,
-      line: line,
-      column: column,
+      line: file.lineAt(finding.offset),
+      column: file.columnAt(finding.offset),
       message: finding.message,
     );
   }

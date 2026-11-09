@@ -2,7 +2,7 @@ import 'package:test/test.dart';
 import 'package:vaixell/src/model/model.dart';
 
 DartFile _parse(String source) =>
-    const DartFileParser().parse(path: 'lib/a.dart', content: source);
+    DartFile.parse(path: 'lib/a.dart', content: source);
 
 List<Expression> _expressions(String source) => _parse(source).expressions;
 

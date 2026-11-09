@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:collection/collection.dart';
 import 'package:path/path.dart' as p;
 import 'package:vaixell/src/model/model.dart';
 import 'package:vaixell/src/options/config_exception.dart';
@@ -44,7 +45,7 @@ final class const RuleTester() {
     if (!p.posix.isWithin(lib, path)) {
       throw ArgumentError.value(path, 'path', 'Must be under `$lib/`');
     }
-    final file = const DartFileParser().parse(
+    final file = DartFile.parse(
       path: path,
       content: source,
       packageRoot: package.path,
@@ -52,7 +53,9 @@ final class const RuleTester() {
     );
     if (file.errors.isNotEmpty) throw _syntaxErrors(file);
     if (!rule.shouldCheck(file)) return const [];
-    return const FindingOrder().byOffset(rule.check(file), (f) => f);
+    final findings = rule.check(file).toList();
+    mergeSort(findings);
+    return findings;
   }
 
   /// The rule [factory] builds from the options in the YAML file at
@@ -81,10 +84,8 @@ final class const RuleTester() {
     return FormatException(
       [
         '`${file.path}` has syntax errors:',
-        for (final error in file.errors)
-          switch (const SourceLocator().locate(file, error.offset)) {
-            (:final line, :final column) => '  $line:$column: ${error.message}',
-          },
+        for (final SyntaxError(:offset, :message) in file.errors)
+          '  ${file.lineAt(offset)}:${file.columnAt(offset)}: $message',
       ].join('\n'),
     );
   }

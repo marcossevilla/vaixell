@@ -1,9 +1,8 @@
 import 'package:test/test.dart';
 import 'package:vaixell/src/model/model.dart';
 
-List<Declaration> _declarations(String source) => const DartFileParser()
-    .parse(path: 'lib/a.dart', content: source)
-    .declarations;
+List<Declaration> _declarations(String source) =>
+    DartFile.parse(path: 'lib/a.dart', content: source).declarations;
 
 T _single<T extends Declaration>(String source) =>
     _declarations(source).single as T;
@@ -59,7 +58,7 @@ typedef J = int;
     });
 
     test('give an extension its extended type, as in the file', () {
-      final file = const DartFileParser().parse(
+      final file = DartFile.parse(
         path: 'lib/a.dart',
         content: 'extension X on core.Map<String, int> {}\n',
       );
@@ -92,7 +91,7 @@ void f() {}
     });
 
     test('keep the same objects on every read', () {
-      final file = const DartFileParser().parse(
+      final file = DartFile.parse(
         path: 'lib/a.dart',
         content: '@A(1) class C { int f = 0; C(); void m(int p) {} }',
       );

@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:vaixell/src/model/model.dart';
 import 'package:vaixell/src/options/option_value.dart';
 import 'package:vaixell/src/violation/violation.dart';
@@ -13,7 +14,7 @@ class const Finding({
   /// The symbol path that identifies the finding within its file, for
   /// example `Foo.bar`, or `null` when the file itself is the subject.
   final String? symbol,
-}) {
+}) implements Comparable<Finding> {
   /// Creates a finding at [offset] in the file.
   this;
 
@@ -27,6 +28,11 @@ class const Finding({
             ? element.symbol
             : '${element.symbol ?? ''}@$qualifier',
       );
+
+  /// Orders findings by [offset], so that a stable sort keeps the order of
+  /// findings at the same offset.
+  @override
+  int compareTo(Finding other) => offset.compareTo(other.offset);
 }
 
 /// An entry of the list of rules that vaixell runs: a [Rule], or a
@@ -91,10 +97,9 @@ abstract base class const Rule() implements RuleEntry {
     Iterable<Finding?> Function() visit,
   ) {
     if (!shouldCheck(file)) return const [];
-    return const FindingOrder().byOffset([
-      ...inherited,
-      ...visit().nonNulls,
-    ], (finding) => finding);
+    final findings = [...inherited, ...visit().nonNulls];
+    mergeSort(findings);
+    return findings;
   }
 }
 
@@ -125,28 +130,6 @@ final class const RuleFactory(
       'The factory for `$id` built a rule with id `${rule.id}`.',
     ),
   };
-}
-
-/// Sorts findings in source order. Internal: it's never exported.
-class const FindingOrder() {
-  /// Creates the order.
-  this;
-
-  /// [items] sorted by the offset of their [findingOf], keeping their order
-  /// for equal offsets, which [List.sort] doesn't promise.
-  List<T> byOffset<T>(Iterable<T> items, Finding Function(T item) findingOf) {
-    final indexed = items.indexed.toList()
-      ..sort((a, b) {
-        final (ia, itemA) = a;
-        final (ib, itemB) = b;
-        return switch (findingOf(itemA).offset
-            .compareTo(findingOf(itemB).offset)) {
-          0 => ia.compareTo(ib),
-          final order => order,
-        };
-      });
-    return [for (final (_, item) in indexed) item];
-  }
 }
 
 /// Calls [checkDeclaration] for every top-level declaration in the file.

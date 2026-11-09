@@ -1,35 +1,17 @@
 part of 'model.dart';
 
-/// Builds [DartFile]s from source, without resolving types.
-class const DartFileParser() {
-  /// Creates the parser.
-  this;
-
-  /// Parses [content] as the file at [path], a POSIX path relative to the
-  /// repository root.
-  ///
-  /// The file is in the package at [packageRoot], relative to the repository
-  /// root, where `''` is the root itself. [packageName] is the package's
-  /// `pubspec.yaml` name, used to resolve imports of the package itself.
-  DartFile parse({
-    required String path,
-    required String content,
-    String packageRoot = '',
-    String? packageName,
-  }) => _AstDartFile(
-    path,
-    parseString(content: content, path: path, throwIfDiagnostics: false),
-    packageRoot,
-    packageName,
-  );
-}
-
 final class _AstDartFile(
   @override final String path,
   final ParseStringResult result,
   final String packageRoot,
   final String? packageName,
 ) implements DartFile {
+  @override
+  int lineAt(int offset) => result.lineInfo.getLocation(offset).lineNumber;
+
+  @override
+  int columnAt(int offset) => result.lineInfo.getLocation(offset).columnNumber;
+
   @override
   String get packagePath =>
       packageRoot.isEmpty ? path : p.posix.relative(path, from: packageRoot);
