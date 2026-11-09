@@ -20,7 +20,10 @@ void main() {
     );
 
     test('writes the violation ids and returns the baseline', () async {
-      final baseline = await WriteBaseline(root: d.sandbox)('baseline.json');
+      final baseline = await WriteBaseline(
+        rules: Recommended.rules,
+        root: d.sandbox,
+      )('baseline.json');
       expect(
         baseline.ids,
         equals({
@@ -47,10 +50,10 @@ void main() {
         d.file('pubspec.yaml', 'name: b\n'),
         d.dir('lib', [d.file('b.dart', 'void b() {}\n')]),
       ]).create();
-      final baseline = await WriteBaseline(root: d.sandbox)(
-        'baseline.json',
-        paths: ['packages/b'],
-      );
+      final baseline = await WriteBaseline(
+        rules: Recommended.rules,
+        root: d.sandbox,
+      )('baseline.json', paths: ['packages/b']);
       expect(
         baseline.ids,
         equals({'top-level-function:packages/b/lib/b.dart:b'}),
@@ -59,9 +62,11 @@ void main() {
 
     test('reads the files from the given tree', () async {
       final tree = MemorySourceTree({'lib/c.dart': 'void c() {}\n'});
-      final baseline = await WriteBaseline(root: d.sandbox, tree: tree)(
-        'baseline.json',
-      );
+      final baseline = await WriteBaseline(
+        rules: Recommended.rules,
+        root: d.sandbox,
+        tree: tree,
+      )('baseline.json');
       expect(baseline.ids, equals({'top-level-function:lib/c.dart:c'}));
       expect(
         (await const BaselineFile().read(d.path('baseline.json'))).ids,
@@ -72,7 +77,9 @@ void main() {
     test('throws a $ConfigException on an invalid config', () async {
       await d.file('analysis_options.yaml', 'vaixell:\n  rulez: {}\n').create();
       await expectLater(
-        WriteBaseline(root: d.sandbox)('baseline.json'),
+        WriteBaseline(rules: Recommended.rules, root: d.sandbox)(
+          'baseline.json',
+        ),
         throwsA(isA<ConfigException>()),
       );
       await d.nothing('baseline.json').validate();
@@ -81,7 +88,9 @@ void main() {
     test('uses the given collaborators', () async {
       registerFallbackValue(Baseline([]));
       final tree = MemorySourceTree({});
-      final packages = [Package(path: 'p', config: Config.recommended())];
+      final packages = [
+        Package(path: 'p', config: Config.recommended(Recommended.rules)),
+      ];
       final packageResolver = _MockPackageResolver();
       final engine = _MockEngine();
       final baselineFile = _MockBaselineFile();
@@ -102,6 +111,7 @@ void main() {
       when(() => baselineFile.write(any(), any())).thenAnswer((_) async {});
 
       final baseline = await WriteBaseline(
+        rules: Recommended.rules,
         root: '/repo',
         tree: tree,
         packageResolver: packageResolver,

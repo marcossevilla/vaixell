@@ -35,6 +35,21 @@ vaixell:
 - `include`: a preset name, or a list of them. Defaults to `recommended`.
 - `rules`: a map of rule ids to `off`, `warning` or `error`. Errors fail the
   run, warnings are only reported.
+
+  Rules that take options use the long form, with the severity next to the
+  options. Without `severity`, the rule is on at its default severity:
+
+  ```yaml
+  vaixell:
+    rules:
+      static-method: warning # short form
+      some-rule: # long form
+        severity: error
+        some-option: [a, b]
+  ```
+
+  Options are only valid for rules that take them; anything else is an
+  error at its line.
 - `exclude`: globs, relative to the package, for files that aren't checked.
 
 Unknown keys, rules and presets are errors. `parse-error` can't be turned off.

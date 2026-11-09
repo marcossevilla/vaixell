@@ -9,6 +9,7 @@ import 'package:vaixell/src/engine/engine.dart';
 import 'package:vaixell/src/engine/package.dart';
 import 'package:vaixell/src/git/git_runner.dart';
 import 'package:vaixell/src/report/report.dart';
+import 'package:vaixell/src/rules/rule.dart';
 import 'package:vaixell/src/source/git_source_tree.dart';
 import 'package:vaixell/src/source/source_tree.dart';
 import 'package:vaixell/src/violation/violation.dart';
@@ -35,11 +36,17 @@ class const Check._({
   /// git-diff base side from [openGitSourceTree], a [GitSourceTree] on [git]
   /// by default.
   ///
-  /// Resolves the packages with [packageResolver], a [PackageResolver] on
-  /// [tree] by default, checks them with [engine], and reads baselines with
-  /// [baselineFile].
+  /// Resolves the packages with [packageResolver] (by default, a
+  /// [PackageResolver] on [tree] that configures [rules]), checks them with
+  /// [engine], and reads baselines with [baselineFile]. [engine] is only a
+  /// test seam.
+  ///
+  /// [rules] is required so that every real caller picks its rules. A given
+  /// [packageResolver] already carries its own, so [rules] is ignored then;
+  /// like [engine], [packageResolver] is only a test seam.
   factory({
     required String root,
+    required List<RuleEntry> rules,
     SourceTree? tree,
     GitRunner? git,
     OpenGitSourceTree? openGitSourceTree,
@@ -58,7 +65,11 @@ class const Check._({
           (commit) => GitSourceTree(git: resolvedGit, commit: commit),
       packageResolver:
           packageResolver ??
-          PackageResolver.fromTree(root: root, tree: resolvedTree),
+          PackageResolver.fromTree(
+            root: root,
+            tree: resolvedTree,
+            rules: rules,
+          ),
       engine: engine,
       baselineFile: baselineFile,
     );

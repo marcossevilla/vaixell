@@ -1,28 +1,30 @@
 import 'package:test/test.dart';
 import 'package:vaixell/src/rules/raw_json.dart';
+import 'package:vaixell/testing.dart';
 
-import '../../helpers/parse.dart';
+const _tester = RuleTester();
 
 void main() {
   group(RawJsonRule, () {
     const rule = RawJsonRule();
 
     List<String?> symbols(String source, {String path = 'lib/a.dart'}) =>
-        rule.check(parse(source, path: path)).map((f) => f.symbol).toList();
+        _tester
+            .checkSource(rule, source, path: path)
+            .map((f) => f.symbol)
+            .toList();
 
     test('has the expected id', () {
       expect(rule.id, equals('raw-json'));
     });
 
     test('flags jsonDecode and jsonEncode calls', () {
-      final findings = rule.check(
-        parse('''
+      final findings = _tester.checkSource(rule, '''
 void f(String s) {
   jsonDecode(s);
   jsonEncode({'a': s});
 }
-'''),
-      );
+''');
       expect(findings.map((f) => f.symbol), equals(['f@decode', 'f@encode']));
       expect(findings.first.offset, equals(21));
       expect(
@@ -42,15 +44,13 @@ void f(String s) {
     });
 
     test('flags json.decode and json.encode, with or without a prefix', () {
-      final findings = rule.check(
-        parse('''
+      final findings = _tester.checkSource(rule, '''
 void f(String s) {
   json.decode(s);
   convert.json.encode([s]);
   convert.jsonDecode(s);
 }
-'''),
-      );
+''');
       expect(
         findings.map((f) => f.symbol),
         equals(['f@decode', 'f@encode', 'f@decode']),
@@ -78,15 +78,13 @@ void f(String s) {
     });
 
     test('flags Map<String, dynamic> wherever it is written', () {
-      final findings = rule.check(
-        parse('''
+      final findings = _tester.checkSource(rule, '''
 Map<String, dynamic>? f(Object o) {
   final a = o as Map<String, dynamic>;
   final b = <List<Map<String, dynamic>>>[];
   return null;
 }
-'''),
-      );
+''');
       expect(
         findings.map((f) => f.symbol),
         equals(['f@map', 'f@map', 'f@map']),
@@ -128,6 +126,18 @@ class B {
 }
 '''),
         equals(['A.fromJson2@map']),
+      );
+    });
+
+    test('allows primary fromJson constructors', () {
+      expect(
+        symbols('''
+class const A.fromJson(final Map<String, dynamic> json) {
+  this : assert(jsonEncode(json) != '');
+}
+class const B(final Map<String, dynamic> json);
+'''),
+        equals(['B.new@map']),
       );
     });
 
@@ -249,9 +259,11 @@ extension type T(int v) { void m() => jsonDecode(''); }
     });
 
     test('uses only the kind outside any declaration', () {
-      final file = parse("@Foo(jsonDecode(''))\nlibrary;\n");
-      expect(file.hasErrors, isFalse);
-      expect(rule.check(file).map((f) => f.symbol), equals(['@decode']));
+      const source = "@Foo(jsonDecode(''))\nlibrary;\n";
+      expect(
+        _tester.checkSource(rule, source).map((f) => f.symbol),
+        equals(['@decode']),
+      );
     });
   });
 }

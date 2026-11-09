@@ -42,7 +42,7 @@ void main() {
 
     group('output of a $Check', tags: 'golden', () {
       Future<String> run({String? gitDiff, String? baseline}) async {
-        final report = await Check(root: d.sandbox)(
+        final report = await Check(rules: Recommended.rules, root: d.sandbox)(
           gitDiff: gitDiff,
           baseline: baseline,
         );

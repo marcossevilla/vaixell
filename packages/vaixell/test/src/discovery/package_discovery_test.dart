@@ -205,5 +205,30 @@ void main() {
         equals(['', 'packages/a']),
       );
     });
+
+    group('nameOf', () {
+      Future<String?> nameOf(String dir, Map<String, String> files) =>
+          PackageDiscovery(MemorySourceTree(files)).nameOf(dir);
+
+      test("reads the package's pubspec name", () async {
+        expect(await nameOf('', {'pubspec.yaml': 'name: app\n'}), 'app');
+        expect(
+          await nameOf('packages/a', {'packages/a/pubspec.yaml': 'name: a\n'}),
+          'a',
+        );
+      });
+
+      test('is null without a valid name', () async {
+        for (final files in [
+          <String, String>{},
+          {'pubspec.yaml': 'name: [\n'},
+          {'pubspec.yaml': '- a\n'},
+          {'pubspec.yaml': 'name: 1\n'},
+          {'pubspec.yaml': 'version: 1.0.0\n'},
+        ]) {
+          expect(await nameOf('', files), isNull, reason: '$files');
+        }
+      });
+    });
   });
 }

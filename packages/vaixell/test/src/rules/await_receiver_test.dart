@@ -1,8 +1,9 @@
 import 'package:test/test.dart';
 import 'package:vaixell/src/rules/await_receiver.dart';
 import 'package:vaixell/src/violation/violation.dart';
+import 'package:vaixell/testing.dart';
 
-import '../../helpers/parse.dart';
+const _tester = RuleTester();
 
 void main() {
   group(AwaitReceiverRule, () {
@@ -12,7 +13,7 @@ void main() {
     /// `Future<void> f() async`, relative to the start of the body.
     List<int> offsets(String statements) {
       const prefix = 'Future<void> f() async {\n';
-      final findings = rule.check(parse('$prefix$statements\n}\n'));
+      final findings = _tester.checkSource(rule, '$prefix$statements\n}\n');
       return [for (final f in findings) f.offset - prefix.length];
     }
 
@@ -32,7 +33,7 @@ class Foo {
   }
 }
 ''';
-      final findings = rule.check(parse(source));
+      final findings = _tester.checkSource(rule, source);
       expect(findings, hasLength(1));
       expect(findings.single.offset, equals(source.indexOf('await')));
       expect(findings.single.symbol, equals('Foo.bar@f'));
@@ -89,7 +90,7 @@ class Foo {
 
     test('flags `=> (await f)!`', () {
       expect(
-        rule.check(parse('Future<int> f() async => (await g)!;\n')),
+        _tester.checkSource(rule, 'Future<int> f() async => (await g)!;\n'),
         hasLength(1),
       );
     });
@@ -117,7 +118,10 @@ class Foo {
     }
 
     test('allows `=> await f`', () {
-      expect(rule.check(parse('Future<int> f() async => await g;\n')), isEmpty);
+      expect(
+        _tester.checkSource(rule, 'Future<int> f() async => await g;\n'),
+        isEmpty,
+      );
     });
 
     test('flags nested awaits once each', () {
@@ -130,9 +134,8 @@ class Foo {
 
     test('names findings after the enclosing declaration', () {
       expect(
-        rule
-            .check(
-              parse('''
+        _tester
+            .checkSource(rule, '''
 Future<void> f() async {
   (await a).x;
   final g = () async => (await b).y;
@@ -140,8 +143,7 @@ Future<void> f() async {
 class C {
   Future<void> m() async => (await c).z;
 }
-'''),
-            )
+''')
             .map((f) => f.symbol),
         equals(['f@a', 'f@b', 'C.m@c']),
       );
@@ -149,9 +151,8 @@ class C {
 
     test('qualifies findings with the name of what is awaited', () {
       expect(
-        rule
-            .check(
-              parse('''
+        _tester
+            .checkSource(rule, '''
 Future<void> f() async {
   (await a()).x;
   (await o.b()).x;
@@ -161,8 +162,7 @@ Future<void> f() async {
   (await (g)).x;
   (await (1 + 2)).x;
 }
-'''),
-            )
+''')
             .map((f) => f.symbol),
         equals(['f@a', 'f@b', 'f@c', 'f@d', 'f@e', 'f@g', 'f']),
       );
@@ -170,8 +170,8 @@ Future<void> f() async {
 
     test('qualifies findings outside any declaration', () {
       expect(
-        rule
-            .check(parse('@A(() async => (await a).x)\nlibrary;\n'))
+        _tester
+            .checkSource(rule, '@A(() async => (await a).x)\nlibrary;\n')
             .single
             .symbol,
         equals('@a'),
