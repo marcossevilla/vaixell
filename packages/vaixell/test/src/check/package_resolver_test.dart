@@ -80,8 +80,12 @@ void main() {
       final configResolver = _MockConfigResolver();
       final a = Config.recommended(RuleSet(Recommended.rules));
       const b = Config(rules: []);
-      when(discovery.discover).thenAnswer((_) async => ['x', 'y']);
-      when(() => discovery.nameOf(any())).thenAnswer((_) async => 'n');
+      when(discovery.discover).thenAnswer(
+        (_) async => const [
+          PackageDir(path: 'x', name: 'n'),
+          PackageDir(path: 'y'),
+        ],
+      );
       when(() => configResolver.forPackages(['x', 'y']))
           .thenAnswer((_) async => [a, b]);
 
@@ -93,7 +97,7 @@ void main() {
 
       expect(packages.map((p) => (p.path, p.config, p.name)), [
         ('x', a, 'n'),
-        ('y', b, 'n'),
+        ('y', b, null),
       ]);
     });
 
@@ -103,7 +107,8 @@ void main() {
       when(() => configResolver.forPackages(['x'])).thenAnswer(
         (_) async => [Config.recommended(RuleSet(Recommended.rules))],
       );
-      when(() => discovery.nameOf('x')).thenAnswer((_) async => null);
+      when(() => discovery.at('x'))
+          .thenAnswer((_) async => const PackageDir(path: 'x', name: 'x'));
 
       await PackageResolver(
         root: '/repo',
@@ -112,6 +117,7 @@ void main() {
       )(['x']);
 
       verifyNever(discovery.discover);
+      verify(() => discovery.at('x')).called(1);
     });
   });
 }
