@@ -33,6 +33,9 @@ class const WriteBaseline._({
   /// [rules] is required so that every real caller picks its rules. A given
   /// [packageResolver] already carries its own, so [rules] is ignored then;
   /// like [engine], [packageResolver] is only a test seam.
+  ///
+  /// Throws an [ArgumentError] when [packageResolver] isn't given and two
+  /// [rules] share an id, or one is `parse-error`.
   factory({
     required String root,
     required List<RuleEntry> rules,

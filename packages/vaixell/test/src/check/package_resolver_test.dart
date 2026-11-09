@@ -64,10 +64,21 @@ void main() {
       await expectLater(resolve([]), throwsA(isA<ConfigException>()));
     });
 
+    test('throws an ArgumentError for a repeated rule id', () {
+      expect(
+        () => PackageResolver.fromTree(
+          root: '/repo',
+          tree: tree,
+          rules: [...Recommended.rules, Recommended.rules.first],
+        ),
+        throwsArgumentError,
+      );
+    });
+
     test('uses the given discovery and config resolver', () async {
       final discovery = _MockPackageDiscovery();
       final configResolver = _MockConfigResolver();
-      final a = Config.recommended(Recommended.rules);
+      final a = Config.recommended(RuleSet(Recommended.rules));
       const b = Config(rules: []);
       when(discovery.discover).thenAnswer((_) async => ['x', 'y']);
       when(() => discovery.nameOf(any())).thenAnswer((_) async => 'n');
@@ -89,8 +100,9 @@ void main() {
     test('skips discovery when paths are given', () async {
       final discovery = _MockPackageDiscovery();
       final configResolver = _MockConfigResolver();
-      when(() => configResolver.forPackages(['x']))
-          .thenAnswer((_) async => [Config.recommended(Recommended.rules)]);
+      when(() => configResolver.forPackages(['x'])).thenAnswer(
+        (_) async => [Config.recommended(RuleSet(Recommended.rules))],
+      );
       when(() => discovery.nameOf('x')).thenAnswer((_) async => null);
 
       await PackageResolver(

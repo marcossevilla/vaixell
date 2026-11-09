@@ -74,7 +74,7 @@ final class const RuleTester() {
     final options = node.value == null
         ? const OptionValues().empty(name: factory.id, path: fixture)
         : const OptionValues().of(node, name: factory.id, path: fixture);
-    return const RuleBuilder().build(factory, options);
+    return factory.build(options);
   }
 
   FormatException _syntaxErrors(DartFile file) {

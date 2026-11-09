@@ -39,36 +39,29 @@ class const Config({
   /// the [exclude] globs, which are relative to [root].
   this;
 
-  /// Creates the `recommended` config for the [entries] a caller runs: every
-  /// entry at its default severity, except those that aren't
+  /// Creates the `recommended` config for the [rules] a caller runs: every
+  /// rule at its default severity, except those that aren't
   /// [RuleEntry.recommended].
   ///
   /// It's the config used when there's no config file. Factories build
   /// their rules without options, and report errors at the start of
   /// [root]'s `analysis_options.yaml`, where options would go.
-  ///
-  /// Throws an [ArgumentError] when two [entries] share an id, or one is
-  /// `parse-error`.
-  factory recommended(List<RuleEntry> entries, {String root = ''}) {
-    const RuleIds().check(entries);
-    return Config(
-      rules: [
-        for (final entry in entries)
-          if (entry.recommended)
-            ConfiguredRule(
-              const RuleBuilder().build(
-                entry,
-                const OptionValues().empty(
-                  name: entry.id,
-                  path: p.posix.join(root, 'analysis_options.yaml'),
-                ),
+  factory recommended(RuleSet rules, {String root = ''}) => Config(
+    rules: [
+      for (final entry in rules.entries)
+        if (entry.recommended)
+          ConfiguredRule(
+            entry.build(
+              const OptionValues().empty(
+                name: entry.id,
+                path: p.posix.join(root, 'analysis_options.yaml'),
               ),
-              entry.defaultSeverity,
             ),
-      ],
-      root: root,
-    );
-  }
+            entry.defaultSeverity,
+          ),
+    ],
+    root: root,
+  );
 
   /// The id of the syntax errors the engine reports. It isn't a rule, but
   /// its severity is set under `rules:` like one.
@@ -84,15 +77,14 @@ class const Config({
   }
 }
 
-/// Checks the ids of the rules a caller runs. Internal: it's never exported.
-class const RuleIds() {
-  /// Creates the checker.
-  this;
-
-  /// Throws an [ArgumentError] when two of [entries] share an id, or one is
+/// The rules a caller runs, each with its own id, in reporting order.
+final class RuleSet(Iterable<RuleEntry> rules) {
+  /// Creates the set of [rules].
+  ///
+  /// Throws an [ArgumentError] when two [rules] share an id, or one is
   /// [Config.parseErrorId], since config and violation ids couldn't tell
   /// them apart.
-  void check(List<RuleEntry> entries) {
+  this {
     final seen = <String>{};
     for (final RuleEntry(:id) in entries) {
       if (id == Config.parseErrorId) {
@@ -110,5 +102,23 @@ class const RuleIds() {
         );
       }
     }
+  }
+
+  /// The rules, in reporting order.
+  final List<RuleEntry> entries = List.unmodifiable(rules);
+
+  /// The ids that config can name: [Config.parseErrorId], then the id of
+  /// each rule, in order.
+  List<String> get configIds => [
+    Config.parseErrorId,
+    for (final entry in entries) entry.id,
+  ];
+
+  /// The rule with [id], or `null` when there's none.
+  RuleEntry? operator [](String id) {
+    for (final entry in entries) {
+      if (entry.id == id) return entry;
+    }
+    return null;
   }
 }
