@@ -196,7 +196,7 @@ abstract interface class DartFile {
 
 ### `Reportable` and symbols ([#37](https://github.com/marcossevilla/vaixell/issues/37))
 
-`Reportable` is the sealed parent of everything a finding can point at: syntax errors, imports, declarations, members, expressions and type annotations. Each has an `offset` (its name, or its keyword when it has none) and a ready-made `symbol`:
+`Reportable` is the sealed parent of everything a finding can point at: imports, declarations, members, expressions and type annotations. Each has an `offset` (its name, or its keyword when it has none) and a ready-made `symbol`. A `SyntaxError` is only an `offset` and a `message`: the engine reports it as `parse-error`, and rules never see one.
 
 | Element                        | Symbol                                                                            |
 | ------------------------------ | --------------------------------------------------------------------------------- |
@@ -205,7 +205,6 @@ abstract interface class DartFile {
 | Member                         | `Type.member`, `Type.member=` for a setter, `Type.new` for an unnamed constructor |
 | Expression or type annotation  | the symbol of the declaration and member it's in                                  |
 | Import                         | its URI                                                                           |
-| Syntax error                   | `null`                                                                            |
 
 There are no back-references: a `Member` doesn't know its declaration. Rules that need it get it from `checkMember(type, member)`.
 
