@@ -58,13 +58,13 @@ class const Config({
           false => null,
         };
     return Config(
-      rules: [
+      rules: List.unmodifiable([
         for (final entry in rules.entries)
           if (severityOf(entry) case final severity?)
             ConfiguredRule(entry.build(options(entry.id)), severity),
-      ],
+      ]),
       parseErrorSeverity: severities[parseErrorId] ?? Severity.error,
-      exclude: exclude,
+      exclude: List.unmodifiable(exclude),
       root: root,
     );
   }
@@ -74,8 +74,8 @@ class const Config({
   /// [RuleEntry.recommended].
   ///
   /// It's the config used when there's no config file. Factories build
-  /// their rules without options, and report errors at the start of
-  /// [root]'s `analysis_options.yaml`, where options would go.
+  /// their rules without options, and report errors at the start of the
+  /// root `analysis_options.yaml`, where options would go.
   factory recommended(RuleSet rules) => Config.configure(
     rules,
     options: (id) =>

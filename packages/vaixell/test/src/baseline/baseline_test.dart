@@ -3,6 +3,10 @@ import 'package:vaixell/vaixell.dart';
 
 void main() {
   group(Baseline, () {
+    test('has unmodifiable ids', () {
+      expect(Baseline(['a']).ids.clear, throwsUnsupportedError);
+    });
+
     group('toJson', () {
       test('sorts and dedupes the ids', () {
         expect(

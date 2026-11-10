@@ -155,6 +155,11 @@ class Foo {
       });
     }
 
+    test('returns an unmodifiable list', () async {
+      final violations = await _run({'lib/a.dart': 'void foo() {}\n'});
+      expect(violations.clear, throwsUnsupportedError);
+    });
+
     test('allows a top-level main in lib/', () async {
       expect(await _run({'lib/main.dart': 'void main() {}\n'}), isEmpty);
     });

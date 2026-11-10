@@ -37,5 +37,13 @@ void main() {
       expect(suppressed.added.map((v) => v.id), equals(['b']));
       expect(suppressed.fixed, equals(['c']));
     });
+
+    test('compare and suppress return unmodifiable lists', () {
+      final diff = DiffResult.compare(base: ['b'], head: [_violation('a')]);
+      final suppressed = diff.suppress({});
+      for (final list in [diff.added, diff.fixed, suppressed.added]) {
+        expect(list.clear, throwsUnsupportedError);
+      }
+    });
   });
 }

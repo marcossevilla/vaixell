@@ -40,6 +40,12 @@ void main() {
         expect(config.parseErrorSeverity, Severity.error);
       });
 
+      test('builds unmodifiable rules and excludes', () {
+        final config = Config.configure(rules, options: (_) => options);
+        expect(config.rules.clear, throwsUnsupportedError);
+        expect(config.exclude.clear, throwsUnsupportedError);
+      });
+
       test('applies the given severities, where null is off', () {
         final config = Config.configure(
           rules,
@@ -92,7 +98,7 @@ void main() {
           exclude: exclude,
           root: 'pkg',
         );
-        expect(config.exclude, same(exclude));
+        expect(config.exclude, equals(exclude));
         expect(config.root, 'pkg');
       });
     });

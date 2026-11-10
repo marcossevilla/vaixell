@@ -56,7 +56,7 @@ final class const RuleTester() {
     if (file.errors.isNotEmpty) throw _syntaxErrors(file);
     if (!rule.shouldCheck(file)) return const [];
     final findings = rule.check(file).toList();
-    mergeSort(findings);
+    mergeSort(findings, compare: (a, b) => a.offset.compareTo(b.offset));
     return findings;
   }
 

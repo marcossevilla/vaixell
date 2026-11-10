@@ -34,8 +34,8 @@ class const Engine() {
   /// the rules enabled in that config. A file that doesn't parse only gets a
   /// `parse-error`, which is always on.
   ///
-  /// Returns the violations, sorted by path, line and column, and in the
-  /// order of the rules at the same position.
+  /// Returns the violations in an unmodifiable list, sorted by path, line
+  /// and column, and in the order of the rules at the same position.
   Future<List<Violation>> run({
     required SourceTree tree,
     required List<Package> packages,
@@ -46,7 +46,9 @@ class const Engine() {
         byPath[path] = _check(package, path, await tree.read(path));
       }
     }
-    return [for (final violations in byPath.values) ...violations];
+    return List.unmodifiable([
+      for (final violations in byPath.values) ...violations,
+    ]);
   }
 
   Future<List<String>> _dartFiles(SourceTree tree, Package package) async {
@@ -72,7 +74,10 @@ class const Engine() {
       [] => _findings(file, package.config.rules),
       final errors => [_parseError(package, errors)],
     };
-    mergeSort(found, compare: (a, b) => a.finding.compareTo(b.finding));
+    mergeSort(
+      found,
+      compare: (a, b) => a.finding.offset.compareTo(b.finding.offset),
+    );
 
     final counts = <String, int>{};
     return [for (final finding in found) finding.violation(file, counts)];

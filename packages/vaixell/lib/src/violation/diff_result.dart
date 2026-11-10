@@ -20,23 +20,25 @@ class const DiffResult({
     final baseIds = {...base};
     final headIds = {for (final v in head) v.id};
     return DiffResult(
-      added: [
+      added: List.unmodifiable([
         for (final v in head)
           if (!baseIds.contains(v.id)) v,
-      ],
-      fixed: [
-        for (final id in baseIds)
-          if (!headIds.contains(id)) id,
-      ]..sort(),
+      ]),
+      fixed: List.unmodifiable(
+        [
+          for (final id in baseIds)
+            if (!headIds.contains(id)) id,
+        ]..sort(),
+      ),
     );
   }
 
   /// Returns a copy without the added violations whose ids are in [ids].
   DiffResult suppress(Set<String> ids) => DiffResult(
-    added: [
+    added: List.unmodifiable([
       for (final v in added)
         if (!ids.contains(v.id)) v,
-    ],
+    ]),
     fixed: fixed,
   );
 }
