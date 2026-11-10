@@ -90,6 +90,28 @@ void main() {
       );
     });
 
+    test('reads malformed UTF-8 with replacement characters', () async {
+      await d.file('pkg/bad.txt', [0x61, 0xff, 0x62]).create();
+      await gitCommitAll(d.sandbox, message: 'bad');
+      commit = (await git(d.sandbox, ['rev-parse', 'HEAD'])).trim();
+      final tree = treeIn(d.path('pkg'));
+      addTearDown(tree.close);
+      expect(await tree.read('bad.txt'), equals('a\uFFFDb'));
+    });
+
+    test('lists and reads paths with spaces', () async {
+      await d.dir('pkg/my lib', [d.file('a b.dart', 'a')]).create();
+      await gitCommitAll(d.sandbox, message: 'spaces');
+      commit = (await git(d.sandbox, ['rev-parse', 'HEAD'])).trim();
+      final tree = treeIn(d.path('pkg'));
+      addTearDown(tree.close);
+      expect(await tree.listFiles('my lib'), equals(['my lib/a b.dart']));
+      expect(await tree.listDirectories(''), contains('my lib'));
+      expect(await tree.exists('my lib/a b.dart'), isTrue);
+      expect(await tree.exists('my lib/c d.dart'), isFalse);
+      expect(await tree.read('my lib/a b.dart'), equals('a'));
+    });
+
     test('close works before any file is read', () async {
       await treeIn(d.path('pkg')).close();
     });

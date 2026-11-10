@@ -4,41 +4,34 @@ import 'dart:io';
 
 import 'package:vaixell/src/git/git_runner.dart';
 
-/// A git object read by [CatFileBatch].
-class const GitObject({
-  /// The object type, for example `blob` or `tree`.
-  required final String type,
-
-  /// The raw contents of the object.
-  required final List<int> bytes,
-}) {
-  /// Creates an object of [type] with [bytes] as its contents.
-  this;
-}
-
 /// Reads git objects through one long-running `git cat-file --batch`
 /// process.
 class CatFileBatch(final Process _process) {
   /// Creates a reader that talks to a started `git cat-file --batch`
   /// process.
+  ///
+  /// Its stderr is drained, since `cat-file` reports missing objects on
+  /// stdout.
   this {
-    _process.stdout.listen(_onData, onDone: _onDone);
+    _stdout = _process.stdout.listen(_onData, onDone: _onDone);
+    unawaited(_process.stderr.drain<void>());
   }
 
   static const GitException _exited = GitException(
     '`git cat-file --batch` exited unexpectedly.',
   );
 
+  late final StreamSubscription<List<int>> _stdout;
   final List<int> _buffer = [];
   Completer<void>? _waiting;
   bool _done = false;
   Future<void> _queue = Future.value();
 
-  /// Returns the object named by [spec], such as `<commit>:./lib/a.dart`,
-  /// or `null` if it doesn't exist.
+  /// Returns the contents of the blob named by [spec], such as
+  /// `<commit>:./lib/a.dart`, or `null` if it doesn't exist or isn't a blob.
   ///
   /// Lookups are answered in the order they're made.
-  Future<GitObject?> lookup(String spec) {
+  Future<List<int>?> blob(String spec) {
     final result = _queue.then((_) => _lookup(spec));
     _queue = result.then((_) {}, onError: (_) {});
     return result;
@@ -48,18 +41,22 @@ class CatFileBatch(final Process _process) {
   Future<void> close() async {
     await _process.stdin.close();
     await _process.exitCode;
+    await _stdout.cancel();
   }
 
-  Future<GitObject?> _lookup(String spec) async {
+  Future<List<int>?> _lookup(String spec) async {
     // A failed write means the process exited, which closes stdout too, so
     // the read below reports it.
     _process.stdin.add(utf8.encode('$spec\n'));
     await _process.stdin.flush().then((_) {}, onError: (_) {});
+    // `<oid> <type> <size>`, or `<spec> missing` and `<spec> ambiguous`,
+    // where the spec can hold spaces.
     final header = utf8.decode(await _readLine()).split(' ');
-    if (header.length != 3) return null;
-    final size = int.parse(header[2]);
+    if (header.last case 'missing' || 'ambiguous') return null;
+    final [..., type, sizeText] = header;
+    final size = int.parse(sizeText);
     final bytes = await _take(size + 1);
-    return GitObject(type: header[1], bytes: bytes.sublist(0, size));
+    return type == 'blob' ? bytes.sublist(0, size) : null;
   }
 
   Future<List<int>> _readLine() async {
