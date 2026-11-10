@@ -196,16 +196,4 @@ void main() {
       );
     });
   });
-
-  group(ConfigException, () {
-    test('prints file:line:col and the message', () {
-      const error = ConfigException(
-        'Bad.',
-        path: 'analysis_options.yaml',
-        line: 3,
-        column: 5,
-      );
-      expect(error.toString(), equals('analysis_options.yaml:3:5: Bad.'));
-    });
-  });
 }

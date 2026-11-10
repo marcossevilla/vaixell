@@ -105,15 +105,26 @@ void main() {
       ),
     );
 
+    /// Starts a Dart process that runs [code] as its `main` body.
+    Future<Process> dart(String code) async {
+      final script = d.path('script.dart');
+      File(
+        script,
+      ).writeAsStringSync("import 'dart:io';\n\nvoid main() {\n  $code\n}\n");
+      // `dart` from the PATH: under `flutter test`,
+      // Platform.resolvedExecutable is the Flutter test runner.
+      return await Process.start('dart', [script]);
+    }
+
     test('throws when the process has already exited', () async {
-      final process = await Process.start('sh', ['-c', 'exit 0']);
+      final process = await dart('');
       await process.exitCode;
       final batch = CatFileBatch(process);
       await expectLater(batch.blob('HEAD:./a'), exited);
     });
 
     test('throws when the process exits without answering', () async {
-      final process = await Process.start('sh', ['-c', 'read line']);
+      final process = await dart('stdin.readLineSync();');
       final batch = CatFileBatch(process);
       await expectLater(batch.blob('HEAD:./a'), exited);
       await expectLater(batch.blob('HEAD:./b'), exited);

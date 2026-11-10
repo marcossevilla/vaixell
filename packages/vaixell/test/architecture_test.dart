@@ -61,6 +61,25 @@ String? _target(String uri, {required String from}) {
   return p.posix.isWithin('.', resolved) ? resolved : null;
 }
 
+/// Returns why each of [uris], written in the file at [path] relative to
+/// `lib/src`, breaks the layering.
+Iterable<String> _importViolations(String path, Iterable<String> uris) sync* {
+  final layer = _layer(path);
+  final allowed = _allowedImports[layer];
+  if (allowed == null) {
+    yield '$path: layer "$layer" is not in the layering';
+    return;
+  }
+  for (final uri in uris) {
+    final target = _target(uri, from: path);
+    if (target == null) continue;
+    final targetLayer = _layer(target);
+    if (targetLayer != layer && !allowed.contains(targetLayer)) {
+      yield '$path: $layer must not import $targetLayer ($uri)';
+    }
+  }
+}
+
 /// Returns the Dart files in [directory] and its subdirectories.
 Iterable<File> _dartFiles(String directory) =>
     Directory(directory)
@@ -226,24 +245,33 @@ void main() {
         final path = p.posix.joinAll(
           p.split(p.relative(file.path, from: _src)),
         );
-        final layer = _layer(path);
-        final allowed = _allowedImports[layer];
-        if (allowed == null) {
-          violations.add('$path: layer "$layer" is not in the layering');
-          continue;
-        }
-
-        for (final uri in _uris(file)) {
-          final target = _target(uri, from: path);
-          if (target == null) continue;
-          final targetLayer = _layer(target);
-          if (targetLayer != layer && !allowed.contains(targetLayer)) {
-            violations.add('$path: $layer must not import $targetLayer ($uri)');
-          }
-        }
+        violations.addAll(_importViolations(path, _uris(file)));
       }
 
       expect(violations, isEmpty);
+    });
+
+    test('the layering check catches forbidden imports', () {
+      const packageUri = 'package:vaixell/src/engine/engine.dart';
+      const relativeUri = '../engine/engine.dart';
+      expect(
+        _importViolations('report/x.dart', [
+          packageUri,
+          relativeUri,
+          'package:vaixell/src/violation/violation.dart',
+          'report.dart',
+          'package:path/path.dart',
+          'dart:io',
+        ]),
+        equals([
+          for (final uri in [packageUri, relativeUri])
+            'report/x.dart: report must not import engine ($uri)',
+        ]),
+      );
+      expect(
+        _importViolations('nowhere/x.dart', []),
+        equals(['nowhere/x.dart: layer "nowhere" is not in the layering']),
+      );
     });
 
     test('keeps check free of CLI packages and reporters', () {

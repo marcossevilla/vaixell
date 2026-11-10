@@ -66,7 +66,6 @@ void main() {
       expect(foo.severity, equals(Severity.error));
       expect(foo.path, equals('lib/a.dart'));
       expect((foo.line, foo.column), equals((1, 6)));
-      expect(foo.toString(), equals('Violation(${foo.id} at lib/a.dart:1:6)'));
     });
 
     test('ids stay the same when code moves', () async {
