@@ -113,9 +113,12 @@ base class _InClass(
 
   String get symbol => member.symbol!;
 
+  /// A leading run of `_`.
+  static final RegExp _leadingUnderscores = RegExp('^_*');
+
   /// `_$UserFromJson` for `User.fromJson`. Leading underscores are dropped.
   String get generated =>
-      '_\$${type.name.replaceFirst(RegExp('^_*'), '')}'
+      '_\$${type.name.replaceFirst(_leadingUnderscores, '')}'
       '${name == 'fromJson' ? 'FromJson' : 'ToJson'}';
 
   /// What the body should pass to [generated].

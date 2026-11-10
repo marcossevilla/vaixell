@@ -121,21 +121,14 @@ void main() {
         (options) => throw options['names'].error('Needs names.'),
       );
       expect(
-        () => Config.recommended(RuleSet([factory]), root: 'pkg'),
+        () => Config.recommended(RuleSet([factory])),
         throwsA(
           isA<ConfigException>().having(
             (e) => '$e',
             'toString()',
-            'pkg/analysis_options.yaml:1:1: Needs names.',
+            'analysis_options.yaml:1:1: Needs names.',
           ),
         ),
-      );
-    });
-
-    test('recommended keeps the given root', () {
-      expect(
-        Config.recommended(RuleSet(Recommended.rules), root: 'pkg').root,
-        'pkg',
       );
     });
   });

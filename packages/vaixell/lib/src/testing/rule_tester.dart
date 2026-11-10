@@ -6,10 +6,12 @@ import 'package:vaixell/src/model/model.dart';
 import 'package:vaixell/src/options/config_exception.dart';
 import 'package:vaixell/src/options/option_value.dart';
 import 'package:vaixell/src/rules/rule.dart';
-import 'package:yaml/yaml.dart';
 
 /// Where [RuleTester.checkSource] places its file: the package directory,
 /// relative to the repository root, and its `pubspec.yaml` name.
+///
+/// The testing API has its own type because the package types vaixell
+/// discovers and checks aren't part of its public API.
 final class const TestPackage({
   /// The package directory, relative to the repository root, where `''` is
   /// the root itself.
@@ -65,15 +67,7 @@ final class const RuleTester() {
   /// Throws a [ConfigException] with [fixture]'s path, line and column when
   /// the options aren't valid.
   Rule createRule(RuleFactory factory, {required String fixture}) {
-    final YamlNode node;
-    try {
-      node = loadYamlNode(
-        File(fixture).readAsStringSync(),
-        sourceUrl: Uri.file(fixture),
-      );
-    } on YamlException catch (error) {
-      throw error.toConfigException(path: fixture);
-    }
+    final node = File(fixture).readAsStringSync().parseYaml(path: fixture);
     final options = node.value == null
         ? YamlOptionValue.empty(name: factory.id, path: fixture)
         : YamlOptionValue.of(node, name: factory.id, path: fixture);

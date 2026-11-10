@@ -138,6 +138,23 @@ class Foo {
       expect(violations.map((v) => v.path), ['lib/src/c.dart']);
     });
 
+    for (final suffix in [
+      '.g.dart',
+      '.freezed.dart',
+      '.gr.dart',
+      '.gen.dart',
+      '.mocks.dart',
+      '.pb.dart',
+      '.pbenum.dart',
+      '.pbgrpc.dart',
+      '.pbjson.dart',
+      '.pbserver.dart',
+    ]) {
+      test('skips generated `$suffix` files', () async {
+        expect(await _run({'lib/a$suffix': 'void foo() {}\n'}), isEmpty);
+      });
+    }
+
     test('allows a top-level main in lib/', () async {
       expect(await _run({'lib/main.dart': 'void main() {}\n'}), isEmpty);
     });

@@ -1,7 +1,13 @@
 part of 'model.dart';
 
-/// A syntax error reported by the parser. Its [symbol] is `null`.
-abstract interface class SyntaxError implements Reportable {
+/// A syntax error reported by the parser.
+final class const SyntaxError(
+  /// The character offset of the error in the file.
+  final int offset,
+
   /// What the parser reported.
-  String get message;
+  final String message,
+) {
+  /// Creates the error the parser reported at [offset].
+  this;
 }

@@ -168,10 +168,11 @@ void main() {
         path: 'lib/a.dart',
         content: source,
       ).imports.single;
+      // An expression outside any declaration has no symbol.
       final error = DartFile.parse(
         path: 'lib/a.dart',
-        content: 'class A {\n',
-      ).errors.first;
+        content: '@A(1)\nlibrary;\n',
+      ).expressions.last;
 
       test("takes the element's offset and symbol", () {
         final finding = Finding.at(import, message: 'm');

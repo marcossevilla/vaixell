@@ -1,5 +1,4 @@
 import 'package:glob/glob.dart';
-import 'package:path/path.dart' as p;
 import 'package:vaixell/src/options/option_value.dart';
 import 'package:vaixell/src/rules/rule.dart';
 import 'package:vaixell/src/violation/violation.dart';
@@ -77,13 +76,10 @@ class const Config({
   /// It's the config used when there's no config file. Factories build
   /// their rules without options, and report errors at the start of
   /// [root]'s `analysis_options.yaml`, where options would go.
-  factory recommended(RuleSet rules, {String root = ''}) => Config.configure(
+  factory recommended(RuleSet rules) => Config.configure(
     rules,
-    options: (id) => YamlOptionValue.empty(
-      name: id,
-      path: p.posix.join(root, 'analysis_options.yaml'),
-    ),
-    root: root,
+    options: (id) =>
+        YamlOptionValue.empty(name: id, path: 'analysis_options.yaml'),
   );
 
   /// The id of the syntax errors the engine reports. It isn't a rule, but

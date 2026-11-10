@@ -58,11 +58,10 @@ void main() {
         expect(_parse('class A {}\n').errors, isEmpty);
       });
 
-      test('are in source order, without a symbol', () {
+      test('are in source order, with messages', () {
         const source = 'class A { void f( }\nclass {\n';
         final errors = _parse(source).errors;
         expect(errors, hasLength(greaterThan(1)));
-        expect(errors.map((e) => e.symbol), everyElement(isNull));
         expect(errors.map((e) => e.message), everyElement(isNotEmpty));
         final offsets = errors.map((e) => e.offset).toList();
         expect(offsets, orderedEquals([...offsets]..sort()));
