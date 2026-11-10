@@ -1,19 +1,11 @@
 /// Checks architecture rules in Dart and Flutter repositories.
 library;
 
-export 'src/baseline/baseline.dart'
-    show Baseline, BaselineException, BaselineFile;
+export 'src/baseline/baseline.dart' show Baseline, BaselineException;
 export 'src/check/check.dart' show Check;
-export 'src/check/package_resolver.dart' show PackageResolver;
 export 'src/check/write_baseline.dart' show WriteBaseline;
 export 'src/config/config.dart' show Config, ConfiguredRule, RuleSet;
-export 'src/config/config_loader.dart' show ConfigLoader, ConfigResolver;
-export 'src/discovery/package_discovery.dart' show PackageDir, PackageDiscovery;
-export 'src/engine/diff_result.dart' show DiffResult;
-export 'src/engine/engine.dart' show Engine;
-export 'src/engine/package.dart' show Package;
-export 'src/git/git_runner.dart'
-    show GitException, GitRunner, RunGit, StartProcess;
+export 'src/git/git_runner.dart' show GitException;
 export 'src/model/model.dart'
     show
         AccessOperator,
@@ -79,7 +71,6 @@ export 'src/rules/rule.dart'
         RuleEntry,
         RuleFactory,
         SkipsDirectories;
-export 'src/source/git_source_tree.dart'
-    show ClosableSourceTree, GitSourceTree, OpenGitSourceTree;
-export 'src/source/source_tree.dart' show FileSystemSourceTree, SourceTree;
+export 'src/source/source_tree.dart' show SourceTree;
+export 'src/violation/diff_result.dart' show DiffResult;
 export 'src/violation/violation.dart' show Severity, Violation;

@@ -2,16 +2,17 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 import 'package:vaixell/src/baseline/baseline.dart';
+import 'package:vaixell/src/baseline/baseline_file.dart';
 import 'package:vaixell/src/check/package_resolver.dart';
-import 'package:vaixell/src/config/config.dart';
-import 'package:vaixell/src/engine/diff_result.dart';
 import 'package:vaixell/src/engine/engine.dart';
 import 'package:vaixell/src/engine/package.dart';
 import 'package:vaixell/src/git/git_runner.dart';
+import 'package:vaixell/src/options/config_exception.dart';
 import 'package:vaixell/src/report/report.dart';
 import 'package:vaixell/src/rules/rule.dart';
 import 'package:vaixell/src/source/git_source_tree.dart';
 import 'package:vaixell/src/source/source_tree.dart';
+import 'package:vaixell/src/violation/diff_result.dart';
 import 'package:vaixell/src/violation/violation.dart';
 
 /// {@template check}
@@ -21,67 +22,38 @@ class const Check._({
   /// The repository root directory.
   required final String root,
   required final SourceTree _tree,
-  required final GitRunner _git,
-  required final OpenGitSourceTree _openGitSourceTree,
   required final PackageResolver _packageResolver,
-  required final Engine _engine,
-  required final BaselineFile _baselineFile,
 }) {
   /// {@macro check}
   ///
-  /// Reads the files of [root] from [tree], a [FileSystemSourceTree] on
-  /// [root] by default. [tree] is the head side of a git-diff comparison.
+  /// Configures [rules] for each package, and reads the files of [root] from
+  /// [tree], a [FileSystemSourceTree] on [root] by default. [tree] is the
+  /// head side of a git-diff comparison, whose base side git reads from the
+  /// repository at [root].
   ///
-  /// Runs git with [git], a [GitRunner] in [root] by default, and reads the
-  /// git-diff base side from [openGitSourceTree], a [GitSourceTree] on [git]
-  /// by default.
-  ///
-  /// Resolves the packages with [packageResolver] (by default, a
-  /// [PackageResolver] on [tree] that configures [rules]), checks them with
-  /// [engine], and reads baselines with [baselineFile]. [engine] is only a
-  /// test seam.
-  ///
-  /// [rules] is required so that every real caller picks its rules. A given
-  /// [packageResolver] already carries its own, so [rules] is ignored then;
-  /// like [engine], [packageResolver] is only a test seam.
-  ///
-  /// Throws an [ArgumentError] when [packageResolver] isn't given and two
-  /// [rules] share an id, or one is `parse-error`.
+  /// Throws an [ArgumentError] when two [rules] share an id, or one is
+  /// `parse-error`.
   factory({
     required String root,
     required List<RuleEntry> rules,
     SourceTree? tree,
-    GitRunner? git,
-    OpenGitSourceTree? openGitSourceTree,
-    PackageResolver? packageResolver,
-    Engine engine = const Engine(),
-    BaselineFile baselineFile = const BaselineFile(),
   }) {
     final resolvedTree = tree ?? FileSystemSourceTree(Directory(root));
-    final resolvedGit = git ?? GitRunner(root);
     return Check._(
       root: root,
       tree: resolvedTree,
-      git: resolvedGit,
-      openGitSourceTree:
-          openGitSourceTree ??
-          (commit) => GitSourceTree(git: resolvedGit, commit: commit),
-      packageResolver:
-          packageResolver ??
-          PackageResolver.fromTree(
-            root: root,
-            tree: resolvedTree,
-            rules: rules,
-          ),
-      engine: engine,
-      baselineFile: baselineFile,
+      packageResolver: PackageResolver(
+        root: root,
+        tree: resolvedTree,
+        rules: rules,
+      ),
     );
   }
 
+  static const Engine _engine = Engine();
+
   /// Checks the packages at [paths], relative to [root], or the discovered
   /// packages when [paths] is empty, and returns the [Report].
-  ///
-  /// [paths] are not validated: each must be a directory inside [root].
   ///
   /// With a [gitDiff] ref, the report is a [ReportMode.diff] comparison
   /// with the merge-base of [gitDiff] and `HEAD`, checking the same
@@ -90,9 +62,10 @@ class const Check._({
   /// relative to [root], the report is a [ReportMode.baseline] comparison
   /// with its ids. Otherwise it's a [ReportMode.full] report.
   ///
-  /// Throws a [ConfigException] when discovery or a config fails, a
-  /// [BaselineException] when the baseline file is missing or malformed,
-  /// and a [GitException] when git fails.
+  /// Throws an [ArgumentError] when a path is outside [root], a
+  /// [ConfigException] when discovery or a config fails, a
+  /// [BaselineException] when the baseline file can't be read, and a
+  /// [GitException] when git fails.
   Future<Report> call({
     List<String> paths = const [],
     String? gitDiff,
@@ -101,7 +74,7 @@ class const Check._({
     final packages = await _packageResolver(paths);
     final savedBaseline = baseline == null
         ? null
-        : await _baselineFile.read(p.join(root, baseline));
+        : await BaselineFile(p.join(root, baseline)).read();
     final ids = savedBaseline?.ids;
     final violations = await _engine.run(tree: _tree, packages: packages);
     if (gitDiff != null) {
@@ -127,7 +100,8 @@ class const Check._({
     List<Package> packages,
     String ref,
   ) async {
-    final base = _openGitSourceTree(await _git.mergeBase(ref));
+    final git = GitRunner(root);
+    final base = GitSourceTree(git: git, commit: await git.mergeBase(ref));
     try {
       final baseViolations = await _engine.run(tree: base, packages: packages);
       return DiffResult.compare(

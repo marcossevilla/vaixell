@@ -1,22 +1,11 @@
 import 'dart:io';
 
-import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 import 'package:test_descriptor/test_descriptor.dart' as d;
 import 'package:vaixell/vaixell.dart';
 
 import '../../helpers/git_repo.dart';
 import '../../helpers/memory_source_tree.dart';
-
-class _MockPackageResolver extends Mock implements PackageResolver;
-
-class _MockEngine extends Mock implements Engine;
-
-class _MockBaselineFile extends Mock implements BaselineFile;
-
-class _MockGitRunner extends Mock implements GitRunner;
-
-class _MockClosableSourceTree extends Mock implements ClosableSourceTree;
 
 void main() {
   group(Check, () {
@@ -352,99 +341,8 @@ workspace:
       });
     });
 
-    group('collaborators', () {
-      final packages = [
-        Package(
-          path: '',
-          config: Config.recommended(RuleSet(Recommended.rules)),
-        ),
-      ];
-      const violation = Violation(
-        id: 'top-level-function:lib/a.dart:foo',
-        rule: 'top-level-function',
-        severity: Severity.error,
-        path: 'lib/a.dart',
-        line: 1,
-        column: 6,
-        message: 'message',
-      );
-
-      late MemorySourceTree tree;
-      late _MockPackageResolver packageResolver;
-      late _MockEngine engine;
-      late _MockBaselineFile baselineFile;
-      late _MockGitRunner git;
-      late _MockClosableSourceTree base;
-      late List<String> openedCommits;
-
-      setUpAll(() {
-        registerFallbackValue(MemorySourceTree({}));
-        registerFallbackValue(<Package>[]);
-      });
-
-      setUp(() {
-        tree = MemorySourceTree({});
-        packageResolver = _MockPackageResolver();
-        engine = _MockEngine();
-        baselineFile = _MockBaselineFile();
-        git = _MockGitRunner();
-        base = _MockClosableSourceTree();
-        openedCommits = [];
-        when(() => packageResolver(any())).thenAnswer((_) async => packages);
-        when(
-          () => engine.run(
-            tree: any(named: 'tree'),
-            packages: any(named: 'packages'),
-          ),
-        ).thenAnswer((_) async => [violation]);
-        when(() => git.mergeBase(any())).thenAnswer((_) async => 'abc');
-        when(base.close).thenAnswer((_) async {});
-      });
-
-      Check build() => Check(
-        rules: Recommended.rules,
-        root: '/repo',
-        tree: tree,
-        git: git,
-        openGitSourceTree: (commit) {
-          openedCommits.add(commit);
-          return base;
-        },
-        packageResolver: packageResolver,
-        engine: engine,
-        baselineFile: baselineFile,
-      );
-
-      test('resolves the packages with the given resolver', () async {
-        await build()(paths: ['x']);
-        verify(() => packageResolver(['x'])).called(1);
-        verify(() => engine.run(tree: tree, packages: packages)).called(1);
-      });
-
-      test('reads the baseline with the given baseline file', () async {
-        when(() => baselineFile.read(any()))
-            .thenAnswer((_) async => Baseline([violation.id]));
-        final report = await build()(baseline: 'baseline.json');
-        expect(report.failing, isEmpty);
-        verify(() => baselineFile.read('/repo/baseline.json')).called(1);
-      });
-
-      test('runs the base side on the opened git tree', () async {
-        when(() => engine.run(tree: base, packages: packages))
-            .thenAnswer((_) async => []);
-        final report = await build()(gitDiff: 'main');
-        expect(ids(report.failing), [violation.id]);
-        verify(() => git.mergeBase('main')).called(1);
-        expect(openedCommits, ['abc']);
-        verify(base.close).called(1);
-      });
-
-      test('closes the base tree when the base run fails', () async {
-        when(() => engine.run(tree: base, packages: packages))
-            .thenThrow(StateError('boom'));
-        await expectLater(build()(gitDiff: 'main'), throwsA(isA<StateError>()));
-        verify(base.close).called(1);
-      });
+    test('throws an ArgumentError for a path outside the root', () async {
+      await expectLater(check(paths: ['..']), throwsArgumentError);
     });
   });
 }

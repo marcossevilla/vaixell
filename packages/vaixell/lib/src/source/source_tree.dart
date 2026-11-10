@@ -3,6 +3,13 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+/// Paths in a [SourceTree], which are POSIX-style and relative to its
+/// root.
+extension SourceTreePath on String {
+  /// This path, with the root written as `''` instead of `.`.
+  String get asTreePath => this == '.' ? '' : this;
+}
+
 /// A read-only view of the files in a repository.
 ///
 /// Paths are POSIX-style and relative to the root of the tree, for example

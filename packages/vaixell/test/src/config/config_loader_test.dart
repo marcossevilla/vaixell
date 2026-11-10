@@ -1,4 +1,5 @@
 import 'package:test/test.dart';
+import 'package:vaixell/src/config/config_loader.dart';
 import 'package:vaixell/vaixell.dart';
 
 import '../../helpers/memory_source_tree.dart';
@@ -482,7 +483,7 @@ void main() {
       Map<String, String> files,
       String package,
     ) async => severitiesOf(
-      (await _resolver(files).forPackages([package])).single,
+      (await _resolver(files).forPackages([package])).values.single,
     )['top-level-function'];
 
     test('uses recommended without any config', () async {
@@ -512,7 +513,8 @@ void main() {
         'packages/analysis_options.yaml': warning,
         'packages/a/analysis_options.yaml': 'linter: {}\n',
       };
-      final [config] = await _resolver(files).forPackages(['packages/a']);
+      final config = (await _resolver(files)
+          .forPackages(['packages/a']))['packages/a']!;
       expect(config.root, equals('packages'));
       expect(config.exclude, isEmpty);
       expect(
@@ -542,7 +544,9 @@ void main() {
       );
       await resolver.forPackages(['packages/a']);
       tree.files['analysis_options.yaml'] = off;
-      final [config] = await resolver.forPackages(['packages/a']);
+      final config = (await resolver.forPackages([
+        'packages/a',
+      ]))['packages/a']!;
       expect(severitiesOf(config), isNot(contains('top-level-function')));
       expect(tree.reads, hasLength(2));
     });

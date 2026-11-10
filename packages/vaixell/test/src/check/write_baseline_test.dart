@@ -1,15 +1,9 @@
-import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 import 'package:test_descriptor/test_descriptor.dart' as d;
+import 'package:vaixell/src/baseline/baseline_file.dart';
 import 'package:vaixell/vaixell.dart';
 
 import '../../helpers/memory_source_tree.dart';
-
-class _MockPackageResolver extends Mock implements PackageResolver;
-
-class _MockEngine extends Mock implements Engine;
-
-class _MockBaselineFile extends Mock implements BaselineFile;
 
 void main() {
   group(WriteBaseline, () {
@@ -69,7 +63,7 @@ void main() {
       )('baseline.json');
       expect(baseline.ids, equals({'top-level-function:lib/c.dart:c'}));
       expect(
-        (await const BaselineFile().read(d.path('baseline.json'))).ids,
+        (await BaselineFile(d.path('baseline.json')).read()).ids,
         equals(baseline.ids),
       );
     });
@@ -85,46 +79,13 @@ void main() {
       await d.nothing('baseline.json').validate();
     });
 
-    test('uses the given collaborators', () async {
-      registerFallbackValue(Baseline([]));
-      final tree = MemorySourceTree({});
-      final packages = [
-        Package(
-          path: 'p',
-          config: Config.recommended(RuleSet(Recommended.rules)),
+    test('throws a $BaselineException when it can not write', () async {
+      await expectLater(
+        WriteBaseline(rules: Recommended.rules, root: d.sandbox)(
+          'missing/baseline.json',
         ),
-      ];
-      final packageResolver = _MockPackageResolver();
-      final engine = _MockEngine();
-      final baselineFile = _MockBaselineFile();
-      when(() => packageResolver(['p'])).thenAnswer((_) async => packages);
-      when(() => engine.run(tree: tree, packages: packages)).thenAnswer(
-        (_) async => [
-          const Violation(
-            id: 'top-level-function:p/lib/a.dart:foo',
-            rule: 'top-level-function',
-            severity: Severity.error,
-            path: 'p/lib/a.dart',
-            line: 1,
-            column: 6,
-            message: 'message',
-          ),
-        ],
+        throwsA(isA<BaselineException>()),
       );
-      when(() => baselineFile.write(any(), any())).thenAnswer((_) async {});
-
-      final baseline = await WriteBaseline(
-        rules: Recommended.rules,
-        root: '/repo',
-        tree: tree,
-        packageResolver: packageResolver,
-        engine: engine,
-        baselineFile: baselineFile,
-      )('baseline.json', paths: ['p']);
-
-      expect(baseline.ids, equals({'top-level-function:p/lib/a.dart:foo'}));
-      verify(() => baselineFile.write('/repo/baseline.json', baseline))
-          .called(1);
     });
   });
 }

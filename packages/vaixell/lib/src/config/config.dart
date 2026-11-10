@@ -4,8 +4,6 @@ import 'package:vaixell/src/options/option_value.dart';
 import 'package:vaixell/src/rules/rule.dart';
 import 'package:vaixell/src/violation/violation.dart';
 
-export 'package:vaixell/src/options/config_exception.dart';
-
 /// A rule that a [Config] enables, with the severity of its violations.
 final class const ConfiguredRule(
   /// The rule, built with the config's options.

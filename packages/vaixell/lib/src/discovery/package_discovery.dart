@@ -1,6 +1,5 @@
 import 'package:glob/glob.dart';
 import 'package:path/path.dart' as p;
-import 'package:vaixell/src/config/config.dart';
 import 'package:vaixell/src/options/config_exception.dart';
 import 'package:vaixell/src/source/source_tree.dart';
 import 'package:yaml/yaml.dart';

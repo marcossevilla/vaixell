@@ -6,7 +6,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 import 'package:test_descriptor/test_descriptor.dart' as d;
 import 'package:vaixell/src/git/cat_file_batch.dart';
-import 'package:vaixell/vaixell.dart';
+import 'package:vaixell/src/git/git_runner.dart';
 
 import '../../helpers/git_repo.dart';
 

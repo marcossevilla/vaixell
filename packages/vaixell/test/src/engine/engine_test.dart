@@ -1,5 +1,7 @@
 import 'package:glob/glob.dart';
 import 'package:test/test.dart';
+import 'package:vaixell/src/engine/engine.dart';
+import 'package:vaixell/src/engine/package.dart';
 import 'package:vaixell/src/rules/top_level_function.dart';
 import 'package:vaixell/vaixell.dart';
 

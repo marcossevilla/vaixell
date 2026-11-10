@@ -1,7 +1,4 @@
-import 'dart:io';
-
 import 'package:test/test.dart';
-import 'package:test_descriptor/test_descriptor.dart' as d;
 import 'package:vaixell/vaixell.dart';
 
 void main() {
@@ -66,63 +63,5 @@ void main() {
         });
       }
     });
-  });
-
-  group(BaselineFile, () {
-    late String path;
-
-    setUp(() => path = d.path('baseline.json'));
-
-    test('writes deterministic, indented JSON and reads it back', () async {
-      await const BaselineFile().write(path, Baseline(['b', 'a']));
-      expect(
-        File(path).readAsStringSync(),
-        equals(
-          '{\n'
-          '  "schemaVersion": 1,\n'
-          '  "violations": [\n'
-          '    "a",\n'
-          '    "b"\n'
-          '  ]\n'
-          '}\n',
-        ),
-      );
-      expect((await const BaselineFile().read(path)).ids, equals({'a', 'b'}));
-    });
-
-    Matcher baselineError(Object message) => throwsA(
-      isA<BaselineException>().having(
-        (e) => e.toString(),
-        'toString()',
-        message,
-      ),
-    );
-
-    test('throws when the file is missing', () async {
-      await expectLater(
-        const BaselineFile().read(path),
-        baselineError('Baseline file `$path` not found.'),
-      );
-    });
-
-    for (final (name, content, detail) in [
-      ('invalid JSON', '{', 'Unexpected end of input'),
-      ('a non-object', '[]', 'Expected a JSON object.'),
-      (
-        'an invalid schema',
-        '{"schemaVersion": 1}',
-        '`violations` must be a list of violation ids.',
-      ),
-    ]) {
-      test('throws for $name', () async {
-        File(path).writeAsStringSync(content);
-        await expectLater(
-          const BaselineFile().read(path),
-          baselineError(
-            startsWith('Baseline file `$path` is malformed: $detail'),
-          ),
-        );
-      });
-    }
   });
 }

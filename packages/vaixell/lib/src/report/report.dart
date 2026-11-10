@@ -1,4 +1,4 @@
-import 'package:vaixell/src/engine/diff_result.dart';
+import 'package:vaixell/src/violation/diff_result.dart';
 import 'package:vaixell/src/violation/violation.dart';
 
 /// How a run decided which violations are new.

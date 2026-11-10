@@ -1,6 +1,7 @@
 import 'package:glob/glob.dart';
 import 'package:path/path.dart' as p;
 import 'package:vaixell/src/config/config.dart';
+import 'package:vaixell/src/options/config_exception.dart';
 import 'package:vaixell/src/options/option_value.dart';
 import 'package:vaixell/src/rules/rule.dart';
 import 'package:vaixell/src/source/source_tree.dart';
@@ -69,10 +70,7 @@ final class _ConfigFile(
   static const String _recommended = 'recommended';
 
   /// The directory of [path], which the `exclude` globs are relative to.
-  String get _root => switch (p.posix.dirname(path)) {
-    '.' => '',
-    final dir => dir,
-  };
+  String get _root => p.posix.dirname(path).asTreePath;
 
   /// The config that the [section] sets for [rules], or `null` when there's
   /// no section. An empty section enables the recommended rules.
@@ -307,22 +305,25 @@ class const ConfigResolver(
   /// Creates a resolver that reads configs with [loader].
   this;
 
-  /// Returns the config for each package in [packages], relative to the
-  /// root, in order, or the [Config.recommended] one for the loader's rules
-  /// when no file up to the root has a `vaixell:` key. Each file is read at
-  /// most once per call.
+  /// Returns the config for each package directory in [packages], relative
+  /// to the root, keyed by directory: the nearest one, or the
+  /// [Config.recommended] one for the loader's rules when no file up to the
+  /// root has a `vaixell:` key. Each file is read at most once per call.
   ///
   /// Throws a [ConfigException] for the first invalid file on the way.
-  Future<List<Config>> forPackages(List<String> packages) async {
+  Future<Map<String, Config>> forPackages(Iterable<String> packages) async {
     final cache = <String, Future<Config?>>{};
-    return [for (final package in packages) await _forPackage(package, cache)];
+    return {
+      for (final package in packages)
+        package: await _forPackage(package, cache),
+    };
   }
 
   Future<Config> _forPackage(
     String package,
     Map<String, Future<Config?>> cache,
   ) async {
-    for (var dir = package; ; dir = _parent(dir)) {
+    for (var dir = package; ; dir = p.posix.dirname(dir).asTreePath) {
       final path = p.posix.join(dir, ConfigLoader.defaultPath);
       final config = await cache.putIfAbsent(
         path,
@@ -332,9 +333,4 @@ class const ConfigResolver(
       if (dir.isEmpty) return Config.recommended(loader.rules);
     }
   }
-
-  String _parent(String dir) => switch (p.posix.dirname(dir)) {
-    '.' => '',
-    final parent => parent,
-  };
 }
