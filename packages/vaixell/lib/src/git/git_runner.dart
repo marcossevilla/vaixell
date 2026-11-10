@@ -4,9 +4,13 @@ import 'dart:io';
 /// A git command that failed, or a repository in an unusable state.
 class const GitException(
   /// A description of the problem.
-  final String message,
-) implements Exception {
-  /// Creates an exception with a [message] for the user.
+  final String message, {
+
+  /// Whether git itself couldn't run, as opposed to a git command failing.
+  final bool unavailable = false,
+}) implements Exception {
+  /// Creates an exception with a [message] for the user, where git couldn't
+  /// run when [unavailable].
   this;
 
   @override
@@ -50,7 +54,10 @@ class const GitRunner(
         workingDirectory: workingDirectory,
       );
     } on ProcessException catch (error) {
-      throw GitException('Could not run `git`: ${error.message}');
+      throw GitException(
+        'Could not run `git`: ${error.message}',
+        unavailable: true,
+      );
     }
   }
 
@@ -100,7 +107,10 @@ class const GitRunner(
         stderrEncoding: utf8,
       );
     } on ProcessException catch (error) {
-      throw GitException('Could not run `git`: ${error.message}');
+      throw GitException(
+        'Could not run `git`: ${error.message}',
+        unavailable: true,
+      );
     }
   }
 }

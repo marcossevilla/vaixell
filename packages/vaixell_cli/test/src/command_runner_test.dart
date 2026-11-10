@@ -1,7 +1,5 @@
 import 'dart:io';
 
-import 'package:args/command_runner.dart';
-import 'package:cli_completion/cli_completion.dart';
 import 'package:mason_logger/mason_logger.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:pub_updater/pub_updater.dart';
@@ -11,19 +9,12 @@ import 'package:vaixell/vaixell.dart';
 import 'package:vaixell_cli/vaixell_cli.dart';
 
 import '../helpers/buffered_logger.dart';
-
-class _MockLogger extends Mock implements Logger;
-
-class _MockProgress extends Mock implements Progress;
-
-class _MockPubUpdater extends Mock implements PubUpdater;
-
-const _latestVersion = '0.0.0';
+import '../helpers/mocks.dart';
 
 final _updatePrompt =
     // We need to ignore this lint in order to match the exact message format.
     // ignore: leading_newlines_in_multiline_strings
-    '''${lightYellow.wrap('Update available!')} ${lightCyan.wrap(VaixellCommandRunner.packageVersion)} \u2192 ${lightCyan.wrap(_latestVersion)}
+    '''${lightYellow.wrap('Update available!')} ${lightCyan.wrap(VaixellCommandRunner.packageVersion)} \u2192 ${lightCyan.wrap(latestVersion)}
 Run ${lightCyan.wrap('vaixell update')} to update''';
 
 /// Reports every class.
@@ -38,32 +29,49 @@ final class const _ClassRule() extends Rule with ChecksDeclarations {
   };
 }
 
+/// Throws a [FormatException] for every declaration.
+final class const _ThrowingRule() extends Rule with ChecksDeclarations {
+  @override
+  String get id => 'throwing';
+
+  @override
+  Finding? checkDeclaration(Declaration declaration) =>
+      throw const FormatException('rule bug');
+}
+
 void main() {
   group(VaixellCommandRunner, () {
     late PubUpdater pubUpdater;
     late Logger logger;
     late VaixellCommandRunner commandRunner;
+    late bool interactive;
+
+    /// Runs [args] on a new runner in the sandbox, where completion files
+    /// would go to a sandbox home, so no test touches the real shell config.
+    Future<int> run(List<String> args) => IOOverrides.runZoned(
+      () =>
+          (commandRunner = VaixellCommandRunner(
+                logger: logger,
+                pubUpdater: pubUpdater,
+                interactive: interactive,
+              )..environmentOverride = {'SHELL': '/bin/zsh', 'HOME': d.sandbox})
+              .run(args),
+      getCurrentDirectory: () => Directory(d.sandbox),
+    );
 
     setUp(() {
-      pubUpdater = _MockPubUpdater();
-
+      pubUpdater = MockPubUpdater();
       when(() => pubUpdater.getLatestVersion(any()))
           .thenAnswer((_) async => VaixellCommandRunner.packageVersion);
-
-      logger = _MockLogger();
-
-      commandRunner = VaixellCommandRunner(
-        logger: logger,
-        pubUpdater: pubUpdater,
-        interactive: true,
-      );
+      logger = MockLogger();
+      interactive = true;
     });
 
     test('shows update message when newer version exists', () async {
       when(() => pubUpdater.getLatestVersion(any()))
-          .thenAnswer((_) async => _latestVersion);
+          .thenAnswer((_) async => latestVersion);
 
-      final result = await commandRunner.run(['--version']);
+      final result = await run(['--version']);
       expect(result, equals(ExitCode.success.code));
       verify(() => logger.info(_updatePrompt)).called(1);
     });
@@ -72,23 +80,23 @@ void main() {
       when(() => pubUpdater.getLatestVersion(any()))
           .thenThrow(Exception('Failed to check for updates'));
 
-      await commandRunner.run(['--version']);
+      await run(['--version']);
       verify(() => logger.err('Failed to check for updates.')).called(1);
     });
 
     test('does not show update message when the shell calls the '
         'completion command', () async {
       when(() => pubUpdater.getLatestVersion(any()))
-          .thenAnswer((_) async => _latestVersion);
+          .thenAnswer((_) async => latestVersion);
 
-      final result = await commandRunner.run(['completion']);
+      final result = await run(['completion']);
       expect(result, equals(ExitCode.success.code));
       verifyNever(() => logger.info(_updatePrompt));
     });
 
     test('does not show update message when using update command', () async {
       when(() => pubUpdater.getLatestVersion(any()))
-          .thenAnswer((_) async => _latestVersion);
+          .thenAnswer((_) async => latestVersion);
       when(
         () => pubUpdater.update(
           packageName: VaixellCommandRunner.packageName,
@@ -103,16 +111,9 @@ void main() {
           currentVersion: any(named: 'currentVersion'),
         ),
       ).thenAnswer((_) async => true);
+      when(() => logger.progress(any())).thenReturn(MockProgress());
 
-      final progress = _MockProgress();
-      final progressLogs = <String>[];
-      when(() => progress.complete(any())).thenAnswer((answer) {
-        final message = answer.positionalArguments.elementAt(0) as String?;
-        if (message != null) progressLogs.add(message);
-      });
-      when(() => logger.progress(any())).thenReturn(progress);
-
-      final result = await commandRunner.run(['update']);
+      final result = await run(['update']);
       expect(result, equals(ExitCode.success.code));
       verifyNever(() => logger.info(_updatePrompt));
     });
@@ -120,49 +121,43 @@ void main() {
     test('does not show update message for machine-readable '
         'check output', () async {
       when(() => pubUpdater.getLatestVersion(any()))
-          .thenAnswer((_) async => _latestVersion);
+          .thenAnswer((_) async => latestVersion);
 
-      await commandRunner.run(['check', '--format=json']);
+      await run(['check', '--format=json']);
       verifyNever(() => pubUpdater.getLatestVersion(any()));
       verifyNever(() => logger.info(_updatePrompt));
     });
 
     test('does not auto-install completion files for machine-readable '
         'check output', () async {
-      await commandRunner.run(['check', '--format=json']);
+      await run(['check', '--format=json']);
       expect(commandRunner.enableAutoInstall, isFalse);
     });
 
     test('auto-installs completion files for a text check', () async {
-      await commandRunner.run(['check']);
+      await run(['check']);
       expect(commandRunner.enableAutoInstall, isTrue);
     });
 
     group('when not interactive', () {
-      setUp(() {
-        commandRunner = VaixellCommandRunner(
-          logger: logger,
-          pubUpdater: pubUpdater,
-          interactive: false,
-        );
-      });
+      setUp(() => interactive = false);
 
       test('does not check for updates', () async {
-        await commandRunner.run(['check']);
+        await run(['check']);
         verifyNever(() => pubUpdater.getLatestVersion(any()));
       });
 
       test('does not auto-install completion files', () async {
-        await commandRunner.run(['check']);
+        await run(['check']);
         expect(commandRunner.enableAutoInstall, isFalse);
       });
     });
 
     test('shows update message after a text check', () async {
       when(() => pubUpdater.getLatestVersion(any()))
-          .thenAnswer((_) async => _latestVersion);
+          .thenAnswer((_) async => latestVersion);
 
-      await commandRunner.run(['check']);
+      await run(['check']);
       verify(() => logger.info(_updatePrompt)).called(1);
     });
 
@@ -177,56 +172,55 @@ void main() {
         ).run(['check']),
         getCurrentDirectory: () => Directory(d.sandbox),
       );
-      expect(code, equals(1));
+      expect(code, equals(CheckCommand.violationsExitCode));
       expect(
         out.toString(),
         startsWith('lib/a.dart:1:7: error: A class. [no-class:lib/a.dart:A]'),
       );
     });
 
-    test(
-      'can be instantiated without an explicit analytics/logger instance',
-      () {
-        final commandRunner = VaixellCommandRunner();
-        expect(commandRunner, isNotNull);
-        expect(commandRunner, isA<CompletionCommandRunner<int>>());
-      },
-    );
-
-    test('handles $FormatException', () async {
-      const exception = FormatException('oops!');
-      var isFirstInvocation = true;
-      when(() => logger.info(any())).thenAnswer((_) {
-        if (isFirstInvocation) {
-          isFirstInvocation = false;
-          throw exception;
-        }
-      });
-      final result = await commandRunner.run(['--version']);
-      expect(result, equals(ExitCode.usage.code));
-      verify(() => logger.err(exception.message)).called(1);
-      verify(() => logger.detail(any(that: contains('#0')))).called(1);
-      verify(() => logger.info(commandRunner.usage)).called(1);
+    test('creates its own logger and pub updater by default', () {
+      expect(VaixellCommandRunner().executableName, equals('vaixell'));
     });
 
-    test('handles $UsageException', () async {
-      final exception = UsageException('oops!', 'exception usage');
-      var isFirstInvocation = true;
-      when(() => logger.info(any())).thenAnswer((_) {
-        if (isFirstInvocation) {
-          isFirstInvocation = false;
-          throw exception;
-        }
+    for (final (name, args) in [
+      ('an unknown flag', ['--nope']),
+      ('an unknown command', ['bogus']),
+      ('an invalid option value', ['check', '--format=xml']),
+    ]) {
+      test('exits 64 with usage for $name', () async {
+        expect(await run(args), equals(ExitCode.usage.code));
+        verify(() => logger.err(any())).called(1);
+        verify(() => logger.info(any(that: contains('Usage: vaixell'))))
+            .called(1);
       });
-      final result = await commandRunner.run(['--version']);
-      expect(result, equals(ExitCode.usage.code));
-      verify(() => logger.err(exception.message)).called(1);
-      verify(() => logger.info('exception usage')).called(1);
+    }
+
+    test('prints usage without arguments', () async {
+      expect(await run([]), equals(ExitCode.success.code));
+      verify(() => logger.info(any(that: contains('Usage: vaixell'))))
+          .called(1);
+    });
+
+    test('lets a $FormatException from a command surface', () async {
+      await d.dir('lib', [d.file('a.dart', 'class A {}\n')]).create();
+      interactive = false;
+      await expectLater(
+        IOOverrides.runZoned(
+          () => VaixellCommandRunner(
+            logger: bufferedLogger(out: StringBuffer(), err: StringBuffer()),
+            interactive: false,
+            rules: [const _ThrowingRule()],
+          ).run(['check']),
+          getCurrentDirectory: () => Directory(d.sandbox),
+        ),
+        throwsFormatException,
+      );
     });
 
     group('--version', () {
       test('outputs current version', () async {
-        final result = await commandRunner.run(['--version']);
+        final result = await run(['--version']);
         expect(result, equals(ExitCode.success.code));
         verify(() => logger.info(VaixellCommandRunner.packageVersion))
             .called(1);
@@ -247,7 +241,7 @@ void main() {
 
     group('--verbose', () {
       test('enables verbose logging', () async {
-        final result = await commandRunner.run(['--verbose']);
+        final result = await run(['--verbose']);
         expect(result, equals(ExitCode.success.code));
 
         verify(() => logger.detail('Argument information:')).called(1);
@@ -257,11 +251,7 @@ void main() {
       });
 
       test('enables verbose logging for sub commands', () async {
-        final result = await commandRunner.run([
-          '--verbose',
-          'check',
-          '--format=text',
-        ]);
+        final result = await run(['--verbose', 'check', '--format=text']);
         expect(result, equals(ExitCode.success.code));
 
         verify(() => logger.detail('Argument information:')).called(1);
@@ -274,11 +264,7 @@ void main() {
 
       test('does not log arguments for machine-readable check '
           'output', () async {
-        final result = await commandRunner.run([
-          '--verbose',
-          'check',
-          '--format=json',
-        ]);
+        final result = await run(['--verbose', 'check', '--format=json']);
         expect(result, equals(ExitCode.success.code));
 
         verifyNever(() => logger.detail(any()));

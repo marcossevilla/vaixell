@@ -1,7 +1,4 @@
-import 'dart:io';
-
 import 'package:test/test.dart';
-import 'package:test_descriptor/test_descriptor.dart' as d;
 import 'package:vaixell/vaixell.dart';
 
 Violation _violation(
@@ -108,22 +105,24 @@ void main() {
     });
 
     group('step summary', () {
-      late String path;
+      late List<String> summaries;
+      late GithubReporter reporter;
 
-      setUp(() => path = d.path('summary.md'));
-
-      test('is not written without a path', () {
-        const GithubReporter().write(Report.full([_violation('x')]), out);
-        expect(File(path).existsSync(), isFalse);
+      setUp(() {
+        summaries = [];
+        reporter = GithubReporter(writeSummary: summaries.add);
       });
 
-      test('is appended to, not overwritten', () {
-        File(path).writeAsStringSync('previous step\n');
-        GithubReporter(summaryPath: path).write(const Report.full([]), out);
+      test('is skipped without writeSummary', () {
+        const GithubReporter().write(Report.full([_violation('x')]), out);
+        expect(summaries, isEmpty);
+      });
+
+      test('is passed to writeSummary once per report', () {
+        reporter.write(const Report.full([]), out);
         expect(
-          File(path).readAsStringSync(),
+          summaries.single,
           equals(
-            'previous step\n'
             '## vaixell\n'
             '\n'
             '**No violations found.** (full mode)\n'
@@ -137,14 +136,14 @@ void main() {
           'top-level-function:lib/a.dart:added',
           message: 'Pipes | and\nnew lines.',
         );
-        GithubReporter(summaryPath: path).write(
+        reporter.write(
           Report.compared(ReportMode.baseline, [
             added,
           ], DiffResult(added: [added], fixed: const ['a', 'b'])),
           out,
         );
         expect(
-          File(path).readAsStringSync(),
+          summaries.single,
           equals(
             '## vaixell\n'
             '\n'
@@ -168,11 +167,11 @@ void main() {
       });
 
       test('lists every violation and says how many were not annotated', () {
-        GithubReporter(summaryPath: path).write(
+        reporter.write(
           Report.full([for (var i = 0; i < 12; i++) _violation('e$i')]),
           out,
         );
-        final summary = File(path).readAsStringSync();
+        final summary = summaries.single;
         expect(summary, contains('### Violations\n'));
         expect(
           RegExp(r'^\| error ', multiLine: true).allMatches(summary),
@@ -189,14 +188,11 @@ void main() {
       });
 
       test('uses the singular for one violation left out', () {
-        GithubReporter(summaryPath: path).write(
+        reporter.write(
           Report.full([for (var i = 0; i < 11; i++) _violation('e$i')]),
           out,
         );
-        expect(
-          File(path).readAsStringSync(),
-          contains('> 1 violation was not annotated'),
-        );
+        expect(summaries.single, contains('> 1 violation was not annotated'));
       });
     });
   });

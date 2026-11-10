@@ -9,8 +9,10 @@ import '../../helpers/git_repo.dart';
 /// An executable that isn't on any `PATH`.
 const _missingGit = 'vaixell-test-missing-git';
 
-Matcher _gitError(Object message) => throwsA(
-  isA<GitException>().having((e) => e.toString(), 'toString()', message),
+Matcher _gitError(Object message, {bool unavailable = false}) => throwsA(
+  isA<GitException>()
+      .having((e) => e.toString(), 'toString()', message)
+      .having((e) => e.unavailable, 'unavailable', unavailable),
 );
 
 void main() {
@@ -53,21 +55,21 @@ void main() {
       test('run throws a $GitException', () async {
         await expectLater(
           missing.run(['--version']),
-          _gitError(startsWith('Could not run `git`: ')),
+          _gitError(startsWith('Could not run `git`: '), unavailable: true),
         );
       });
 
       test('start throws a $GitException', () async {
         await expectLater(
           missing.start(['--version']),
-          _gitError(startsWith('Could not run `git`: ')),
+          _gitError(startsWith('Could not run `git`: '), unavailable: true),
         );
       });
 
       test('mergeBase throws a $GitException', () async {
         await expectLater(
           missing.mergeBase('main'),
-          _gitError(startsWith('Could not run `git`: ')),
+          _gitError(startsWith('Could not run `git`: '), unavailable: true),
         );
       });
     });

@@ -27,7 +27,7 @@
       "package-name": "vaixell_cli",
       "initial-version": "0.1.0",
       "changelog-path": "CHANGELOG.md",
-      "extra-files": ["lib/src/command_runner.dart"]
+      "extra-files": ["lib/src/version.dart"]
     }
   }
 }

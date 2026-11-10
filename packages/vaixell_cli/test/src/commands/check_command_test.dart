@@ -199,10 +199,13 @@ void main() {
     });
 
     group('exit codes', () {
-      test('exits 1 when a violation is an error', () async {
-        stubCheck(const Report.full([_error, _warning]));
-        expect(await run([]), equals(1));
-      });
+      test(
+        'exits ${CheckCommand.violationsExitCode} when a violation is an error',
+        () async {
+          stubCheck(const Report.full([_error, _warning]));
+          expect(await run([]), equals(CheckCommand.violationsExitCode));
+        },
+      );
 
       test('exits 0 without violations', () async {
         stubCheck(const Report.full([]));
@@ -223,15 +226,21 @@ void main() {
         expect(await run(['--git-diff=main']), equals(ExitCode.success.code));
       });
 
-      test('exits 1 when a new violation is an error', () async {
-        stubCheck(
-          const Report.compared(ReportMode.baseline, [
-            _error,
-            _warning,
-          ], DiffResult(added: [_error], fixed: [])),
-        );
-        expect(await run(['--baseline=b.json']), equals(1));
-      });
+      test(
+        'exits with violationsExitCode when a new violation is an error',
+        () async {
+          stubCheck(
+            const Report.compared(ReportMode.baseline, [
+              _error,
+              _warning,
+            ], DiffResult(added: [_error], fixed: [])),
+          );
+          expect(
+            await run(['--baseline=b.json']),
+            equals(CheckCommand.violationsExitCode),
+          );
+        },
+      );
 
       test('exits 0 when every new violation is a warning', () async {
         stubCheck(
@@ -259,7 +268,11 @@ void main() {
         ),
         'GitException': (
           const GitException('Not a git repository.'),
-          ExitCode.software.code,
+          ExitCode.data.code,
+        ),
+        'unavailable GitException': (
+          const GitException('Could not run `git`.', unavailable: true),
+          ExitCode.unavailable.code,
         ),
       };
       for (final MapEntry(key: name, value: (error, code)) in errors.entries) {
@@ -272,6 +285,15 @@ void main() {
           });
         }
       }
+
+      test('exits 74 on a $FileSystemException, on stderr only', () async {
+        stubCheckThrows(
+          const FileSystemException('Cannot open file', 'lib/a.dart'),
+        );
+        expect(await run([]), equals(ExitCode.ioError.code));
+        expect(err.toString(), equals('Cannot open file: lib/a.dart\n'));
+        expect(out.toString(), isEmpty);
+      });
 
       test('exits 78 when writing a baseline fails on a config', () async {
         const error = ConfigException(
@@ -323,7 +345,7 @@ void main() {
               ['--format=github'],
               environment: {'GITHUB_STEP_SUMMARY': d.path('summary.md')},
             ),
-            equals(1),
+            equals(CheckCommand.violationsExitCode),
           );
           expect(
             out.toString(),
@@ -343,14 +365,17 @@ void main() {
             ['--format=github'],
             environment: {'GITHUB_STEP_SUMMARY': ''},
           ),
-          equals(1),
+          equals(CheckCommand.violationsExitCode),
         );
         expect(Directory(d.sandbox).listSync(), isEmpty);
       });
 
       test('--format=github skips a missing GITHUB_STEP_SUMMARY', () async {
         stubCheck(const Report.full([_error]));
-        expect(await run(['--format=github']), equals(1));
+        expect(
+          await run(['--format=github']),
+          equals(CheckCommand.violationsExitCode),
+        );
         expect(Directory(d.sandbox).listSync(), isEmpty);
       });
 
@@ -396,7 +421,10 @@ void main() {
 
       test('writes the report with the given reporter', () async {
         stubCheck(const Report.full([_error]));
-        expect(await run([], reporters: {'custom': reporter}), equals(1));
+        expect(
+          await run([], reporters: {'custom': reporter}),
+          equals(CheckCommand.violationsExitCode),
+        );
         verify(() => reporter.write(const Report.full([_error]), any()))
             .called(1);
         expect(out.toString(), equals('custom\n'));
@@ -446,7 +474,7 @@ void main() {
           );
         return runner.run([CheckCommand.commandName]);
       }, getCurrentDirectory: () => Directory(d.sandbox));
-      expect(code, equals(1));
+      expect(code, equals(CheckCommand.violationsExitCode));
       expect(out.toString(), startsWith('lib/a.dart:1:6: error: '));
     });
   });
