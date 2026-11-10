@@ -8,7 +8,7 @@ import 'package:vaixell/vaixell.dart';
 /// {@template check_command}
 /// `vaixell check`: checks architecture rules in the given packages.
 ///
-/// Returns a process exit code that follows `package:io`'s [ExitCode].
+/// Returns a process exit code from [ExitCode].
 /// {@endtemplate}
 class CheckCommand._({
   required final Logger _logger,
