@@ -1,4 +1,5 @@
 import 'package:vaixell/src/model/model.dart';
+import 'package:vaixell/src/rules/built_in_rule.dart';
 import 'package:vaixell/src/rules/rule.dart';
 
 /// Reports static methods, getters and setters, public or private, in
@@ -6,7 +7,9 @@ import 'package:vaixell/src/rules/rule.dart';
 ///
 /// Static fields and factory constructors aren't methods, so they aren't
 /// reported.
-final class const StaticMethodRule() extends Rule with ChecksMembers {
+final class const StaticMethodRule()
+    extends Rule
+    with BuiltInRule, ChecksMembers {
   /// Creates the rule.
   this;
 

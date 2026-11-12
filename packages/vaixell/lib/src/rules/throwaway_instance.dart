@@ -1,4 +1,5 @@
 import 'package:vaixell/src/model/model.dart';
+import 'package:vaixell/src/rules/built_in_rule.dart';
 import 'package:vaixell/src/rules/rule.dart';
 import 'package:vaixell/src/violation/violation.dart';
 
@@ -14,7 +15,9 @@ import 'package:vaixell/src/violation/violation.dart';
 ///
 /// Ids use the enclosing declaration and the name of the member, such as
 /// `Config.recommended@check`.
-final class const ThrowawayInstanceRule() extends Rule with ChecksExpressions {
+final class const ThrowawayInstanceRule()
+    extends Rule
+    with BuiltInRule, ChecksExpressions {
   /// Creates the rule.
   this;
 

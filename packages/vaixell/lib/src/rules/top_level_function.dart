@@ -1,11 +1,14 @@
 import 'package:vaixell/src/model/model.dart';
+import 'package:vaixell/src/rules/built_in_rule.dart';
 import 'package:vaixell/src/rules/rule.dart';
 
 /// Reports top-level functions, getters and setters.
 ///
 /// A top-level `main` function is allowed, because apps need an entrypoint
 /// in `lib/main.dart`.
-final class const TopLevelFunctionRule() extends Rule with ChecksDeclarations {
+final class const TopLevelFunctionRule()
+    extends Rule
+    with BuiltInRule, ChecksDeclarations {
   /// Creates the rule.
   this;
 
