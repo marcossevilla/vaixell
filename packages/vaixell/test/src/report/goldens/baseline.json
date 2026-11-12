@@ -54,9 +54,9 @@
     "top-level-function:lib/a.dart:gone"
   ],
   "summary": {
-    "violations": 3,
-    "errors": 2,
-    "warnings": 1,
+    "violation": 3,
+    "error": 2,
+    "warning": 1,
     "new": 2,
     "fixed": 1
   }

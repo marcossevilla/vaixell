@@ -233,7 +233,7 @@ void main() {
       final stdout = (await process.stdout.rest.toList()).join('\n');
       final json = jsonDecode(stdout) as Map<String, Object?>;
       expect(json['mode'], equals('full'));
-      expect(json['summary'], containsPair('violations', 1));
+      expect(json['summary'], containsPair('violation', 1));
       await process.shouldExit(CheckCommand.violationsExitCode);
     });
   });

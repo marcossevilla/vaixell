@@ -36,9 +36,9 @@ enum ReportMode {
 ///   "new": [],
 ///   "fixed": ["top-level-function:lib/a.dart:bar"],
 ///   "summary": {
-///     "violations": 1,
-///     "errors": 1,
-///     "warnings": 0,
+///     "violation": 1,
+///     "error": 1,
+///     "warning": 0,
 ///     "new": 0,
 ///     "fixed": 1
 ///   }
@@ -54,8 +54,8 @@ enum ReportMode {
 ///   same shape. Only `diff` and `baseline` reports have it.
 /// - `fixed` lists the sorted ids that are in the base or baseline but no
 ///   longer occur. Only `diff` and `baseline` reports have it.
-/// - `summary` counts `violations`, their `errors` and `warnings`, and, in
-///   `diff` and `baseline` reports, `new` and `fixed`.
+/// - `summary` counts every `violation`, each `error` and `warning`, and,
+///   in `diff` and `baseline` reports, each `new` and `fixed` one.
 class Report {
   /// Creates a report for a full run with [violations].
   const new full(this.violations) : mode = ReportMode.full, diff = null;
@@ -92,9 +92,9 @@ class Report {
         'fixed': diff.fixed,
       },
       'summary': {
-        'violations': violations.length,
-        'errors': violations.where((v) => v.severity == Severity.error).length,
-        'warnings': violations
+        'violation': violations.length,
+        'error': violations.where((v) => v.severity == Severity.error).length,
+        'warning': violations
             .where((v) => v.severity == Severity.warning)
             .length,
         if (diff != null) ...{

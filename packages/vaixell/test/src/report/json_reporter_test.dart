@@ -31,9 +31,9 @@ void main() {
           '  "mode": "full",\n'
           '  "violations": [],\n'
           '  "summary": {\n'
-          '    "violations": 0,\n'
-          '    "errors": 0,\n'
-          '    "warnings": 0\n'
+          '    "violation": 0,\n'
+          '    "error": 0,\n'
+          '    "warning": 0\n'
           '  }\n'
           '}\n',
         ),

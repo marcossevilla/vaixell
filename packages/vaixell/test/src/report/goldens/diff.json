@@ -45,9 +45,9 @@
     "top-level-function:lib/a.dart:foo"
   ],
   "summary": {
-    "violations": 3,
-    "errors": 2,
-    "warnings": 1,
+    "violation": 3,
+    "error": 2,
+    "warning": 1,
     "new": 1,
     "fixed": 1
   }
