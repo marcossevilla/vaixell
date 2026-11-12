@@ -28,6 +28,23 @@ void main() {
       );
     });
 
+    test('toJson includes docs when the rule has them', () {
+      final documented = Violation(
+        id: 'top-level-function:lib/a.dart:foo',
+        rule: 'top-level-function',
+        severity: Severity.error,
+        path: 'lib/a.dart',
+        line: 3,
+        column: 6,
+        message: 'Message.',
+        docs: Uri.parse('https://example.com/top-level-function.md'),
+      );
+      expect(
+        documented.toJson(),
+        containsPair('docs', 'https://example.com/top-level-function.md'),
+      );
+    });
+
     test('toString shows the id and the location', () {
       expect(
         violation.toString(),
