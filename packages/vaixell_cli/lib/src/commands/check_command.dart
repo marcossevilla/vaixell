@@ -90,13 +90,19 @@ class CheckCommand._({
         'write-baseline',
         valueHelp: 'file',
         help: 'Write the current violation ids to <file>.',
+      )
+      ..addFlag(
+        'fatal-warnings',
+        negatable: false,
+        help: 'Exit with ${CheckCommand.violationsExitCode} on warnings too.',
       );
   }
 
   /// The name of this command.
   static const String commandName = 'check';
 
-  /// The exit code when any reported violation is an error.
+  /// The exit code when any failing violation is an error, or a warning
+  /// with `--fatal-warnings`.
   static const int violationsExitCode = 1;
 
   /// Whether `--format` [format] keeps stdout for the report alone, which
@@ -150,6 +156,7 @@ class CheckCommand._({
         paths: results.rest,
         gitDiff: ref,
         baseline: baselinePath,
+        fatalWarnings: results.flag('fatal-warnings'),
         reporter: reporter,
       );
     } on ConfigException catch (error) {
@@ -196,11 +203,13 @@ class CheckCommand._({
     return ExitCode.success.code;
   }
 
-  /// Checks [paths] and writes the report with [reporter].
+  /// Checks [paths] and writes the report with [reporter]. Failing warnings
+  /// fail the run when [fatalWarnings].
   Future<int> _runCheck({
     required List<String> paths,
     required String? gitDiff,
     required String? baseline,
+    required bool fatalWarnings,
     required Reporter reporter,
   }) async {
     final report = await _check(
@@ -211,7 +220,7 @@ class CheckCommand._({
     final output = StringBuffer();
     reporter.write(report, output);
     _logger.write('$output');
-    return _exitCode(report.failing);
+    return _exitCode(report.failing, fatalWarnings: fatalWarnings);
   }
 
   /// Returns why [path] can't be checked, or `null` if it can.
@@ -226,10 +235,16 @@ class CheckCommand._({
     return null;
   }
 
-  /// Returns [violationsExitCode] if any of [violations] is an error, and 0
-  /// otherwise.
-  int _exitCode(List<Violation> violations) =>
-      violations.any((v) => v.severity == Severity.error)
+  /// Returns [violationsExitCode] if any of [violations] is an error, or a
+  /// warning when [fatalWarnings], and 0 otherwise. Info never fails.
+  int _exitCode(List<Violation> violations, {required bool fatalWarnings}) =>
+      violations.any(
+        (v) => switch (v.severity) {
+          Severity.error => true,
+          Severity.warning => fatalWarnings,
+          Severity.info => false,
+        },
+      )
       ? violationsExitCode
       : ExitCode.success.code;
 }

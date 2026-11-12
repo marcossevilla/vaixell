@@ -36,6 +36,16 @@ const _warning = Violation(
   message: 'message',
 );
 
+const _info = Violation(
+  id: 'throwaway-instance:lib/a.dart:bar',
+  rule: 'throwaway-instance',
+  severity: Severity.info,
+  path: 'lib/a.dart',
+  line: 3,
+  column: 3,
+  message: 'message',
+);
+
 void main() {
   group(CheckCommand, () {
     late StringBuffer out;
@@ -250,6 +260,63 @@ void main() {
           ], DiffResult(added: [_warning], fixed: [])),
         );
         expect(await run(['--git-diff=main']), equals(ExitCode.success.code));
+      });
+
+      test('exits 0 when every violation is info', () async {
+        stubCheck(const Report.full([_info]));
+        expect(await run([]), equals(ExitCode.success.code));
+      });
+
+      group('with --fatal-warnings', () {
+        test('exits 1 when a violation is a warning', () async {
+          stubCheck(const Report.full([_warning, _info]));
+          expect(
+            await run(['--fatal-warnings']),
+            equals(CheckCommand.violationsExitCode),
+          );
+        });
+
+        test('exits 0 when every violation is info', () async {
+          stubCheck(const Report.full([_info]));
+          expect(
+            await run(['--fatal-warnings']),
+            equals(ExitCode.success.code),
+          );
+        });
+
+        for (final (mode, option) in [
+          (ReportMode.diff, '--git-diff=main'),
+          (ReportMode.baseline, '--baseline=b.json'),
+        ]) {
+          test('exits 1 when a new violation is a warning in a '
+              '${mode.name} run', () async {
+            stubCheck(
+              Report.compared(mode, const [
+                _warning,
+              ], const DiffResult(added: [_warning], fixed: [])),
+            );
+            expect(
+              await run(['--fatal-warnings', option]),
+              equals(CheckCommand.violationsExitCode),
+            );
+          });
+
+          test(
+            'exits 0 when no warning is new in a ${mode.name} run',
+            () async {
+              stubCheck(
+                Report.compared(mode, const [
+                  _warning,
+                  _info,
+                ], const DiffResult(added: [_info], fixed: [])),
+              );
+              expect(
+                await run(['--fatal-warnings', option]),
+                equals(ExitCode.success.code),
+              );
+            },
+          );
+        }
       });
 
       final errors = <String, (Exception, int)>{
