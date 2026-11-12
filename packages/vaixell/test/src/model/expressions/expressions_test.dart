@@ -15,13 +15,13 @@ void main() {
     group('in DartFile.expressions', () {
       test('are every expression in source order', () {
         final expressions = _expressions('f() { g(a + 1, () => b); }');
-        expect(expressions.map((e) => e.runtimeType.toString()), [
-          contains('MethodCall'),
-          contains('Other'),
-          contains('Identifier'),
-          contains('Other'),
-          contains('Other'),
-          contains('Identifier'),
+        expect(expressions, [
+          isA<MethodCall>(),
+          isA<OtherExpression>(),
+          isA<Reference>(),
+          isA<OtherExpression>(),
+          isA<OtherExpression>(),
+          isA<Reference>(),
         ]);
         final offsets = expressions.map((e) => e.offset).toList();
         expect(offsets, orderedEquals([...offsets]..sort()));

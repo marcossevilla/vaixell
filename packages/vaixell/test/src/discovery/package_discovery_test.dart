@@ -1,5 +1,8 @@
 import 'package:test/test.dart';
 import 'package:test_descriptor/test_descriptor.dart' as d;
+import 'package:vaixell/src/discovery/package_discovery.dart';
+import 'package:vaixell/src/git/git_runner.dart';
+import 'package:vaixell/src/source/git_source_tree.dart';
 import 'package:vaixell/vaixell.dart';
 
 import '../../helpers/git_repo.dart';

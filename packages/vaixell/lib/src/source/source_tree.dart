@@ -3,6 +3,13 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+/// Paths in a [SourceTree], which are POSIX-style and relative to its
+/// root.
+extension SourceTreePath on String {
+  /// This path, with the root written as `''` instead of `.`.
+  String get asTreePath => this == '.' ? '' : this;
+}
+
 /// A read-only view of the files in a repository.
 ///
 /// Paths are POSIX-style and relative to the root of the tree, for example
@@ -36,28 +43,12 @@ class FileSystemSourceTree(
   this;
 
   @override
-  Future<List<String>> listFiles(String directory) async {
-    final dir = Directory(p.join(root.path, directory));
-    if (!dir.existsSync()) return const [];
-    final paths = [
-      await for (final entity in dir.list(recursive: true, followLinks: false))
-        if (entity is File)
-          p.posix.joinAll(p.split(p.relative(entity.path, from: root.path))),
-    ]..sort();
-    return paths;
-  }
+  Future<List<String>> listFiles(String directory) =>
+      _list<File>(directory, recursive: true);
 
   @override
-  Future<List<String>> listDirectories(String directory) async {
-    final dir = Directory(p.join(root.path, directory));
-    if (!dir.existsSync()) return const [];
-    final paths = [
-      await for (final entity in dir.list(followLinks: false))
-        if (entity is Directory)
-          p.posix.joinAll(p.split(p.relative(entity.path, from: root.path))),
-    ]..sort();
-    return paths;
-  }
+  Future<List<String>> listDirectories(String directory) =>
+      _list<Directory>(directory, recursive: false);
 
   @override
   Future<bool> exists(String path) async =>
@@ -67,5 +58,23 @@ class FileSystemSourceTree(
   Future<String> read(String path) async {
     final bytes = await File(p.join(root.path, path)).readAsBytes();
     return utf8.decode(bytes, allowMalformed: true);
+  }
+
+  /// Returns the sorted tree paths of the entities of type [T] in
+  /// [directory].
+  Future<List<String>> _list<T extends FileSystemEntity>(
+    String directory, {
+    required bool recursive,
+  }) async {
+    final dir = Directory(p.join(root.path, directory));
+    if (!dir.existsSync()) return const [];
+    return [
+      await for (final entity in dir.list(
+        recursive: recursive,
+        followLinks: false,
+      ))
+        if (entity is T)
+          p.posix.joinAll(p.split(p.relative(entity.path, from: root.path))),
+    ]..sort();
   }
 }

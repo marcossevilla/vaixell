@@ -1,13 +1,10 @@
-import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
+import 'package:vaixell/src/check/package_resolver.dart';
+import 'package:vaixell/src/engine/package.dart';
 import 'package:vaixell/vaixell.dart';
 
 import '../../helpers/memory_source_tree.dart';
 import '../../helpers/severities.dart';
-
-class _MockPackageDiscovery extends Mock implements PackageDiscovery;
-
-class _MockConfigResolver extends Mock implements ConfigResolver;
 
 void main() {
   group(PackageResolver, () {
@@ -24,12 +21,11 @@ void main() {
       });
     });
 
-    Future<List<Package>> resolve(List<String> paths) =>
-        PackageResolver.fromTree(
-          root: '/repo',
-          tree: tree,
-          rules: Recommended.rules,
-        )(paths);
+    Future<List<Package>> resolve(List<String> paths) => PackageResolver(
+      root: '/repo',
+      tree: tree,
+      rules: Recommended.rules,
+    )(paths);
 
     test('discovers the packages when there are no paths', () async {
       final packages = await resolve([]);
@@ -66,7 +62,7 @@ void main() {
 
     test('throws an ArgumentError for a repeated rule id', () {
       expect(
-        () => PackageResolver.fromTree(
+        () => PackageResolver(
           root: '/repo',
           tree: tree,
           rules: [...Recommended.rules, Recommended.rules.first],
@@ -75,49 +71,22 @@ void main() {
       );
     });
 
-    test('uses the given discovery and config resolver', () async {
-      final discovery = _MockPackageDiscovery();
-      final configResolver = _MockConfigResolver();
-      final a = Config.recommended(RuleSet(Recommended.rules));
-      const b = Config(rules: []);
-      when(discovery.discover).thenAnswer(
-        (_) async => const [
-          PackageDir(path: 'x', name: 'n'),
-          PackageDir(path: 'y'),
-        ],
-      );
-      when(() => configResolver.forPackages(['x', 'y']))
-          .thenAnswer((_) async => [a, b]);
-
-      final packages = await PackageResolver(
-        root: '/repo',
-        discovery: discovery,
-        configResolver: configResolver,
-      )([]);
-
-      expect(packages.map((p) => (p.path, p.config, p.name)), [
-        ('x', a, 'n'),
-        ('y', b, null),
-      ]);
+    test('skips discovery when paths are given', () async {
+      // Discovery would fail on this workspace.
+      tree.files['pubspec.yaml'] = 'workspace:\n  - packages/c\n';
+      final packages = await resolve(['packages/a']);
+      expect(packages.map((p) => p.path), equals(['packages/a']));
     });
 
-    test('skips discovery when paths are given', () async {
-      final discovery = _MockPackageDiscovery();
-      final configResolver = _MockConfigResolver();
-      when(() => configResolver.forPackages(['x'])).thenAnswer(
-        (_) async => [Config.recommended(RuleSet(Recommended.rules))],
-      );
-      when(() => discovery.at('x'))
-          .thenAnswer((_) async => const PackageDir(path: 'x', name: 'x'));
+    for (final path in ['..', '../repo2', 'packages/../../x', '/elsewhere']) {
+      test('throws an ArgumentError for `$path` outside the root', () async {
+        await expectLater(resolve([path]), throwsArgumentError);
+      });
+    }
 
-      await PackageResolver(
-        root: '/repo',
-        discovery: discovery,
-        configResolver: configResolver,
-      )(['x']);
-
-      verifyNever(discovery.discover);
-      verify(() => discovery.at('x')).called(1);
+    test('accepts the root given as an absolute path', () async {
+      final packages = await resolve(['/repo/packages/a']);
+      expect(packages.map((p) => p.path), equals(['packages/a']));
     });
   });
 }

@@ -1,13 +1,18 @@
-import 'dart:io';
+import 'dart:convert';
 
 import 'package:test/test.dart';
 import 'package:test_descriptor/test_descriptor.dart' as d;
-import 'package:vaixell/vaixell.dart';
+import 'package:vaixell/src/git/git_runner.dart';
 
 import '../../helpers/git_repo.dart';
 
-Matcher _gitError(Object message) => throwsA(
-  isA<GitException>().having((e) => e.toString(), 'toString()', message),
+/// An executable that isn't on any `PATH`.
+const _missingGit = 'vaixell-test-missing-git';
+
+Matcher _gitError(Object message, {bool unavailable = false}) => throwsA(
+  isA<GitException>()
+      .having((e) => e.toString(), 'toString()', message)
+      .having((e) => e.unavailable, 'unavailable', unavailable),
 );
 
 void main() {
@@ -28,62 +33,55 @@ void main() {
     });
 
     test('runs git in the working directory', () async {
-      List<String>? arguments;
-      String? directory;
-      final fake = GitRunner(
-        d.sandbox,
-        runGit: (args, {throwOnError = true, processWorkingDir}) async {
-          expect(throwOnError, isFalse);
-          arguments = args;
-          directory = processWorkingDir;
-          return ProcessResult(0, 0, 'out', '');
-        },
-      );
-      expect(await fake.run(['status']), equals('out'));
-      expect(arguments, equals(['status']));
-      expect(directory, equals(d.sandbox));
+      await gitInit(d.sandbox);
+      await d.dir('sub').create();
+      final sub = GitRunner('${d.sandbox}/sub');
+      expect(await sub.run(['rev-parse', '--show-prefix']), equals('sub/\n'));
     });
 
-    for (final exitCode in [127, 9009]) {
-      test('throws when the shell can not find git ($exitCode)', () async {
-        final missing = GitRunner(
-          d.sandbox,
-          runGit: (_, {throwOnError = true, processWorkingDir}) async =>
-              ProcessResult(0, exitCode, '', 'git: command not found\n'),
-        );
+    test('decodes stdout as UTF-8', () async {
+      await gitInit(d.sandbox);
+      await d.file('café.dart').create();
+      await gitCommitAll(d.sandbox);
+      final output = await runner.run(['ls-tree', '--name-only', '-z', 'HEAD']);
+      expect(output.split('\x00'), contains('café.dart'));
+    });
+
+    group('without git', () {
+      late GitRunner missing;
+
+      setUp(() => missing = GitRunner(d.sandbox, executable: _missingGit));
+
+      test('run throws a $GitException', () async {
         await expectLater(
           missing.run(['--version']),
-          _gitError('Could not run `git`: git: command not found'),
+          _gitError(startsWith('Could not run `git`: '), unavailable: true),
         );
       });
-    }
 
-    test('throws when git can not start', () async {
-      final missing = GitRunner(
-        d.sandbox,
-        runGit: (args, {throwOnError = true, processWorkingDir}) =>
-            throw ProcessException('git', args, 'No such file'),
-      );
-      await expectLater(
-        missing.run(['--version']),
-        _gitError('Could not run `git`: No such file'),
-      );
+      test('start throws a $GitException', () async {
+        await expectLater(
+          missing.start(['--version']),
+          _gitError(startsWith('Could not run `git`: '), unavailable: true),
+        );
+      });
+
+      test('mergeBase throws a $GitException', () async {
+        await expectLater(
+          missing.mergeBase('main'),
+          _gitError(startsWith('Could not run `git`: '), unavailable: true),
+        );
+      });
     });
 
-    test('starts git through startProcess', () async {
-      String? executable;
-      String? directory;
-      final fake = GitRunner(
-        d.sandbox,
-        startProcess: (exe, args, {workingDirectory}) {
-          executable = exe;
-          directory = workingDirectory;
-          return Process.start('git', args);
-        },
-      );
-      await (await fake.start(['--version'])).exitCode;
-      expect(executable, equals('git'));
-      expect(directory, equals(d.sandbox));
+    test('starts git in the working directory', () async {
+      await gitInit(d.sandbox);
+      await d.dir('sub').create();
+      final process = await GitRunner('${d.sandbox}/sub')
+          .start(['rev-parse', '--show-prefix']);
+      final output = await process.stdout.transform(utf8.decoder).join();
+      expect(await process.exitCode, equals(0));
+      expect(output, equals('sub/\n'));
     });
 
     group('mergeBase', () {

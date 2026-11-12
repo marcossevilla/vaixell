@@ -27,7 +27,7 @@ final class _AstDartFile(
   late final List<SyntaxError> errors = List.unmodifiable([
     for (final (_, error)
         in result.errors.indexed.toList()..sort(_bySourceOrder))
-      _AstSyntaxError(error.offset, error.message),
+      SyntaxError(error.offset, error.message),
   ]);
 
   int _bySourceOrder((int, Diagnostic) a, (int, Diagnostic) b) {
@@ -229,12 +229,4 @@ final class _AstDartFile(
       ]),
     ),
   };
-}
-
-final class _AstSyntaxError(
-  @override final int offset,
-  @override final String message,
-) implements SyntaxError {
-  @override
-  String? get symbol => null;
 }

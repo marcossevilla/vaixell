@@ -49,3 +49,18 @@ extension YamlExceptionConfigErrors on YamlException {
     );
   }
 }
+
+/// Parses config YAML. Internal: it's never exported, so no YAML type is
+/// part of the public API.
+extension ConfigYamlSource on String {
+  /// Parses this content of the YAML file at [path].
+  ///
+  /// Throws a [ConfigException] at the error when it isn't valid YAML.
+  YamlNode parseYaml({required String path}) {
+    try {
+      return loadYamlNode(this, sourceUrl: Uri.file(path));
+    } on YamlException catch (error) {
+      throw error.toConfigException(path: path);
+    }
+  }
+}

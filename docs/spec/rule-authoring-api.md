@@ -196,7 +196,7 @@ abstract interface class DartFile {
 
 ### `Reportable` and symbols ([#37](https://github.com/marcossevilla/vaixell/issues/37))
 
-`Reportable` is the sealed parent of everything a finding can point at: syntax errors, imports, declarations, members, expressions and type annotations. Each has an `offset` (its name, or its keyword when it has none) and a ready-made `symbol`:
+`Reportable` is the sealed parent of everything a finding can point at: imports, declarations, members, expressions and type annotations. Each has an `offset` (its name, or its keyword when it has none) and a ready-made `symbol`. A `SyntaxError` is only an `offset` and a `message`: the engine reports it as `parse-error`, and rules never see one.
 
 | Element                        | Symbol                                                                            |
 | ------------------------------ | --------------------------------------------------------------------------------- |
@@ -205,7 +205,6 @@ abstract interface class DartFile {
 | Member                         | `Type.member`, `Type.member=` for a setter, `Type.new` for an unnamed constructor |
 | Expression or type annotation  | the symbol of the declaration and member it's in                                  |
 | Import                         | its URI                                                                           |
-| Syntax error                   | `null`                                                                            |
 
 There are no back-references: a `Member` doesn't know its declaration. Rules that need it get it from `checkMember(type, member)`.
 
@@ -260,10 +259,10 @@ abstract interface class Import implements Reportable {
 The caller passes a `List<RuleEntry>`. `package:vaixell` never picks the rule set for them.
 
 - **`Recommended.rules`:** a `static const List<RuleEntry>` in reporting order, without `parse-error`, on a class so it stays clear of `top-level-variable`. The `recommended` preset enables its entries. It replaces `RuleRegistry`. Callers extend it (`[...Recommended.rules, myRule]`) or filter it by `id`. Removing an entry makes its id unknown to that executable.
-- **Required at every step:** `Check(rules:)` and `WriteBaseline(rules:)` pass it to `PackageResolver.fromTree(rules:)`, which wraps it in a `RuleSet` for `ConfigLoader(tree, rules)`.
+- **Required at every step:** `Check(rules:)` and `WriteBaseline(rules:)` pass it to `PackageResolver(rules:)`, which wraps it in a `RuleSet` for `ConfigLoader(tree, rules)`.
 - **`RuleSet`** is the config layer's view of the list: `RuleSet(entries)` throws an `ArgumentError` when two entries share an id or one is `parse-error`, so `ConfigLoader` and `Config.recommended` never see a bad list. Each entry builds its rule with `RuleEntry.build(options)`.
 - **`Config`** holds a package's `ConfiguredRule`s, each a built `rule` with its `severity`, instead of severities by id. `Config.configure(rules, options:, severities:, recommended:)` builds them, running each factory once, for both the loader and `Config.recommended`.
-- **`Engine`** stays `const Engine()`. It runs the rules each package's config carries, plus `parse-error`. `Check` and `WriteBaseline` accept an engine only as a test seam.
+- **`Engine`** stays `const Engine()`. It runs the rules each package's config carries, plus `parse-error`. `Check` creates its own, and `WriteBaseline` runs a `Check`.
 - **CLI:** `VaixellCommandRunner({List<RuleEntry> rules = Recommended.rules})` passes the list to `CheckCommand(rules:)`, which requires it. `bin/vaixell.dart` uses the default.
 - **`Package`** also carries its `pubspec.yaml` name, so the model can resolve own-package imports.
 

@@ -20,7 +20,7 @@ _Avoid_: injected entry, rule provider, rule source
 The settings under a rule's id in a package's config, other than its severity.
 _Avoid_: rule config, rule settings, parameters
 
-**Built-in rule** (`builtInRules`):
+**Built-in rule** (`Recommended.rules`):
 A rule that ships with vaixell, such as `static-method` or `raw-json`. The CLI checks them by default; other callers can extend the list or remove rules from it.
 _Avoid_: core rule, default rule
 

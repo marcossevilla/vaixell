@@ -1,6 +1,7 @@
 import 'package:glob/glob.dart';
 import 'package:path/path.dart' as p;
 import 'package:vaixell/src/config/config.dart';
+import 'package:vaixell/src/options/config_exception.dart';
 import 'package:vaixell/src/options/option_value.dart';
 import 'package:vaixell/src/rules/rule.dart';
 import 'package:vaixell/src/source/source_tree.dart';
@@ -25,14 +26,6 @@ class const ConfigLoader(
   /// The path of the root config file.
   static const String defaultPath = 'analysis_options.yaml';
 
-  /// Returns the config at [path] in [tree], or the [Config.recommended] one
-  /// for [rules] when the file or its `vaixell:` key is missing.
-  ///
-  /// Throws a [ConfigException] when the file isn't valid YAML or the
-  /// `vaixell:` section is invalid.
-  Future<Config> load({String path = defaultPath}) async =>
-      await loadIfPresent(path: path) ?? Config.recommended(rules);
-
   /// Returns the config at [path] in [tree], or `null` when the file or its
   /// `vaixell:` key is missing. An empty `vaixell:` key counts as present.
   ///
@@ -55,24 +48,17 @@ final class _ConfigFile(
   /// Parses [content] as the config file at [path].
   ///
   /// Throws a [ConfigException] when [content] isn't valid YAML.
-  factory parse(String path, String content) {
-    final YamlNode root;
-    try {
-      root = loadYamlNode(content, sourceUrl: Uri.file(path));
-    } on YamlException catch (error) {
-      throw error.toConfigException(path: path);
-    }
-    return _ConfigFile(path, root is YamlMap ? root.nodes['vaixell'] : null);
-  }
+  factory parse(String path, String content) =>
+      _ConfigFile(path, switch (content.parseYaml(path: path)) {
+        final YamlMap root => root.nodes['vaixell'],
+        _ => null,
+      });
 
   static const List<String> _keys = ['include', 'rules', 'exclude'];
   static const String _recommended = 'recommended';
 
   /// The directory of [path], which the `exclude` globs are relative to.
-  String get _root => switch (p.posix.dirname(path)) {
-    '.' => '',
-    final dir => dir,
-  };
+  String get _root => p.posix.dirname(path).asTreePath;
 
   /// The config that the [section] sets for [rules], or `null` when there's
   /// no section. An empty section enables the recommended rules.
@@ -89,13 +75,13 @@ final class _ConfigFile(
   };
 
   Config _section(RuleSet rules, YamlMap section) {
-    var presets = const [_recommended];
+    var recommended = true;
     var overrides = const <String, _RuleConfig>{};
     var exclude = const <Glob>[];
     for (final MapEntry(:key, :value) in section.nodes.entries) {
       switch ((key as YamlNode).value) {
         case 'include':
-          presets = _include(value);
+          recommended = _includesRecommended(value);
         case 'rules':
           overrides = _rules(rules, value);
         case 'exclude':
@@ -112,7 +98,7 @@ final class _ConfigFile(
     return _configure(
       rules,
       section,
-      recommended: presets.isNotEmpty,
+      recommended: recommended,
       overrides: overrides,
       exclude: exclude,
     );
@@ -141,24 +127,27 @@ final class _ConfigFile(
     root: _root,
   );
 
-  List<String> _include(YamlNode node) {
+  /// Whether the `include` at [node] names the `recommended` preset, the
+  /// only one there is, rather than none.
+  bool _includesRecommended(YamlNode node) {
     final items = node is YamlList ? node.nodes : [node];
-    const available = [_recommended];
-    return [
-      for (final item in items)
-        switch (item.value) {
-          final String name when available.contains(name) => name,
-          final String name => throw item.configError(
-            'Unknown preset `$name`. '
-            'Available presets: ${available.join(', ')}.',
+    for (final item in items) {
+      switch (item.value) {
+        case _recommended:
+          continue;
+        case final String name:
+          throw item.configError(
+            'Unknown preset `$name`. Available presets: $_recommended.',
             path: path,
-          ),
-          _ => throw item.configError(
+          );
+        case _:
+          throw item.configError(
             '`include` must be a preset name or a list of preset names.',
             path: path,
-          ),
-        },
-    ];
+          );
+      }
+    }
+    return items.isNotEmpty;
   }
 
   Map<String, _RuleConfig> _rules(RuleSet rules, YamlNode node) {
@@ -307,22 +296,25 @@ class const ConfigResolver(
   /// Creates a resolver that reads configs with [loader].
   this;
 
-  /// Returns the config for each package in [packages], relative to the
-  /// root, in order, or the [Config.recommended] one for the loader's rules
-  /// when no file up to the root has a `vaixell:` key. Each file is read at
-  /// most once per call.
+  /// Returns the config for each package directory in [packages], relative
+  /// to the root, keyed by directory: the nearest one, or the
+  /// [Config.recommended] one for the loader's rules when no file up to the
+  /// root has a `vaixell:` key. Each file is read at most once per call.
   ///
   /// Throws a [ConfigException] for the first invalid file on the way.
-  Future<List<Config>> forPackages(List<String> packages) async {
+  Future<Map<String, Config>> forPackages(Iterable<String> packages) async {
     final cache = <String, Future<Config?>>{};
-    return [for (final package in packages) await _forPackage(package, cache)];
+    return {
+      for (final package in packages)
+        package: await _forPackage(package, cache),
+    };
   }
 
   Future<Config> _forPackage(
     String package,
     Map<String, Future<Config?>> cache,
   ) async {
-    for (var dir = package; ; dir = _parent(dir)) {
+    for (var dir = package; ; dir = p.posix.dirname(dir).asTreePath) {
       final path = p.posix.join(dir, ConfigLoader.defaultPath);
       final config = await cache.putIfAbsent(
         path,
@@ -332,9 +324,4 @@ class const ConfigResolver(
       if (dir.isEmpty) return Config.recommended(loader.rules);
     }
   }
-
-  String _parent(String dir) => switch (p.posix.dirname(dir)) {
-    '.' => '',
-    final parent => parent,
-  };
 }

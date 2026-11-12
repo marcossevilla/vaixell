@@ -8,16 +8,14 @@ import 'package:vaixell/vaixell.dart';
 /// {@template check_command}
 /// `vaixell check`: checks architecture rules in the given packages.
 ///
-/// Returns a process exit code that follows `package:io`'s [ExitCode].
+/// Returns a process exit code from [ExitCode].
 /// {@endtemplate}
-class CheckCommand({
+class CheckCommand._({
   required final Logger _logger,
-  required List<RuleEntry> rules,
-  Directory? root,
-  Map<String, String>? environment,
-  Check? check,
-  WriteBaseline? writeBaseline,
-  Map<String, Reporter>? reporters,
+  required final Directory _root,
+  required final Check _check,
+  required final WriteBaseline _writeBaseline,
+  required final Map<String, Reporter> _reporters,
 }) extends Command<int> {
   /// {@macro check_command}
   ///
@@ -31,10 +29,44 @@ class CheckCommand({
   /// one is the default. It must not be empty. Formats other than a
   /// [TextReporter] keep stdout for the report alone. By default they're a
   /// [TextReporter], a [JsonReporter] and a [GithubReporter] whose summary
-  /// goes to `GITHUB_STEP_SUMMARY` from [environment] (the process
+  /// is appended to `GITHUB_STEP_SUMMARY` from [environment] (the process
   /// environment by default).
-  this {
-    assert(_reporters.isNotEmpty, 'reporters must not be empty');
+  factory({
+    required Logger logger,
+    required List<RuleEntry> rules,
+    Directory? root,
+    Map<String, String>? environment,
+    Check? check,
+    WriteBaseline? writeBaseline,
+    Map<String, Reporter>? reporters,
+  }) {
+    final dir = root ?? Directory.current;
+    final summaryPath =
+        (environment ?? Platform.environment)['GITHUB_STEP_SUMMARY'];
+    return CheckCommand._(
+      logger: logger,
+      root: dir,
+      check: check ?? Check(root: dir.path, rules: rules),
+      writeBaseline:
+          writeBaseline ?? WriteBaseline(root: dir.path, rules: rules),
+      reporters:
+          reporters ??
+          {
+            'text': const TextReporter(),
+            'json': const JsonReporter(),
+            'github': GithubReporter(
+              writeSummary: summaryPath == null || summaryPath.isEmpty
+                  ? null
+                  : (markdown) =>
+                        File(summaryPath)
+                            .writeAsStringSync(markdown, mode: FileMode.append),
+            ),
+          },
+    );
+  }
+
+  /// Adds the options for [_reporters], which must not be empty.
+  this : assert(_reporters.isNotEmpty, 'reporters must not be empty') {
     argParser
       ..addOption(
         'format',
@@ -65,27 +97,13 @@ class CheckCommand({
   static const String commandName = 'check';
 
   /// The exit code when any reported violation is an error.
-  static const int _violationsExitCode = 1;
+  static const int violationsExitCode = 1;
 
-  final Directory _root = root ?? Directory.current;
-  final Check _check =
-      check ?? Check(root: (root ?? Directory.current).path, rules: rules);
-  final WriteBaseline _writeBaseline =
-      writeBaseline ??
-      WriteBaseline(root: (root ?? Directory.current).path, rules: rules);
-  final Map<String, Reporter> _reporters =
-      reporters ??
-      {
-        'text': const TextReporter(),
-        'json': const JsonReporter(),
-        'github': GithubReporter(
-          summaryPath: switch ((environment ??
-              Platform.environment)['GITHUB_STEP_SUMMARY']) {
-            '' => null,
-            final path => path,
-          },
-        ),
-      };
+  /// Whether `--format` [format] keeps stdout for the report alone, which
+  /// is every format but a [TextReporter]. A `null` [format] is the
+  /// default one.
+  bool isMachineReadable(String? format) =>
+      _reporters[format ?? _reporters.keys.first] is! TextReporter;
 
   @override
   String get name => commandName;
@@ -135,15 +153,26 @@ class CheckCommand({
         reporter: reporter,
       );
     } on ConfigException catch (error) {
-      _logger.err('$error');
-      return ExitCode.config.code;
+      return _fail(error, ExitCode.config);
     } on BaselineException catch (error) {
-      _logger.err('$error');
-      return ExitCode.config.code;
+      return _fail(error, ExitCode.config);
     } on GitException catch (error) {
-      _logger.err('$error');
-      return ExitCode.software.code;
+      return _fail(
+        error,
+        error.unavailable ? ExitCode.unavailable : ExitCode.data,
+      );
+    } on FileSystemException catch (error) {
+      return _fail(
+        '${error.message}${error.path == null ? '' : ': ${error.path}'}',
+        ExitCode.ioError,
+      );
     }
+  }
+
+  /// Logs [error] and returns [code].
+  int _fail(Object error, ExitCode code) {
+    _logger.err('$error');
+    return code.code;
   }
 
   /// Writes the baseline of [paths] to [path] and logs the status, on stderr
@@ -161,7 +190,8 @@ class CheckCommand({
     if (reporter is TextReporter) {
       _logger.info(status);
     } else {
-      _logger.warn(status, tag: '');
+      // Unstyled on stderr: it's a status, not a warning.
+      _logger.warn(status, tag: '', style: (message) => message);
     }
     return ExitCode.success.code;
   }
@@ -196,10 +226,10 @@ class CheckCommand({
     return null;
   }
 
-  /// Returns [_violationsExitCode] if any of [violations] is an error, and 0
+  /// Returns [violationsExitCode] if any of [violations] is an error, and 0
   /// otherwise.
   int _exitCode(List<Violation> violations) =>
       violations.any((v) => v.severity == Severity.error)
-      ? _violationsExitCode
+      ? violationsExitCode
       : ExitCode.success.code;
 }

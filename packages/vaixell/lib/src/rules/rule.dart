@@ -1,10 +1,15 @@
 import 'package:collection/collection.dart';
+import 'package:meta/meta.dart';
 import 'package:vaixell/src/model/model.dart';
 import 'package:vaixell/src/options/option_value.dart';
 import 'package:vaixell/src/violation/violation.dart';
 
 /// Something a [Rule] found in a file, before it gets an id.
-class const Finding({
+///
+/// Findings are equal when their [offset], [message] and [symbol] are, so
+/// rule tests can compare them directly.
+@immutable
+final class const Finding({
   /// The character offset of the finding in the file.
   required final int offset,
 
@@ -14,7 +19,7 @@ class const Finding({
   /// The symbol path that identifies the finding within its file, for
   /// example `Foo.bar`, or `null` when the file itself is the subject.
   final String? symbol,
-}) implements Comparable<Finding> {
+}) {
   /// Creates a finding at [offset] in the file.
   this;
 
@@ -29,10 +34,19 @@ class const Finding({
             : '${element.symbol ?? ''}@$qualifier',
       );
 
-  /// Orders findings by [offset], so that a stable sort keeps the order of
-  /// findings at the same offset.
   @override
-  int compareTo(Finding other) => offset.compareTo(other.offset);
+  bool operator ==(Object other) =>
+      other is Finding &&
+      other.offset == offset &&
+      other.message == message &&
+      other.symbol == symbol;
+
+  @override
+  int get hashCode => Object.hash(offset, message, symbol);
+
+  @override
+  String toString() =>
+      'Finding($offset${symbol == null ? '' : ' $symbol'}: $message)';
 }
 
 /// An entry of the list of rules that vaixell runs: a [Rule], or a
@@ -98,7 +112,8 @@ abstract base class const Rule() implements RuleEntry {
   ) {
     if (!shouldCheck(file)) return const [];
     final findings = [...inherited, ...visit().nonNulls];
-    mergeSort(findings);
+    // Stable, so findings at the same offset keep their order.
+    mergeSort(findings, compare: (a, b) => a.offset.compareTo(b.offset));
     return findings;
   }
 }

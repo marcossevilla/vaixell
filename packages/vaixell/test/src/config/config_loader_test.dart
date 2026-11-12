@@ -1,4 +1,5 @@
 import 'package:test/test.dart';
+import 'package:vaixell/src/config/config_loader.dart';
 import 'package:vaixell/vaixell.dart';
 
 import '../../helpers/memory_source_tree.dart';
@@ -19,10 +20,16 @@ ConfigResolver _resolver(Map<String, String> files) => ConfigResolver(
   ConfigLoader(MemorySourceTree(files), RuleSet(Recommended.rules)),
 );
 
-Future<Config> _load(String? yaml) => ConfigLoader(
-  MemorySourceTree({'analysis_options.yaml': ?yaml}),
-  RuleSet(Recommended.rules),
-).load();
+/// The config in [yaml], or the recommended one without a `vaixell:` key,
+/// as [ConfigResolver] picks it for the root.
+Future<Config> _load(String? yaml) async {
+  final rules = RuleSet(Recommended.rules);
+  final config = await ConfigLoader(
+    MemorySourceTree({'analysis_options.yaml': ?yaml}),
+    rules,
+  ).loadIfPresent();
+  return config ?? Config.recommended(rules);
+}
 
 final class const _NamedRule(
   final List<String> names, {
@@ -153,10 +160,10 @@ void main() {
         final tree = MemorySourceTree({
           'pkg/analysis_options.yaml': 'vaixell:\n  exclude: [lib/legacy/**]\n',
         });
-        final config = await ConfigLoader(
+        final config = (await ConfigLoader(
           tree,
           RuleSet(Recommended.rules),
-        ).load(path: 'pkg/analysis_options.yaml');
+        ).loadIfPresent(path: 'pkg/analysis_options.yaml'))!;
         expect(config.root, equals('pkg'));
         expect(config.excludes('pkg/lib/legacy/a.dart'), isTrue);
         expect(config.excludes('pkg/lib/a.dart'), isFalse);
@@ -169,7 +176,7 @@ void main() {
           'analysis_options.yaml':
               'include: package:foo/analysis_options.yaml\n',
         });
-        await ConfigLoader(tree, RuleSet(Recommended.rules)).load();
+        await ConfigLoader(tree, RuleSet(Recommended.rules)).loadIfPresent();
         expect(tree.reads, equals(['analysis_options.yaml']));
       });
 
@@ -177,10 +184,10 @@ void main() {
         final tree = MemorySourceTree({
           'pkg/analysis_options.yaml': 'vaixell:\n  include: []\n',
         });
-        final config = await ConfigLoader(
+        final config = (await ConfigLoader(
           tree,
           RuleSet(Recommended.rules),
-        ).load(path: 'pkg/analysis_options.yaml');
+        ).loadIfPresent(path: 'pkg/analysis_options.yaml'))!;
         expect(severitiesOf(config).keys, equals(['parse-error']));
       });
     });
@@ -287,10 +294,11 @@ void main() {
     });
 
     group('injected rules', () {
-      Future<Config> load(String yaml, List<RuleEntry> rules) => ConfigLoader(
-        MemorySourceTree({'analysis_options.yaml': yaml}),
-        RuleSet(rules),
-      ).load();
+      Future<Config> load(String yaml, List<RuleEntry> rules) async =>
+          (await ConfigLoader(
+            MemorySourceTree({'analysis_options.yaml': yaml}),
+            RuleSet(rules),
+          ).loadIfPresent())!;
 
       test('an entry that is not recommended is off by default', () async {
         final config = await load('vaixell: {}\n', [
@@ -482,7 +490,7 @@ void main() {
       Map<String, String> files,
       String package,
     ) async => severitiesOf(
-      (await _resolver(files).forPackages([package])).single,
+      (await _resolver(files).forPackages([package])).values.single,
     )['top-level-function'];
 
     test('uses recommended without any config', () async {
@@ -512,7 +520,8 @@ void main() {
         'packages/analysis_options.yaml': warning,
         'packages/a/analysis_options.yaml': 'linter: {}\n',
       };
-      final [config] = await _resolver(files).forPackages(['packages/a']);
+      final config = (await _resolver(files)
+          .forPackages(['packages/a']))['packages/a']!;
       expect(config.root, equals('packages'));
       expect(config.exclude, isEmpty);
       expect(
@@ -542,7 +551,9 @@ void main() {
       );
       await resolver.forPackages(['packages/a']);
       tree.files['analysis_options.yaml'] = off;
-      final [config] = await resolver.forPackages(['packages/a']);
+      final config = (await resolver.forPackages([
+        'packages/a',
+      ]))['packages/a']!;
       expect(severitiesOf(config), isNot(contains('top-level-function')));
       expect(tree.reads, hasLength(2));
     });

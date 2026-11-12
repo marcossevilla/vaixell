@@ -7,6 +7,7 @@ import 'package:mason_logger/mason_logger.dart';
 import 'package:pub_updater/pub_updater.dart';
 import 'package:vaixell/vaixell.dart';
 import 'package:vaixell_cli/src/commands/commands.dart';
+import 'package:vaixell_cli/src/version.dart';
 
 /// {@template vaixell_command_runner}
 /// A [CommandRunner] for the CLI.
@@ -15,7 +16,12 @@ import 'package:vaixell_cli/src/commands/commands.dart';
 /// $ vaixell --version
 /// ```
 /// {@endtemplate}
-class VaixellCommandRunner extends CompletionCommandRunner<int> {
+class VaixellCommandRunner({
+  Logger? logger,
+  PubUpdater? pubUpdater,
+  bool? interactive,
+  List<RuleEntry> rules = Recommended.rules,
+}) extends CompletionCommandRunner<int> {
   /// {@macro vaixell_command_runner}
   ///
   /// [interactive] controls the update check and shell completion
@@ -24,22 +30,12 @@ class VaixellCommandRunner extends CompletionCommandRunner<int> {
   ///
   /// `vaixell check` runs [rules], which are vaixell's [Recommended.rules] by
   /// default.
-  new({
-    Logger? logger,
-    PubUpdater? pubUpdater,
-    bool? interactive,
-    List<RuleEntry> rules = Recommended.rules,
-  }) : _logger = logger ?? Logger(),
-       _pubUpdater = pubUpdater ?? PubUpdater(),
-       _interactive =
-           interactive ??
-           (stdout.hasTerminal && !Platform.environment.containsKey('CI')),
-       super(
-         'vaixell',
-         'Checks architecture rules in Dart and Flutter repositories without '
-             'resolving types or running pub get.',
-       ) {
-    // Add root options and flags
+  this
+    : super(
+        'vaixell',
+        'Checks architecture rules in Dart and Flutter repositories without '
+            'resolving types or running pub get.',
+      ) {
     argParser
       ..addFlag(
         'version',
@@ -52,24 +48,26 @@ class VaixellCommandRunner extends CompletionCommandRunner<int> {
         help: 'Noisy logging, including all shell commands executed.',
       );
 
-    // Add sub commands
-    addCommand(CheckCommand(logger: _logger, rules: rules));
+    addCommand(_check);
     addCommand(UpdateCommand(logger: _logger, pubUpdater: _pubUpdater));
   }
 
   /// The name of the package on pub.dev, used to check for updates.
-  static const String packageName = 'vaixell_cli';
+  static const String packageName = CliPackage.name;
 
-  /// The current version of the CLI, kept in sync with `pubspec.yaml` by
-  /// release-please.
-  static const String packageVersion = '0.1.0'; // x-release-please-version
+  /// The current version of the CLI.
+  static const String packageVersion = CliPackage.version;
+
+  final Logger _logger = logger ?? Logger();
+  final PubUpdater _pubUpdater = pubUpdater ?? PubUpdater();
+  final bool _interactive =
+      interactive ??
+      (stdout.hasTerminal && !Platform.environment.containsKey('CI'));
+  late final CheckCommand _check = CheckCommand(logger: _logger, rules: _rules);
+  final List<RuleEntry> _rules = rules;
 
   @override
   void printUsage() => _logger.info(usage);
-
-  final Logger _logger;
-  final PubUpdater _pubUpdater;
-  final bool _interactive;
 
   bool _isMachineReadable = false;
 
@@ -80,30 +78,30 @@ class VaixellCommandRunner extends CompletionCommandRunner<int> {
 
   @override
   Future<int> run(Iterable<String> args) async {
+    final ArgResults topLevelResults;
     try {
-      final topLevelResults = parse(args);
-      if (topLevelResults['verbose'] == true) {
-        _logger.level = Level.verbose;
-      }
-      return await runCommand(topLevelResults) ?? ExitCode.success.code;
-    } on FormatException catch (e, stackTrace) {
-      // On format errors, show the commands error message, root usage and
-      // exit with an error code
-      _logger
-        ..err(e.message)
-        ..detail('$stackTrace')
-        ..info('')
-        ..info(usage);
-      return ExitCode.usage.code;
+      topLevelResults = parse(args);
     } on UsageException catch (e) {
-      // On usage errors, show the commands usage message and
-      // exit with an error code
-      _logger
-        ..err(e.message)
-        ..info('')
-        ..info(e.usage);
-      return ExitCode.usage.code;
+      // `parse` reports invalid arguments as usage errors too.
+      return _usageError(e.message, e.usage);
     }
+    if (topLevelResults['verbose'] == true) {
+      _logger.level = Level.verbose;
+    }
+    try {
+      return await runCommand(topLevelResults) ?? ExitCode.success.code;
+    } on UsageException catch (e) {
+      return _usageError(e.message, e.usage);
+    }
+  }
+
+  /// Logs [message] and [usage], and returns the usage exit code.
+  int _usageError(String message, String usage) {
+    _logger
+      ..err(message)
+      ..info('')
+      ..info(usage);
+    return ExitCode.usage.code;
   }
 
   @override
@@ -133,7 +131,7 @@ class VaixellCommandRunner extends CompletionCommandRunner<int> {
 
   bool _isMachineReadableCheck(ArgResults? command) =>
       command?.name == CheckCommand.commandName &&
-      command!.option('format') != 'text';
+      _check.isMachineReadable(command!.option('format'));
 
   /// Whether to check for updates: only when interactive, and not for the
   /// update command or a machine-readable report on stdout.

@@ -3,18 +3,17 @@ import 'dart:io';
 import 'package:args/command_runner.dart';
 import 'package:mason_logger/mason_logger.dart';
 import 'package:pub_updater/pub_updater.dart';
-import 'package:vaixell_cli/src/command_runner.dart';
+import 'package:vaixell_cli/src/version.dart';
 
 /// {@template update_command}
 /// A command which updates the CLI.
 /// {@endtemplate}
-class UpdateCommand extends Command<int> {
+class UpdateCommand({required final Logger _logger, PubUpdater? pubUpdater})
+    extends Command<int> {
   /// {@macro update_command}
-  new({required this._logger, PubUpdater? pubUpdater})
-    : _pubUpdater = pubUpdater ?? PubUpdater();
+  this;
 
-  final Logger _logger;
-  final PubUpdater _pubUpdater;
+  final PubUpdater _pubUpdater = pubUpdater ?? PubUpdater();
 
   @override
   String get description => 'Update the CLI.';
@@ -30,9 +29,7 @@ class UpdateCommand extends Command<int> {
     final updateCheckProgress = _logger.progress('Checking for updates');
     late final String latestVersion;
     try {
-      latestVersion = await _pubUpdater.getLatestVersion(
-        VaixellCommandRunner.packageName,
-      );
+      latestVersion = await _pubUpdater.getLatestVersion(CliPackage.name);
     } on Exception catch (error) {
       updateCheckProgress.fail();
       _logger.err('$error');
@@ -40,7 +37,7 @@ class UpdateCommand extends Command<int> {
     }
     updateCheckProgress.complete('Checked for updates');
 
-    final isUpToDate = VaixellCommandRunner.packageVersion == latestVersion;
+    final isUpToDate = CliPackage.version == latestVersion;
     if (isUpToDate) {
       _logger.info('CLI is already at the latest version.');
       return ExitCode.success.code;
@@ -51,7 +48,7 @@ class UpdateCommand extends Command<int> {
     late final ProcessResult result;
     try {
       result = await _pubUpdater.update(
-        packageName: VaixellCommandRunner.packageName,
+        packageName: CliPackage.name,
         versionConstraint: latestVersion,
       );
     } on Exception catch (error) {

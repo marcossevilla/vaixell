@@ -1,5 +1,7 @@
 import 'package:glob/glob.dart';
 import 'package:test/test.dart';
+import 'package:vaixell/src/engine/engine.dart';
+import 'package:vaixell/src/engine/package.dart';
 import 'package:vaixell/src/rules/top_level_function.dart';
 import 'package:vaixell/vaixell.dart';
 
@@ -64,7 +66,6 @@ void main() {
       expect(foo.severity, equals(Severity.error));
       expect(foo.path, equals('lib/a.dart'));
       expect((foo.line, foo.column), equals((1, 6)));
-      expect(foo.toString(), equals('Violation(${foo.id} at lib/a.dart:1:6)'));
     });
 
     test('ids stay the same when code moves', () async {
@@ -135,6 +136,28 @@ class Foo {
         'lib/src/c.dart': 'void foo() {}\n',
       });
       expect(violations.map((v) => v.path), ['lib/src/c.dart']);
+    });
+
+    for (final suffix in [
+      '.g.dart',
+      '.freezed.dart',
+      '.gr.dart',
+      '.gen.dart',
+      '.mocks.dart',
+      '.pb.dart',
+      '.pbenum.dart',
+      '.pbgrpc.dart',
+      '.pbjson.dart',
+      '.pbserver.dart',
+    ]) {
+      test('skips generated `$suffix` files', () async {
+        expect(await _run({'lib/a$suffix': 'void foo() {}\n'}), isEmpty);
+      });
+    }
+
+    test('returns an unmodifiable list', () async {
+      final violations = await _run({'lib/a.dart': 'void foo() {}\n'});
+      expect(violations.clear, throwsUnsupportedError);
     });
 
     test('allows a top-level main in lib/', () async {

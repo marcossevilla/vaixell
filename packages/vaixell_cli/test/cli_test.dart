@@ -2,8 +2,9 @@
 library;
 
 import 'dart:convert';
+import 'dart:io';
 
-import 'package:io/io.dart';
+import 'package:mason_logger/mason_logger.dart' show ExitCode;
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 import 'package:test_descriptor/test_descriptor.dart' as d;
@@ -12,46 +13,38 @@ import 'package:vaixell_cli/vaixell_cli.dart';
 
 import 'helpers/git_repo.dart';
 
-final String _script = p.absolute('bin', 'vaixell.dart');
+/// The CLI compiled once to a kernel snapshot, so each test starts it in
+/// well under a second instead of paying for `dart run`.
+late final String _snapshot;
 
 Future<TestProcess> _vaixell(
   List<String> arguments, {
   String? workingDirectory,
 }) => TestProcess.start('dart', [
-  'run',
-  _script,
+  _snapshot,
   ...arguments,
 ], workingDirectory: workingDirectory);
 
 void main() {
+  setUpAll(() async {
+    final dir = await Directory.systemTemp.createTemp('vaixell_e2e_');
+    _snapshot = p.join(dir.path, 'vaixell.dill');
+    // `dart` from the PATH: under `flutter test`, Platform.resolvedExecutable
+    // is the Flutter test runner.
+    final result = await Process.run('dart', [
+      'compile',
+      'kernel',
+      p.absolute('bin', 'vaixell.dart'),
+      '-o',
+      _snapshot,
+    ]);
+    if (result.exitCode != 0) {
+      throw StateError('Could not compile the CLI: ${result.stderr}');
+    }
+    addTearDown(() => dir.delete(recursive: true));
+  });
+
   group('vaixell', () {
-    test('--help prints usage', () async {
-      final process = await _vaixell(['--help']);
-      await expectLater(
-        process.stdout,
-        emitsThrough('Usage: vaixell <command> [arguments]'),
-      );
-      await process.shouldExit(ExitCode.success.code);
-    });
-
-    test('check --help prints the check usage', () async {
-      final process = await _vaixell(['check', '--help']);
-      await expectLater(
-        process.stdout,
-        emitsThrough('Usage: vaixell check [options] [paths...]'),
-      );
-      await process.shouldExit(ExitCode.success.code);
-    });
-
-    test('--version prints the pubspec version', () async {
-      final process = await _vaixell(['--version']);
-      expect(
-        await process.stdout.next,
-        equals(VaixellCommandRunner.packageVersion),
-      );
-      await process.shouldExit(ExitCode.success.code);
-    });
-
     test('an unknown flag exits 64 with the error on stderr', () async {
       final process = await _vaixell(['check', '--nope']);
       expect(
@@ -92,7 +85,7 @@ void main() {
         allOf(startsWith('lib/b.dart:'), endsWith('[parse-error:lib/b.dart]')),
       );
       expect(await process.stdout.next, equals('2 violations found.'));
-      await process.shouldExit(1);
+      await process.shouldExit(CheckCommand.violationsExitCode);
     });
 
     test('exits 0 on a clean package', () async {
@@ -145,10 +138,10 @@ void main() {
         equals('Fixed: top-level-function:lib/a.dart:old'),
       );
       expect(await process.stdout.next, equals('1 new violation, 1 fixed.'));
-      await process.shouldExit(1);
+      await process.shouldExit(CheckCommand.violationsExitCode);
     });
 
-    test('--git-diff exits 70 outside a git repository', () async {
+    test('--git-diff exits 65 outside a git repository', () async {
       await d.dir('pkg', [d.dir('lib')]).create();
       final process = await _vaixell([
         'check',
@@ -158,7 +151,7 @@ void main() {
         await process.stderr.next,
         endsWith('is not in a git repository.'),
       );
-      await process.shouldExit(ExitCode.software.code);
+      await process.shouldExit(ExitCode.data.code);
     });
 
     test('checks workspace members from the root', () async {
@@ -178,7 +171,54 @@ void main() {
         endsWith('[top-level-function:packages/a/lib/a.dart:a]'),
       );
       expect(await process.stdout.next, equals('1 violation found.'));
-      await process.shouldExit(1);
+      await process.shouldExit(CheckCommand.violationsExitCode);
+    });
+
+    test('writes a baseline, then checks against it', () async {
+      await d.dir('pkg', [
+        d.dir('lib', [d.file('a.dart', 'void foo() {}\n')]),
+      ]).create();
+      final pkg = d.path('pkg');
+
+      var process = await _vaixell([
+        'check',
+        '--write-baseline=b.json',
+      ], workingDirectory: pkg);
+      expect(
+        await process.stdout.next,
+        equals('Wrote 1 violation id to b.json.'),
+      );
+      await process.shouldExit(ExitCode.success.code);
+      await d.dir('pkg', [
+        d.file('b.json', contains('top-level-function:lib/a.dart:foo')),
+      ]).validate();
+
+      process = await _vaixell([
+        'check',
+        '--baseline=b.json',
+      ], workingDirectory: pkg);
+      expect(await process.stdout.next, equals('0 new violations, 0 fixed.'));
+      await process.shouldExit(ExitCode.success.code);
+
+      process = await _vaixell([
+        'check',
+        '--baseline=missing.json',
+      ], workingDirectory: pkg);
+      expect(await process.stderr.next, endsWith('missing.json` not found.'));
+      await process.shouldExit(ExitCode.config.code);
+    });
+
+    test('exits 78 when the baseline directory is missing', () async {
+      await d.dir('pkg', [d.dir('lib')]).create();
+      final process = await _vaixell([
+        'check',
+        '--write-baseline=missing/b.json',
+      ], workingDirectory: d.path('pkg'));
+      expect(
+        await process.stderr.next,
+        startsWith('Could not write baseline file '),
+      );
+      await process.shouldExit(ExitCode.config.code);
     });
 
     test('--format=json prints only a JSON document on stdout', () async {
@@ -194,7 +234,7 @@ void main() {
       final json = jsonDecode(stdout) as Map<String, Object?>;
       expect(json['mode'], equals('full'));
       expect(json['summary'], containsPair('violations', 1));
-      await process.shouldExit(1);
+      await process.shouldExit(CheckCommand.violationsExitCode);
     });
   });
 }

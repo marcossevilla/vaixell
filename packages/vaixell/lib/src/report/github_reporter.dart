@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:vaixell/src/report/report.dart';
 import 'package:vaixell/src/report/reporter.dart';
 import 'package:vaixell/src/report/text_reporter.dart';
@@ -13,14 +11,14 @@ import 'package:vaixell/src/violation/violation.dart';
 /// shows at most [maxAnnotations] of each severity per step, so violations
 /// past that are printed as plain lines instead. A summary line follows.
 ///
-/// When [summaryPath] is set, usually from `$GITHUB_STEP_SUMMARY`, a
-/// Markdown summary with the counts and tables of new and fixed violations
-/// is appended to that file.
+/// When [writeSummary] is set, it gets a Markdown summary with the counts
+/// and tables of new and fixed violations, usually to append to
+/// `$GITHUB_STEP_SUMMARY`.
 class const GithubReporter({
-  /// The step summary file, or `null` to skip the summary.
-  final String? summaryPath,
+  /// Receives the Markdown step summary, or `null` to skip it.
+  final void Function(String markdown)? writeSummary,
 }) implements Reporter {
-  /// Creates a reporter that appends the Markdown summary to [summaryPath],
+  /// Creates a reporter that passes the Markdown summary to [writeSummary],
   /// if set.
   this;
 
@@ -44,11 +42,7 @@ class const GithubReporter({
       }
     }
     out.writeln(_text.summary(report));
-    final summaryPath = this.summaryPath;
-    if (summaryPath != null) {
-      File(summaryPath)
-          .writeAsStringSync(_markdown(report, skipped), mode: FileMode.append);
-    }
+    writeSummary?.call(_markdown(report, skipped));
   }
 
   String _annotation(Violation v) =>

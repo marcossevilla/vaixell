@@ -1,6 +1,5 @@
 import 'package:glob/glob.dart';
 import 'package:path/path.dart' as p;
-import 'package:vaixell/src/config/config.dart';
 import 'package:vaixell/src/options/config_exception.dart';
 import 'package:vaixell/src/source/source_tree.dart';
 import 'package:yaml/yaml.dart';
@@ -47,8 +46,23 @@ class const PackageDiscovery(
   /// Throws a [ConfigException] when the root `pubspec.yaml` isn't valid
   /// YAML or its `workspace:` is invalid.
   Future<List<PackageDir>> discover() async {
-    final paths = await _discoverPaths();
-    return [for (final path in paths) await at(path)];
+    if (!await tree.exists(_pubspec)) {
+      final found = {
+        ...await _packagesIn([..._packageParents, '']),
+      };
+      final paths = found.isEmpty ? [''] : (found.toList()..sort());
+      return [for (final path in paths) await at(path)];
+    }
+    final pubspec = (await tree.read(_pubspec)).parseYaml(path: _pubspec);
+    final members = await _workspaceMembers(pubspec);
+    final paths = {
+      ...?members,
+      if (members == null) ...await _packagesIn(_packageParents),
+    }.toList()..sort();
+    return [
+      PackageDir(path: '', name: _name(pubspec.value)),
+      for (final path in paths) await at(path),
+    ];
   }
 
   /// Returns the package directory at [path], relative to the root in POSIX
@@ -59,30 +73,18 @@ class const PackageDiscovery(
     try {
       return PackageDir(
         path: path,
-        name: switch (loadYaml(await tree.read(pubspec))) {
-          {'name': final String name} => name,
-          _ => null,
-        },
+        name: _name(loadYaml(await tree.read(pubspec))),
       );
     } on YamlException {
       return PackageDir(path: path);
     }
   }
 
-  Future<List<String>> _discoverPaths() async {
-    if (await tree.exists(_pubspec)) {
-      final members = await _workspaceMembers();
-      return {
-        '',
-        ...?members,
-        if (members == null) ...await _packagesIn(_packageParents),
-      }.toList()..sort();
-    }
-    final found = {
-      ...await _packagesIn([..._packageParents, '']),
-    };
-    return found.isEmpty ? [''] : (found.toList()..sort());
-  }
+  /// The string `name` in the parsed [pubspec], or `null`.
+  String? _name(Object? pubspec) => switch (pubspec) {
+    {'name': final String name} => name,
+    _ => null,
+  };
 
   /// Returns the directories under [parents] that have a `pubspec.yaml`.
   Future<List<String>> _packagesIn(List<String> parents) async => [
@@ -91,19 +93,10 @@ class const PackageDiscovery(
         if (await tree.exists(p.posix.join(dir, _pubspec))) dir,
   ];
 
-  /// Returns the members of the root workspace, or `null` when the root
-  /// `pubspec.yaml` has no `workspace:` key.
-  Future<List<String>?> _workspaceMembers() async {
-    final YamlNode root;
-    try {
-      root = loadYamlNode(
-        await tree.read(_pubspec),
-        sourceUrl: Uri.file(_pubspec),
-      );
-    } on YamlException catch (error) {
-      throw error.toConfigException(path: _pubspec);
-    }
-    final workspace = root is YamlMap ? root.nodes['workspace'] : null;
+  /// Returns the members of the workspace in the root [pubspec], or `null`
+  /// when it has no `workspace:` key.
+  Future<List<String>?> _workspaceMembers(YamlNode pubspec) async {
+    final workspace = pubspec is YamlMap ? pubspec.nodes['workspace'] : null;
     if (workspace == null) return null;
     if (workspace is! YamlList) {
       throw workspace.configError(

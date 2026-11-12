@@ -51,10 +51,13 @@ final class const ThrowawayInstanceRule() extends Rule with ChecksExpressions {
     _ => false,
   };
 
+  /// A leading run of `_` and `$`.
+  static final RegExp _leadingPrivacy = RegExp(r'^[_$]+');
+
   /// Whether [name] is written like a type, in UpperCamelCase, ignoring a
   /// leading `_` or `$`.
   bool _isTypeName(String name) =>
-      switch (name.replaceFirst(RegExp(r'^[_$]+'), '')) {
+      switch (name.replaceFirst(_leadingPrivacy, '')) {
         '' => false,
         final rest => rest[0] != rest[0].toLowerCase(),
       };

@@ -9,8 +9,7 @@ T _single<T extends Declaration>(String source) =>
 
 void main() {
   group(Declaration, () {
-    test('lists top-level declarations in source order', () {
-      final declarations = _declarations('''
+    const topLevel = '''
 class C {}
 mixin M {}
 enum E { a }
@@ -22,27 +21,26 @@ int get g => 1;
 set s(int v) {}
 const a = 1, b = 2;
 typedef J = int;
-''');
-      expect(declarations.map((d) => d.runtimeType.toString()), [
-        contains('Class'),
-        contains('Mixin'),
-        contains('Enum'),
-        contains('Extension'),
-        contains('Extension'),
-        contains('ExtensionType'),
-        contains('TopLevelFunction'),
-        contains('TopLevelFunction'),
-        contains('TopLevelFunction'),
-        contains('TopLevelVariable'),
-        contains('TopLevelVariable'),
+''';
+
+    test('lists top-level declarations in source order', () {
+      expect(_declarations(topLevel), [
+        isA<ClassDeclaration>(),
+        isA<MixinDeclaration>(),
+        isA<EnumDeclaration>(),
+        isA<ExtensionDeclaration>(),
+        isA<ExtensionDeclaration>(),
+        isA<ExtensionTypeDeclaration>(),
+        isA<TopLevelFunction>(),
+        isA<TopLevelFunction>(),
+        isA<TopLevelFunction>(),
+        isA<TopLevelVariable>(),
+        isA<TopLevelVariable>(),
       ]);
-      expect(declarations[0], isA<ClassDeclaration>());
-      expect(declarations[1], isA<MixinDeclaration>());
-      expect(declarations[2], isA<EnumDeclaration>());
-      expect(declarations[3], isA<ExtensionDeclaration>());
-      expect(declarations[4], isA<ExtensionDeclaration>());
-      expect(declarations[5], isA<ExtensionTypeDeclaration>());
-      expect(declarations.map((d) => d.symbol), [
+    });
+
+    test('have symbols, with `<unnamed>` and `=` for setters', () {
+      expect(_declarations(topLevel).map((d) => d.symbol), [
         'C',
         'M',
         'E',
@@ -90,26 +88,32 @@ void f() {}
       ]);
     });
 
-    test('keep the same objects on every read', () {
+    group('keep the same objects on every read', () {
       final file = DartFile.parse(
         path: 'lib/a.dart',
         content: '@A(1) class C { int f = 0; C(); void m(int p) {} }',
       );
-      expect(file.declarations.single, same(file.declarations.single));
       final type = file.declarations.single as TypeDeclaration;
-      expect(type.members[2], same(type.methods.single));
-      for (final list in <List<Object> Function()>[
-        () => type.members,
-        () => type.methods,
-        () => type.constructors,
-        () => type.fields,
-        () => type.annotations,
-        () => type.annotations.single.arguments,
-        () => type.methods.single.parameters,
-        () => type.constructors.single.parameters,
+
+      test('for declarations and members', () {
+        expect(file.declarations.single, same(file.declarations.single));
+        expect(type.members[2], same(type.methods.single));
+      });
+
+      for (final (name, list) in <(String, List<Object> Function())>[
+        ('members', () => type.members),
+        ('methods', () => type.methods),
+        ('constructors', () => type.constructors),
+        ('fields', () => type.fields),
+        ('annotations', () => type.annotations),
+        ('annotation arguments', () => type.annotations.single.arguments),
+        ('method parameters', () => type.methods.single.parameters),
+        ('constructor parameters', () => type.constructors.single.parameters),
       ]) {
-        expect(list(), same(list()));
-        expect(() => list().clear(), throwsUnsupportedError);
+        test('in an unmodifiable list of $name', () {
+          expect(list(), same(list()));
+          expect(() => list().clear(), throwsUnsupportedError);
+        });
       }
     });
 
@@ -254,31 +258,19 @@ abstract class C {
         expect(methods.first.offset, source.indexOf('m('));
       });
 
-      test('know if they are static, abstract or external', () {
-        expect(methods.map((m) => m.isStatic), [
-          false,
-          true,
-          false,
-          false,
-          false,
-          false,
+      test('know if they are static', () {
+        expect(methods.where((m) => m.isStatic).map((m) => m.name), ['g']);
+      });
+
+      test('know if they are abstract', () {
+        expect(methods.where((m) => m.isAbstract).map((m) => m.name), [
+          'abstract',
+          'ext',
         ]);
-        expect(methods.map((m) => m.isAbstract), [
-          false,
-          false,
-          false,
-          false,
-          true,
-          true,
-        ]);
-        expect(methods.map((m) => m.isExternal), [
-          false,
-          false,
-          false,
-          false,
-          false,
-          true,
-        ]);
+      });
+
+      test('know if they are external', () {
+        expect(methods.where((m) => m.isExternal).map((m) => m.name), ['ext']);
       });
 
       test('have parameters, none for a getter', () {

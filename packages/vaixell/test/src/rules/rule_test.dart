@@ -154,12 +154,25 @@ final class const _NamedRule(
 
 void main() {
   group(Finding, () {
-    test('orders by offset', () {
-      const a = Finding(offset: 1, message: 'a');
-      const b = Finding(offset: 2, message: 'b');
-      expect(a.compareTo(b), isNegative);
-      expect(b.compareTo(a), isPositive);
-      expect(a.compareTo(const Finding(offset: 1, message: 'c')), 0);
+    test('are equal when offset, message and symbol are', () {
+      Finding finding({int offset = 1, String message = 'm', String? s}) =>
+          Finding(offset: offset, message: message, symbol: s);
+      expect(finding(), equals(finding()));
+      expect(finding().hashCode, equals(finding().hashCode));
+      expect(finding(), isNot(equals(finding(offset: 2))));
+      expect(finding(), isNot(equals(finding(message: 'n'))));
+      expect(finding(), isNot(equals(finding(s: 'A'))));
+    });
+
+    test('print their offset, symbol and message', () {
+      expect(
+        const Finding(offset: 3, message: 'm', symbol: 'A.b').toString(),
+        equals('Finding(3 A.b: m)'),
+      );
+      expect(
+        const Finding(offset: 3, message: 'm').toString(),
+        equals('Finding(3: m)'),
+      );
     });
 
     group('at', () {
@@ -168,10 +181,11 @@ void main() {
         path: 'lib/a.dart',
         content: source,
       ).imports.single;
+      // An expression outside any declaration has no symbol.
       final error = DartFile.parse(
         path: 'lib/a.dart',
-        content: 'class A {\n',
-      ).errors.first;
+        content: '@A(1)\nlibrary;\n',
+      ).expressions.last;
 
       test("takes the element's offset and symbol", () {
         final finding = Finding.at(import, message: 'm');
