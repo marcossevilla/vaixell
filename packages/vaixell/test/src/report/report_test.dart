@@ -48,5 +48,27 @@ void main() {
         );
       });
     });
+
+    test('toJson counts each severity in the summary', () {
+      Violation violation(String id, Severity severity) => Violation(
+        id: id,
+        rule: 'r',
+        severity: severity,
+        path: 'lib/a.dart',
+        line: 1,
+        column: 1,
+        message: 'm',
+      );
+      final report = Report.full([
+        violation('a', Severity.error),
+        violation('b', Severity.warning),
+        violation('c', Severity.warning),
+        violation('d', Severity.info),
+      ]);
+      expect(
+        report.toJson()['summary'],
+        equals({'violation': 4, 'error': 1, 'warning': 2, 'info': 1}),
+      );
+    });
   });
 }

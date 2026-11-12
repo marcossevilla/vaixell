@@ -39,6 +39,7 @@ enum ReportMode {
 ///     "violation": 1,
 ///     "error": 1,
 ///     "warning": 0,
+///     "info": 0,
 ///     "new": 0,
 ///     "fixed": 1
 ///   }
@@ -54,8 +55,8 @@ enum ReportMode {
 ///   same shape. Only `diff` and `baseline` reports have it.
 /// - `fixed` lists the sorted ids that are in the base or baseline but no
 ///   longer occur. Only `diff` and `baseline` reports have it.
-/// - `summary` counts every `violation`, each `error` and `warning`, and,
-///   in `diff` and `baseline` reports, each `new` and `fixed` one.
+/// - `summary` counts every `violation`, each `error`, `warning` and `info`,
+///   and, in `diff` and `baseline` reports, each `new` and `fixed` one.
 class Report {
   /// Creates a report for a full run with [violations].
   const new full(this.violations) : mode = ReportMode.full, diff = null;
@@ -97,6 +98,7 @@ class Report {
         'warning': violations
             .where((v) => v.severity == Severity.warning)
             .length,
+        'info': violations.where((v) => v.severity == Severity.info).length,
         if (diff != null) ...{
           'new': diff.added.length,
           'fixed': diff.fixed.length,

@@ -256,6 +256,7 @@ class const _RuleConfig(
 ) {
   static const Map<String, Severity?> severities = {
     'off': null,
+    'info': Severity.info,
     'warning': Severity.warning,
     'error': Severity.error,
   };

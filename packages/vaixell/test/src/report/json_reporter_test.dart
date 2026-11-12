@@ -33,7 +33,8 @@ void main() {
           '  "summary": {\n'
           '    "violation": 0,\n'
           '    "error": 0,\n'
-          '    "warning": 0\n'
+          '    "warning": 0,\n'
+          '    "info": 0\n'
           '  }\n'
           '}\n',
         ),

@@ -1,6 +1,9 @@
 /// How a violation affects the exit code.
 enum Severity {
-  /// Reported, but doesn't fail the run.
+  /// Reported, but never fails the run.
+  info,
+
+  /// Reported, but doesn't fail the run unless warnings are fatal.
   warning,
 
   /// Reported, and fails the run.
@@ -37,7 +40,7 @@ class const Violation({
   this;
 
   /// Returns the violation as a JSON object with the keys `id`, `rule`,
-  /// `severity` (`error` or `warning`), `path`, `line`, `column` and
+  /// `severity` (`error`, `warning` or `info`), `path`, `line`, `column` and
   /// `message`.
   Map<String, Object?> toJson() => {
     'id': id,

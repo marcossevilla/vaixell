@@ -57,6 +57,7 @@
     "violation": 3,
     "error": 2,
     "warning": 1,
+    "info": 0,
     "new": 2,
     "fixed": 1
   }
