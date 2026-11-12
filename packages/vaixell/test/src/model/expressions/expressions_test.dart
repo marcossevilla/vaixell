@@ -232,6 +232,16 @@ void g() { void h() {} }
         final call = _first<MethodCall>('f() => g(a);');
         expect(call.unwrapped, same(call));
       });
+
+      test('are unwrapped through a cast alone', () {
+        final cast = _first<Cast>('f() => a as Map;');
+        expect(cast.unwrapped, isA<Reference>());
+      });
+
+      test('are unwrapped through a null check alone', () {
+        final check = _first<NullCheck>('f() => a!;');
+        expect(check.unwrapped, isA<Reference>());
+      });
     });
 
     group('calledName', () {

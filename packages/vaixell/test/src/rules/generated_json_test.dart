@@ -258,8 +258,54 @@ class C {
   factory C.fromJson(Object? json) => _$CFromJson((json! as Map<String, dynamic>));
   Map<String, dynamic> toJson() => _$CToJson((this));
 }
+@JsonSerializable()
+class D {
+  factory D.fromJson(Map<String, dynamic> json) => (_$DFromJson(json));
+  Map<String, dynamic> toJson() {
+    return (_$DToJson(this));
+  }
+}
 '''),
           isEmpty,
+        );
+      });
+
+      test('flags a parenthesized wrong input', () {
+        expect(
+          symbols(r'''
+@JsonSerializable()
+class A {
+  factory A.fromJson(Map<String, dynamic> json) => _$AFromJson((other));
+  Map<String, dynamic> toJson() => _$AToJson((other));
+}
+'''),
+          equals(['A.fromJson', 'A.toJson']),
+        );
+      });
+
+      test('treats a non-literal flag as enabled', () {
+        final findings = _tester.checkSource(rule, '''
+@JsonSerializable(createFactory: flag, createToJson: flag)
+class User {
+  factory User.fromJson(Map<String, dynamic> json) => User();
+  Map<String, dynamic> toJson() => {};
+}
+''');
+        expect(
+          findings.first.message,
+          equals(
+            '`User.fromJson` is written by hand. Return '
+            r'`_$UserFromJson(json)` instead. Use a `JsonConverter` for '
+            'fields that need custom parsing.',
+          ),
+        );
+        expect(
+          findings.last.message,
+          equals(
+            '`User.toJson` is written by hand. Return '
+            r'`_$UserToJson(this)` instead. Use a `JsonConverter` for '
+            'fields that need custom parsing.',
+          ),
         );
       });
 
@@ -477,6 +523,43 @@ class User {
 }
 '''),
           equals(['User.fromJson']),
+        );
+      });
+    });
+
+    group('static toJson methods', () {
+      test('are told to delegate on annotated classes', () {
+        final findings = _tester.checkSource(rule, '''
+@JsonSerializable()
+class User {
+  static Map<String, dynamic> toJson() => {};
+}
+''');
+        expect(findings.map((f) => f.symbol), equals(['User.toJson']));
+        expect(
+          findings.single.message,
+          equals(
+            '`User.toJson` is written by hand. Return '
+            r'`_$UserToJson(this)` instead. Use a `JsonConverter` for '
+            'fields that need custom parsing.',
+          ),
+        );
+      });
+
+      test('are told to annotate on unannotated classes', () {
+        expect(
+          _tester
+              .checkSource(
+                rule,
+                'class User { static Map<String, dynamic> toJson() => {}; }',
+              )
+              .single
+              .message,
+          equals(
+            '`User.toJson` is written by hand. Annotate `User` with '
+            r'`@JsonSerializable()` and delegate to `_$UserToJson`. Use a '
+            '`JsonConverter` for fields that need custom parsing.',
+          ),
         );
       });
     });

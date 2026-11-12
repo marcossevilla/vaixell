@@ -235,7 +235,7 @@ abstract interface class Import implements Reportable {
   - Sealed `FunctionMember` groups methods and constructors: `isExternal`, `parameters`, `returnExpression`.
   - `Method`: `kind`, `isStatic`, `isAbstract` (no body).
   - `Constructor`: `isFactory`. A primary constructor is one too, and code in its header or its `this : …;` body is in it, so findings there get `Type.new` or `Type.name` symbols instead of `Type`.
-  - `Field`: one per declared name, with `name` and `isStatic`.
+  - `Field`: one per declared name, with `isStatic`.
   - `returnExpression` is `e` for `=> e;` or `{ return e; }`, otherwise `null`.
 - **`Parameter`:** `name`, `isPositional`, `isNamed`, `isFunction` (as in `T Function(Object?) fromJsonT`).
 - **`Annotation`:** `name`, `prefix`, `arguments`, and `argumentNamed(name)` for a named argument.
@@ -345,7 +345,7 @@ The map is done when every built-in rule and #32's `forbidden-import` fit this s
 | `static-method`         | `Rule`                              | error   | `ChecksMembers`                                                           | `Method` `isStatic`, `kind`                                                                                | `Type.member`                       |
 | `throwaway-instance`    | `Rule`                              | warning | `ChecksExpressions`                                                       | `MethodCall`, `Reference`, `InstanceCreation` `arguments`, `unparenthesized`                               | `<where>@name`                      |
 | `raw-json`              | `Rule`                              | error   | `ChecksExpressions`, `ChecksTypeAnnotations`, `SkipsDirectories {models}` | `MethodCall`, `Reference`, `ArgumentUse`, `CollectionLiteral`, `Cast`, `TypeAnnotation`, `Enclosed.member` | `<where>@decode`, `@encode`, `@map` |
-| `generated-json`        | `Rule`                              | warning | `ChecksMembers`                                                           | `FunctionMember`, `annotationNamed`, `argumentNamed`, `returnExpression`, `unwrapped`                       | `Type.fromJson`, `Type.toJson`      |
+| `generated-json`        | `Rule`                              | warning | `ChecksMembers`                                                           | `FunctionMember`, `annotationNamed`, `argumentNamed`, `returnExpression`, `unwrapped`                      | `Type.fromJson`, `Type.toJson`      |
 | `await-receiver`        | `Rule`                              | warning | `ChecksExpressions`                                                       | `Await`, `ReceiverUse`, `NullCheckUse`, `MethodCall`, `Reference`, `FunctionCall`                          | `<where>@calledName`                |
 | `forbidden-import`      | `RuleFactory`, `recommended: false` | error   | `ChecksImports`                                                           | `Import` `uri`, `path`; `DartFile.packagePath`                                                             | the import's URI                    |
 

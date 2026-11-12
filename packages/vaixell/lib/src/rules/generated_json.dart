@@ -9,7 +9,8 @@ import 'package:vaixell/src/violation/violation.dart';
 /// annotated with `@JsonSerializable` and its body only returns
 /// `_$<Class>FromJson(json, …)` or `_$<Class>ToJson(this, …)`. Static
 /// `fromJson` methods and generative `fromJson` constructors are always
-/// reported, and so are these members in enums, which use `@JsonEnum`.
+/// reported. Enums' `fromJson` and `toJson` members are always reported
+/// too, since enums use `@JsonEnum` and `@JsonValue`.
 ///
 /// Abstract and external members aren't reported, and neither are helpers
 /// that convert another value, such as HydratedBloc overrides and
@@ -26,35 +27,41 @@ final class const GeneratedJsonRule() extends Rule with ChecksMembers {
   Severity get defaultSeverity => Severity.warning;
 
   @override
-  Finding? checkMember(TypeDeclaration type, Member member) =>
-      switch ((type, member)) {
-        _ when !_isJsonMember(member) => null,
-        (EnumDeclaration(:final name), _) => Finding.at(
-          member,
-          message:
-              '`${member.symbol}` is written by hand. Annotate `$name` with '
-              '`@JsonEnum()` and its values with `@JsonValue` instead.',
-        ),
-        (final ClassDeclaration type, final FunctionMember member) =>
-          switch (_ClassJson(type, member).message) {
-            final message? => Finding.at(member, message: message),
-            null => null,
-          },
-        _ => null,
-      };
+  Finding? checkMember(TypeDeclaration type, Member member) {
+    if (!_isJsonMember(member)) return null;
+    return switch ((type, member)) {
+      (EnumDeclaration(:final name), _) => Finding.at(
+        member,
+        message:
+            '`${member.symbol}` is written by hand. Annotate `$name` with '
+            '`@JsonEnum()` and its values with `@JsonValue` instead.',
+      ),
+      (final ClassDeclaration type, final FunctionMember member) => _ClassJson(
+        type,
+        member,
+      ).finding,
+      _ => null,
+    };
+  }
 
   /// Whether [member] is a `fromJson` constructor, a static `fromJson`
-  /// method or a `toJson` method that converts the type itself. A `toJson`
-  /// whose first positional parameter is a value, rather than a function
-  /// for `genericArgumentFactories`, converts that value instead.
+  /// method or a `toJson` method that converts the type itself.
   bool _isJsonMember(Member member) => switch (member) {
     Constructor(name: 'fromJson', isExternal: false) => true,
     Method(isAbstract: true) || Method(kind: != FunctionKind.function) => false,
     Method(name: 'fromJson', isStatic: true) => true,
-    Method(name: 'toJson', :final parameters) =>
-      parameters.where((p) => p.isPositional).firstOrNull?.isFunction ?? true,
+    Method(name: 'toJson', :final parameters) => !_convertsValue(parameters),
     _ => false,
   };
+
+  /// Whether a `toJson` with [parameters] converts the value passed first,
+  /// rather than `this`. A function first, as `genericArgumentFactories`
+  /// passes, still converts `this`.
+  static bool _convertsValue(List<Parameter> parameters) =>
+      switch (parameters.where((p) => p.isPositional).firstOrNull) {
+        null => false,
+        final first => !first.isFunction,
+      };
 }
 
 /// A class's `fromJson` or `toJson`, and what generated-json says about it.
@@ -71,7 +78,7 @@ final class _ClassJson(
   /// `_$UserFromJson` for `User.fromJson`, dropping leading underscores as
   /// json_serializable does.
   String get generated =>
-      '_\$${type.name.replaceFirst(RegExp('^_*'), '')}'
+      '_\$${type.name.replaceFirst(_leadingUnderscores, '')}'
       '${isFromJson ? 'FromJson' : 'ToJson'}';
 
   /// What the body should pass to [generated]: `this` for `toJson`, and
@@ -88,9 +95,9 @@ final class _ClassJson(
   /// Whether [annotation] passes `flag: false`.
   bool get isTurnedOff => annotation?.argumentNamed(flag)?.literal == false;
 
-  /// Whether the body only returns `generated(input, …)`, where the input
-  /// may be parenthesized, cast or null-checked.
-  bool get delegates => switch (member.returnExpression) {
+  /// Whether the body only returns `generated(input, …)`, where the call
+  /// may be parenthesized and the input parenthesized, cast or null-checked.
+  bool get delegates => switch (member.returnExpression?.unparenthesized) {
     MethodCall(
       target: null,
       :final name,
@@ -110,13 +117,24 @@ final class _ClassJson(
       'factory ${type.name}.fromJson(Map<String, dynamic> $input) => '
       '$generated($input);';
 
-  String? get message => switch (member) {
-    Method(isStatic: true) =>
+  /// Whether [member] is a static `fromJson` method, which json_serializable
+  /// can't use whatever its body.
+  bool get isStaticFromJson => isFromJson && member is Method;
+
+  /// Whether the class is annotated and [member] returns [generated].
+  bool get isCompliant => annotation != null && delegates && !isStaticFromJson;
+
+  /// The finding for [member], or `null` when [isCompliant].
+  Finding? get finding =>
+      isCompliant ? null : Finding.at(member, message: message);
+
+  /// Why [member] is reported. Only read when it isn't [isCompliant].
+  String get message => switch (member) {
+    _ when isStaticFromJson =>
       '`$symbol` is a method. Make it a factory constructor, `$factory`.',
     Constructor(isFactory: false) =>
       "`$symbol` is a generative constructor, which can't return the "
           'generated function. $_makeIt a factory constructor, `$factory`.',
-    _ when annotation != null && delegates => null,
     _ when annotation == null && delegates =>
       "`$symbol` delegates to `$generated`, but `${type.name}` isn't "
           'annotated with `@JsonSerializable()`. Annotate it directly, '
@@ -143,6 +161,8 @@ final class _ClassJson(
       'Remove `$flag: false` from `@JsonSerializable` and make it',
     _ => 'Make it',
   };
+
+  static final _leadingUnderscores = RegExp('^_*');
 
   static const _converter =
       'Use a `JsonConverter` for fields that need custom parsing.';

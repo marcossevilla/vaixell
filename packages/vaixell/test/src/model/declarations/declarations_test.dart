@@ -248,22 +248,40 @@ class C {}
   });
 
   group(Member, () {
-    test('are function members, except fields, and have a name', () {
-      final members = _single<ClassDeclaration>('''
+    final members = _single<ClassDeclaration>('''
 class C {
   C();
   C.named();
   void m() {}
+  int get g => 1;
+  set s(int v) {}
+  bool operator ==(Object other) => true;
   int f = 1;
 }
 ''').members;
+
+    test('are function members, except fields', () {
       expect(members.map((m) => m is FunctionMember), [
+        true,
+        true,
+        true,
         true,
         true,
         true,
         false,
       ]);
-      expect(members.map((m) => m.name), [null, 'named', 'm', 'f']);
+    });
+
+    test('have a name, null only for an unnamed constructor', () {
+      expect(members.map((m) => m.name), [
+        null,
+        'named',
+        'm',
+        'g',
+        's',
+        '==',
+        'f',
+      ]);
     });
 
     group(Method, () {

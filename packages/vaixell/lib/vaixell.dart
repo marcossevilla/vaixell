@@ -28,6 +28,7 @@ export 'src/model/model.dart'
         Field,
         FunctionCall,
         FunctionKind,
+        FunctionMember,
         Import,
         ImportKind,
         InstanceCreation,
