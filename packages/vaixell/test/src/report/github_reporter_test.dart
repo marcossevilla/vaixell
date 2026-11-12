@@ -33,6 +33,10 @@ void main() {
             'top-level-variable:lib/a.dart:x',
             severity: Severity.warning,
           ),
+          _violation(
+            'top-level-function:lib/a.dart:bar',
+            severity: Severity.info,
+          ),
         ]),
         out,
       );
@@ -44,7 +48,8 @@ void main() {
         equals([
           '::error $properties::Message. [top-level-function:lib/a.dart:foo]',
           '::warning $properties::Message. [top-level-variable:lib/a.dart:x]',
-          '2 violations found.',
+          '::notice $properties::Message. [top-level-function:lib/a.dart:bar]',
+          '3 violations found.',
         ]),
       );
     });
@@ -89,17 +94,21 @@ void main() {
           for (var i = 0; i < 12; i++) _violation('e$i', line: i + 1),
           for (var i = 0; i < 3; i++)
             _violation('w$i', severity: Severity.warning, line: i + 1),
+          for (var i = 0; i < 11; i++)
+            _violation('i$i', severity: Severity.info, line: i + 1),
         ]),
         out,
       );
       final output = lines();
       expect(output.where((l) => l.startsWith('::error ')), hasLength(10));
       expect(output.where((l) => l.startsWith('::warning ')), hasLength(3));
+      expect(output.where((l) => l.startsWith('::notice ')), hasLength(10));
       expect(
         output.where((l) => l.startsWith('lib/a.dart:')),
         equals([
           'lib/a.dart:11:6: error: Message. [e10]',
           'lib/a.dart:12:6: error: Message. [e11]',
+          'lib/a.dart:11:6: info: Message. [i10]',
         ]),
       );
     });
@@ -181,8 +190,8 @@ void main() {
           summary,
           endsWith(
             '> 2 violations were not annotated because GitHub shows at most '
-            '10 errors and 10 warnings per step. All of them are listed '
-            'above.\n\n',
+            '10 errors, 10 warnings and 10 notices per step. All of them are '
+            'listed above.\n\n',
           ),
         );
       });

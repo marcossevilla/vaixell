@@ -6,10 +6,11 @@ import 'package:vaixell/src/violation/violation.dart';
 /// Writes a [Report] for GitHub Actions.
 ///
 /// Each failing violation (every violation in a full run, the new ones in
-/// diff and baseline runs) becomes an `::error` or `::warning` workflow
-/// command, which GitHub shows as an annotation on the file and line. GitHub
-/// shows at most [maxAnnotations] of each severity per step, so violations
-/// past that are printed as plain lines instead. A summary line follows.
+/// diff and baseline runs) becomes an `::error`, `::warning` or `::notice`
+/// (for [Severity.info]) workflow command, which GitHub shows as an
+/// annotation on the file and line. GitHub shows at most [maxAnnotations] of
+/// each per step, so violations past that are printed as plain lines
+/// instead. A summary line follows.
 ///
 /// When [writeSummary] is set, it gets a Markdown summary with the counts
 /// and tables of new and fixed violations, usually to append to
@@ -46,10 +47,17 @@ class const GithubReporter({
   }
 
   String _annotation(Violation v) =>
-      '::${v.severity.name} '
+      '::${_command(v.severity)} '
       'file=${_property(v.path)},line=${v.line},col=${v.column},'
       'title=${_property('vaixell ${v.rule}')}'
       '::${_data('${v.message} [${v.id}]')}';
+
+  /// The workflow command that annotates a violation of [severity].
+  String _command(Severity severity) => switch (severity) {
+    Severity.error => 'error',
+    Severity.warning => 'warning',
+    Severity.info => 'notice',
+  };
 
   /// Escapes the message of a workflow command.
   String _data(String value) => value
@@ -96,9 +104,9 @@ class const GithubReporter({
       buffer
         ..writeln(
           '> $skipped violation${skipped == 1 ? ' was' : 's were'} not '
-          'annotated because GitHub shows at most $maxAnnotations errors '
-          'and $maxAnnotations warnings per step. All of them are listed '
-          'above.',
+          'annotated because GitHub shows at most $maxAnnotations errors, '
+          '$maxAnnotations warnings and $maxAnnotations notices per step. '
+          'All of them are listed above.',
         )
         ..writeln();
     }
