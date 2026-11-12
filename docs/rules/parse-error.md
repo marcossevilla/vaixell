@@ -28,7 +28,8 @@ class User {
 
 ## Usage
 
-This rule is always on. It can be set to `warning`, but not to `off`:
+This rule is always on, and ignore comments can't turn it off. It can be
+set to `warning`, but not to `off`:
 
 ```yaml
 vaixell:
