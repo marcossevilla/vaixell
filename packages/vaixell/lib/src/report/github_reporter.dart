@@ -13,7 +13,8 @@ import 'package:vaixell/src/violation/violation.dart';
 ///
 /// When [writeSummary] is set, it gets a Markdown summary with the counts
 /// and tables of new and fixed violations, usually to append to
-/// `$GITHUB_STEP_SUMMARY`.
+/// `$GITHUB_STEP_SUMMARY`. Rules with [Violation.docs] link to their page
+/// there; annotations can't hold links, so they don't.
 class const GithubReporter({
   /// Receives the Markdown step summary, or `null` to skip it.
   final void Function(String markdown)? writeSummary,
@@ -76,7 +77,7 @@ class const GithubReporter({
         ..writeln('| --- | --- | --- | --- |');
       for (final v in failing) {
         buffer.writeln(
-          '| ${v.severity.name} | `${v.rule}` | '
+          '| ${v.severity.name} | ${_rule(v)} | '
           '`${v.path}:${v.line}:${v.column}` | ${_cell(v.message)} |',
         );
       }
@@ -104,6 +105,12 @@ class const GithubReporter({
     }
     return buffer.toString();
   }
+
+  /// The rule of [v], linked to its docs when it has them.
+  String _rule(Violation v) => switch (v.docs) {
+    final docs? => '[`${v.rule}`]($docs)',
+    null => '`${v.rule}`',
+  };
 
   /// Escapes [value] for a markdown table cell.
   String _cell(String value) =>

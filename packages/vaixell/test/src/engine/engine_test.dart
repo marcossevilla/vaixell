@@ -177,6 +177,13 @@ class Foo {
         expect(violation.severity, Severity.error);
         expect(violation.message, startsWith('Syntax error: '));
         expect(violation.message, isNot(contains('more)')));
+        expect(
+          violation.docs,
+          Uri.parse(
+            'https://github.com/marcossevilla/vaixell/blob/main/docs/rules/'
+            'parse-error.md',
+          ),
+        );
       });
 
       test('mentions how many more errors there are', () async {
@@ -318,6 +325,18 @@ class Foo {
       expect(violations.single.id, 'file:packages/a/lib/a.dart');
       expect(violations.single.severity, Severity.warning);
       expect(violations.single.message, 'File lib/a.dart.');
+      expect(violations.single.docs, isNull);
+    });
+
+    test('links violations of built-in rules to their docs', () async {
+      final violations = await _run({'lib/a.dart': 'void foo() {}\n'});
+      expect(
+        violations.single.docs,
+        Uri.parse(
+          'https://github.com/marcossevilla/vaixell/blob/main/docs/rules/'
+          'top-level-function.md',
+        ),
+      );
     });
 
     test('does not check files a rule skips', () async {

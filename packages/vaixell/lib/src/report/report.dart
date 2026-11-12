@@ -30,7 +30,8 @@ enum ReportMode {
 ///       "path": "lib/a.dart",
 ///       "line": 3,
 ///       "column": 6,
-///       "message": "Top-level function `foo` is not allowed. ..."
+///       "message": "Top-level function `foo` is not allowed. ...",
+///       "docs": "https://github.com/marcossevilla/vaixell/blob/main/docs/rules/top-level-function.md"
 ///     }
 ///   ],
 ///   "new": [],
@@ -49,7 +50,8 @@ enum ReportMode {
 ///   could break consumers.
 /// - `mode` is `full`, `diff` or `baseline`. See [ReportMode].
 /// - `violations` lists every violation in the checked code, sorted by
-///   path, line and column. See [Violation.toJson].
+///   path, line and column. See [Violation.toJson]. `docs` links to the
+///   rule's page, and is left out for rules that don't ship with vaixell.
 /// - `new` lists the violations that aren't in the base or baseline, in the
 ///   same shape. Only `diff` and `baseline` reports have it.
 /// - `fixed` lists the sorted ids that are in the base or baseline but no

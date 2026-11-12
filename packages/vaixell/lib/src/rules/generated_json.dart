@@ -1,4 +1,5 @@
 import 'package:vaixell/src/model/model.dart';
+import 'package:vaixell/src/rules/built_in_rule.dart';
 import 'package:vaixell/src/rules/rule.dart';
 import 'package:vaixell/src/violation/violation.dart';
 
@@ -22,7 +23,9 @@ import 'package:vaixell/src/violation/violation.dart';
 /// `@JsonEnum` and `@JsonValue` replace them. Mixins, extensions and
 /// extension types aren't checked, since they can't be annotated with
 /// `@JsonSerializable`.
-final class const GeneratedJsonRule() extends Rule with ChecksMembers {
+final class const GeneratedJsonRule()
+    extends Rule
+    with BuiltInRule, ChecksMembers {
   /// Creates the rule.
   this;
 

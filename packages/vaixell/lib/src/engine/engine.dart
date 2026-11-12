@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 import 'package:vaixell/src/config/config.dart';
 import 'package:vaixell/src/engine/package.dart';
 import 'package:vaixell/src/model/model.dart';
+import 'package:vaixell/src/rules/built_in_rule.dart';
 import 'package:vaixell/src/rules/rule.dart';
 import 'package:vaixell/src/source/source_tree.dart';
 import 'package:vaixell/src/violation/violation.dart';
@@ -87,7 +88,15 @@ class const Engine() {
     for (final ConfiguredRule(:rule, :severity) in rules)
       if (rule.shouldCheck(file))
         for (final finding in rule.check(file))
-          _Found(rule.id, severity, finding),
+          _Found(
+            rule.id,
+            severity,
+            finding,
+            docs: switch (rule) {
+              final BuiltInRule rule => rule.docs,
+              _ => null,
+            },
+          ),
   ];
 
   /// The only finding of a file that doesn't parse, at its first error.
@@ -102,16 +111,19 @@ class const Engine() {
             'Syntax error: ${first.message}'
             '${rest.isEmpty ? '' : ' (and ${rest.length} more)'}',
       ),
+      docs: const RuleDocs(Config.parseErrorId).url,
     );
   }
 }
 
-/// A [finding] of the rule [rule] in a file, reported at [severity].
+/// A [finding] of the rule [rule] in a file, reported at [severity], with
+/// the rule's [docs], if any.
 final class const _Found(
   final String rule,
   final Severity severity,
-  final Finding finding,
-) {
+  final Finding finding, {
+  final Uri? docs,
+}) {
   /// The violation in [file], with a stable id that leaves out line
   /// numbers, so moving code doesn't change it.
   ///
@@ -132,6 +144,7 @@ final class const _Found(
       line: file.lineAt(finding.offset),
       column: file.columnAt(finding.offset),
       message: finding.message,
+      docs: docs,
     );
   }
 }

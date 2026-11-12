@@ -59,6 +59,10 @@ $ vaixell --help
 See the [rules documentation][rules_link] for every supported rule and how to
 configure them.
 
+In `--format=json` output, each violation of a built-in rule has a `docs` key
+with the URL of its rule's page, and the `--format=github` step summary links
+each rule to it. Violations of custom rules have no `docs`.
+
 ## Running Tests with coverage 🧪
 
 To run all unit tests use the following command:
