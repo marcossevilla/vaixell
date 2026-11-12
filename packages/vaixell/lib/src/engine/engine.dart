@@ -83,12 +83,18 @@ class const Engine() {
     return [for (final finding in found) finding.violation(file, counts)];
   }
 
-  List<_Found> _findings(DartFile file, List<ConfiguredRule> rules) => [
-    for (final ConfiguredRule(:rule, :severity) in rules)
-      if (rule.shouldCheck(file))
-        for (final finding in rule.check(file))
-          _Found(rule.id, severity, finding),
-  ];
+  /// The findings of [rules] in [file], without those an ignore comment
+  /// turns off, so they don't take part in numbering ids.
+  List<_Found> _findings(DartFile file, List<ConfiguredRule> rules) {
+    final ignores = Ignores.of(file);
+    return [
+      for (final ConfiguredRule(:rule, :severity) in rules)
+        if (rule.shouldCheck(file))
+          for (final finding in rule.check(file))
+            if (!ignores.ignores(rule.id, file.lineAt(finding.offset)))
+              _Found(rule.id, severity, finding),
+    ];
+  }
 
   /// The only finding of a file that doesn't parse, at its first error.
   _Found _parseError(Package package, List<SyntaxError> errors) {

@@ -30,6 +30,7 @@ part 'expressions/enclosed.dart';
 part 'expressions/expressions.dart';
 part 'expressions/type_annotations.dart';
 part 'expressions/uses.dart';
+part 'ignores.dart';
 part 'imports/ast_import.dart';
 part 'imports/import.dart';
 part 'reportable.dart';

@@ -352,5 +352,105 @@ class Foo {
         'null',
       ]);
     });
+
+    group('ignore comments', () {
+      test('suppress the rule on the next line', () async {
+        final violations = await _run({
+          'lib/a.dart': '''
+class A {
+  // ignore: static-method
+  static void a() {}
+  static void b() {}
+}
+''',
+        });
+        expect(violations.map((v) => v.id), ['static-method:lib/a.dart:A.b']);
+      });
+
+      test('suppress the rule at the end of the line', () async {
+        final violations = await _run({
+          'lib/a.dart': '''
+class A {
+  static void a() {} // ignore: static-method
+  static void b() {}
+}
+''',
+        });
+        expect(violations.map((v) => v.id), ['static-method:lib/a.dart:A.b']);
+      });
+
+      test('suppress only the rules they name', () async {
+        final violations = await _run({
+          'lib/a.dart': '''
+// ignore: avoid_print, static-method
+void foo() {}
+''',
+        });
+        expect(violations.map((v) => v.id), [
+          'top-level-function:lib/a.dart:foo',
+        ]);
+      });
+
+      test('leave the ids of the others when code is added', () async {
+        const source = 'void foo() {}\nvoid foo() {}\n';
+        final before = await _run({'lib/a.dart': source});
+        final after = await _run({
+          'lib/a.dart': 'void foo() {} // ignore: top-level-function\n$source',
+        });
+        expect(after.map((v) => v.id), before.map((v) => v.id));
+      });
+
+      test('number ids as if ignored findings were not there', () async {
+        final violations = await _run({
+          'lib/a.dart': '''
+void foo() {} // ignore: top-level-function
+void foo() {}
+''',
+        });
+        expect(violations.map((v) => v.id), [
+          'top-level-function:lib/a.dart:foo',
+        ]);
+      });
+
+      test('suppress a rule in the whole file with ignore_for_file', () async {
+        final violations = await _run({
+          'lib/a.dart': '''
+class A {
+  static void a() {}
+}
+void foo() {}
+// ignore_for_file: static-method
+class B {
+  static void b() {}
+}
+''',
+          'lib/b.dart': 'class C {\n  static void c() {}\n}\n',
+        });
+        expect(violations.map((v) => v.id), [
+          'top-level-function:lib/a.dart:foo',
+          'static-method:lib/b.dart:C.c',
+        ]);
+      });
+
+      test('cannot suppress parse-error in the whole file', () async {
+        final violations = await _run({
+          'lib/a.dart': '''
+// ignore_for_file: parse-error
+class {
+''',
+        });
+        expect(violations.map((v) => v.rule), ['parse-error']);
+      });
+
+      test('cannot suppress parse-error', () async {
+        final violations = await _run({
+          'lib/a.dart': '''
+// ignore: parse-error
+class {
+''',
+        });
+        expect(violations.map((v) => v.rule), ['parse-error']);
+      });
+    });
   });
 }
