@@ -241,7 +241,7 @@ class G {
         );
       });
 
-      test('accepts a null-checked or cast input', () {
+      test('accepts a null-checked, cast or parenthesized input', () {
         expect(
           symbols(r'''
 @JsonSerializable()
@@ -252,6 +252,11 @@ class A {
 @JsonSerializable()
 class B {
   factory B.fromJson(Object? json) => _$BFromJson(json as Map<String, dynamic>);
+}
+@JsonSerializable()
+class C {
+  factory C.fromJson(Object? json) => _$CFromJson((json! as Map<String, dynamic>));
+  Map<String, dynamic> toJson() => _$CToJson((this));
 }
 '''),
           isEmpty,

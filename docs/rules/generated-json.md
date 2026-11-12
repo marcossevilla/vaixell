@@ -18,7 +18,8 @@ generates that code from the class itself. This rule reports:
   `toJson` must return `_$<Class>ToJson(this, …)`. `<Class>` drops leading
   underscores, as json_serializable does, so `_User` uses `_$UserFromJson`.
   Both `=>` and `{ return …; }` bodies work, and the parameter can be
-  null-checked or cast, as in `_$UserFromJson(json! as Map<String, dynamic>)`.
+  null-checked, cast or parenthesized, as in
+  `_$UserFromJson(json! as Map<String, dynamic>)`.
 - A static `fromJson` method, since json_serializable expects a factory
   constructor. `static-method` reports it too. Make it a factory
   constructor rather than an instance method, which neither rule checks.

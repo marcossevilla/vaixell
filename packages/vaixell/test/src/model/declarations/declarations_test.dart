@@ -188,6 +188,21 @@ class C {}
           null,
         ]);
       });
+
+      test('find an annotation by name, whatever its prefix', () {
+        final type = _single<ClassDeclaration>('''
+@a
+@json.JsonSerializable()
+@JsonSerializable(createToJson: false)
+class C {}
+''');
+        expect(
+          type.annotationNamed('JsonSerializable'),
+          same(type.annotations[1]),
+        );
+        expect(type.annotationNamed('a'), same(type.annotations.first));
+        expect(type.annotationNamed('json'), isNull);
+      });
     });
 
     group(TopLevelFunction, () {
@@ -233,6 +248,24 @@ class C {}
   });
 
   group(Member, () {
+    test('are function members, except fields, and have a name', () {
+      final members = _single<ClassDeclaration>('''
+class C {
+  C();
+  C.named();
+  void m() {}
+  int f = 1;
+}
+''').members;
+      expect(members.map((m) => m is FunctionMember), [
+        true,
+        true,
+        true,
+        false,
+      ]);
+      expect(members.map((m) => m.name), [null, 'named', 'm', 'f']);
+    });
+
     group(Method, () {
       const source = '''
 abstract class C {
@@ -461,6 +494,16 @@ class C {}
         false,
       ]);
       expect(arguments.last.name, 'f');
+    });
+
+    test('are found by name in an annotation', () {
+      final annotation = _single<ClassDeclaration>('''
+@A(1, a: true, b: false)
+class C {}
+''').annotations.single;
+      expect(annotation.argumentNamed('b')?.literal, false);
+      expect(annotation.argumentNamed('a'), same(annotation.arguments[1]));
+      expect(annotation.argumentNamed('c'), isNull);
     });
   });
 }

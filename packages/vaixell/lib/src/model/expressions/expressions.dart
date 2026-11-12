@@ -11,6 +11,10 @@ sealed class Expression implements Enclosed {
   /// This expression without any parentheses around it.
   Expression get unparenthesized;
 
+  /// This expression without any parentheses, `as` casts or `!` around it,
+  /// as `json` in `(json! as Map<String, dynamic>)`.
+  Expression get unwrapped;
+
   /// The name of the method, function, getter or variable this calls or
   /// reads, looking through parentheses, as `fetch` in `api.fetch()` or
   /// `api.fetch()()`, or `null` when it has none.

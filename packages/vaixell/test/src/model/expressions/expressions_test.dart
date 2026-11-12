@@ -223,6 +223,15 @@ void g() { void h() {} }
           same(outer.unparenthesized),
         );
       });
+
+      test('are unwrapped through parentheses, casts and null checks', () {
+        final outer = _first<Parenthesized>('f() => ((a! as Map)!);');
+        expect(outer.unwrapped, isA<Reference>());
+        expect(outer.unwrapped.unwrapped, same(outer.unwrapped));
+        expect(outer.unparenthesized, isA<NullCheck>());
+        final call = _first<MethodCall>('f() => g(a);');
+        expect(call.unwrapped, same(call));
+      });
     });
 
     group('calledName', () {

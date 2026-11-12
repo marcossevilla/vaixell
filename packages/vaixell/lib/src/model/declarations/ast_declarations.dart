@@ -20,6 +20,10 @@ mixin _AstTypeDeclaration implements TypeDeclaration {
   ]);
 
   @override
+  Annotation? annotationNamed(String name) =>
+      annotations.where((annotation) => annotation.name == name).firstOrNull;
+
+  @override
   late final List<Member> members = List.unmodifiable([
     if (namePart case final ast.PrimaryConstructorDeclaration header)
       file.member(header)!,
