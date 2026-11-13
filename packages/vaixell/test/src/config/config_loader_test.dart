@@ -74,9 +74,17 @@ void main() {
           'vaixell:\n  rules:\n    top-level-function: warning\n',
           _recommendedWith({'top-level-function': Severity.warning}),
         ),
+        'a rule set to info': (
+          'vaixell:\n  rules:\n    top-level-function: info\n',
+          _recommendedWith({'top-level-function': Severity.info}),
+        ),
         'parse-error set to warning': (
           'vaixell:\n  rules:\n    parse-error: warning\n',
           _recommendedWith({'parse-error': Severity.warning}),
+        ),
+        'parse-error set to info': (
+          'vaixell:\n  rules:\n    parse-error: info\n',
+          _recommendedWith({'parse-error': Severity.info}),
         ),
         'a rule turned back on after an empty include': (
           'vaixell:\n  include: []\n  rules:\n    top-level-function: error\n',
@@ -99,9 +107,17 @@ void main() {
           'vaixell:\n  rules:\n    top-level-function: {severity: off}\n',
           _recommendedWith({'top-level-function': null}),
         ),
+        'a long-form info': (
+          'vaixell:\n  rules:\n    top-level-function: {severity: info}\n',
+          _recommendedWith({'top-level-function': Severity.info}),
+        ),
         'parse-error in the long form': (
           'vaixell:\n  rules:\n    parse-error: {severity: warning}\n',
           _recommendedWith({'parse-error': Severity.warning}),
+        ),
+        'parse-error set to info in the long form': (
+          'vaixell:\n  rules:\n    parse-error: {severity: info}\n',
+          _recommendedWith({'parse-error': Severity.info}),
         ),
         'the analyzer include is ignored': (
           'include: package:very_good_analysis/analysis_options.yaml\n'
@@ -234,9 +250,10 @@ void main() {
               'throwaway-instance, raw-json, generated-json, await-receiver.',
         ),
         'an unknown severity': (
-          'vaixell:\n  rules:\n    top-level-function: info\n',
-          'analysis_options.yaml:3:25: Invalid severity `info` for '
-              '`top-level-function`. Expected one of: off, warning, error.',
+          'vaixell:\n  rules:\n    top-level-function: hint\n',
+          'analysis_options.yaml:3:25: Invalid severity `hint` for '
+              '`top-level-function`. Expected one of: off, info, warning, '
+              'error.',
         ),
         'a boolean severity': (
           'vaixell:\n  rules:\n    top-level-function: false\n',
@@ -256,8 +273,8 @@ void main() {
           'analysis_options.yaml:3:19: `parse-error` takes no options.',
         ),
         'an invalid long-form severity': (
-          'vaixell:\n  rules:\n    top-level-function: {severity: info}\n',
-          'analysis_options.yaml:3:36: Invalid severity `info` for '
+          'vaixell:\n  rules:\n    top-level-function: {severity: hint}\n',
+          'analysis_options.yaml:3:36: Invalid severity `hint` for '
               '`top-level-function`.',
         ),
         'parse-error turned off in the long form': (

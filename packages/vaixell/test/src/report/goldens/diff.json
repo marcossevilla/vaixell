@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "mode": "diff",
   "violations": [
     {
@@ -28,6 +28,15 @@
       "line": 2,
       "column": 1,
       "message": "Syntax error: Expected to find '}'."
+    },
+    {
+      "id": "extension-declaration:lib/c.dart:E",
+      "rule": "extension-declaration",
+      "severity": "info",
+      "path": "lib/c.dart",
+      "line": 2,
+      "column": 11,
+      "message": "Extension `E` adds members to `C`, which this file declares. Add them to `C` instead."
     }
   ],
   "new": [
@@ -45,9 +54,10 @@
     "top-level-function:lib/a.dart:foo"
   ],
   "summary": {
-    "violations": 3,
-    "errors": 2,
-    "warnings": 1,
+    "total": 4,
+    "error": 2,
+    "warning": 1,
+    "info": 1,
     "new": 1,
     "fixed": 1
   }

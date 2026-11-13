@@ -34,8 +34,10 @@ vaixell:
 ```
 
 - `include`: a preset name, or a list of them. Defaults to `recommended`.
-- `rules`: a map of rule ids to `off`, `warning` or `error`. Errors fail the
-  run, warnings are only reported.
+- `rules`: a map of rule ids to `off`, `info`, `warning` or `error`. Errors
+  fail the run, and warnings are only reported unless `vaixell check` runs
+  with `--fatal-warnings`. Info is only reported, even with
+  `--fatal-warnings`, for rules you want to observe without enforcing them.
 
   Rules that take options use the long form, with the severity next to the
   options. Without `severity`, the rule is on at its default severity:
@@ -65,3 +67,6 @@ hidden, so only new ones are reported:
 vaixell check --write-baseline=vaixell_baseline.json
 vaixell check --baseline=vaixell_baseline.json
 ```
+
+With `--git-diff` or `--baseline`, only new violations fail the run, and
+`--fatal-warnings` applies only to them.

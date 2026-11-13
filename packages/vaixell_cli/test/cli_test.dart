@@ -100,6 +100,26 @@ void main() {
       await process.shouldExit(ExitCode.success.code);
     });
 
+    test('--fatal-warnings exits 1 on a warning', () async {
+      await d.dir('pkg', [
+        d.file(
+          'analysis_options.yaml',
+          'vaixell:\n  rules:\n    top-level-function: warning\n',
+        ),
+        d.dir('lib', [d.file('a.dart', 'void foo() {}\n')]),
+      ]).create();
+
+      var process = await _vaixell(['check'], workingDirectory: d.path('pkg'));
+      await process.shouldExit(ExitCode.success.code);
+
+      process = await _vaixell([
+        'check',
+        '--fatal-warnings',
+      ], workingDirectory: d.path('pkg'));
+      expect(await process.stdout.next, contains(': warning: '));
+      await process.shouldExit(CheckCommand.violationsExitCode);
+    });
+
     test('exits 78 on an invalid config', () async {
       await d.dir('pkg', [
         d.file('analysis_options.yaml', 'vaixell:\n  rules:\n    nope: off\n'),
@@ -233,7 +253,7 @@ void main() {
       final stdout = (await process.stdout.rest.toList()).join('\n');
       final json = jsonDecode(stdout) as Map<String, Object?>;
       expect(json['mode'], equals('full'));
-      expect(json['summary'], containsPair('violations', 1));
+      expect(json['summary'], containsPair('total', 1));
       await process.shouldExit(CheckCommand.violationsExitCode);
     });
   });
