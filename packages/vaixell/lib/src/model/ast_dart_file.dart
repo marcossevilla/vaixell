@@ -54,7 +54,7 @@ final class _AstDartFile(
         ?declaration(node),
   ]);
 
-  late final Ignores ignores = Ignores._(result);
+  late final Ignores ignores = _ignoresOf(result);
 
   late final _AstCollector _collected = _AstCollector(this)
     ..visitCompilationUnit(result.unit);

@@ -93,6 +93,11 @@ in it:
   tools. List analyzer codes first: the analyzer stops reading a comment at
   the first id with a `-`, so in `// ignore: static-method, avoid_print` it
   doesn't see `avoid_print`.
+- Text after the ids, such as `// ignore: static-method // a framework
+  requires it`, is skipped, so you can say why.
+- An `ignore` comment applies only to the line right below it, so stacked
+  comments don't combine: the upper one applies to the comment under it.
+  Put every id, vaixell's and the analyzer's, in one comment.
 - The line vaixell reports is the one with the name of what it points at,
   so a comment above an annotation or a doc comment doesn't apply.
 - Doc comments (`///`), block comments and strings aren't ignore comments.

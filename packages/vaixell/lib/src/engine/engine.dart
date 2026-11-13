@@ -84,14 +84,15 @@ class const Engine() {
   }
 
   /// The findings of [rules] in [file], without those an ignore comment
-  /// turns off, so they don't take part in numbering ids.
+  /// turns off, so they don't take part in numbering ids. A rule turned off
+  /// in the whole file doesn't run.
   List<_Found> _findings(DartFile file, List<ConfiguredRule> rules) {
     final ignores = Ignores.of(file);
     return [
       for (final ConfiguredRule(:rule, :severity) in rules)
-        if (rule.shouldCheck(file))
+        if (!ignores.turnsOffFile(rule.id) && rule.shouldCheck(file))
           for (final finding in rule.check(file))
-            if (!ignores.ignores(rule.id, file.lineAt(finding.offset)))
+            if (!ignores.turnsOff(rule.id, line: file.lineAt(finding.offset)))
               _Found(rule.id, severity, finding),
     ];
   }
