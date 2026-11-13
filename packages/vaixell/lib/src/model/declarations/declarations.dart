@@ -15,6 +15,11 @@ sealed class TypeDeclaration implements Declaration {
   /// The annotations, in source order.
   List<Annotation> get annotations;
 
+  /// The first annotation called [name], whatever its prefix, as
+  /// `@js.JsonSerializable()` for `JsonSerializable`, or `null` when
+  /// there's none.
+  Annotation? annotationNamed(String name);
+
   /// The methods, constructors and fields, in source order, so a primary
   /// constructor, declared in the header, comes first.
   List<Member> get members;

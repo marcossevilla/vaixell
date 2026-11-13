@@ -12,6 +12,9 @@ abstract interface class Annotation {
 
   /// The arguments, in source order. Empty when there are no parentheses.
   List<Argument> get arguments;
+
+  /// The argument called [name], or `null` when it isn't passed.
+  Argument? argumentNamed(String name);
 }
 
 /// An argument of an [Annotation] or a [Call].
