@@ -27,11 +27,11 @@ void main() {
         out.toString(),
         equals(
           '{\n'
-          '  "schemaVersion": 1,\n'
+          '  "schemaVersion": 2,\n'
           '  "mode": "full",\n'
           '  "violations": [],\n'
           '  "summary": {\n'
-          '    "violation": 0,\n'
+          '    "total": 0,\n'
           '    "error": 0,\n'
           '    "warning": 0,\n'
           '    "info": 0\n'
@@ -56,12 +56,14 @@ void main() {
         await d
             .file(
               'analysis_options.yaml',
-              'vaixell:\n  rules:\n    top-level-variable: warning\n',
+              'vaixell:\n  rules:\n    top-level-variable: warning\n'
+                  '    extension-declaration: info\n',
             )
             .create();
         await d.dir('lib', [
           d.file('a.dart', 'void foo() {}\nfinal limit = 1;\n'),
           d.file('b.dart', 'class B {\n'),
+          d.file('c.dart', 'class C {}\nextension E on C {}\n'),
         ]).create();
       });
 

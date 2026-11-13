@@ -20,7 +20,7 @@ enum ReportMode {
 ///
 /// ```json
 /// {
-///   "schemaVersion": 1,
+///   "schemaVersion": 2,
 ///   "mode": "diff",
 ///   "violations": [
 ///     {
@@ -36,7 +36,7 @@ enum ReportMode {
 ///   "new": [],
 ///   "fixed": ["top-level-function:lib/a.dart:bar"],
 ///   "summary": {
-///     "violation": 1,
+///     "total": 1,
 ///     "error": 1,
 ///     "warning": 0,
 ///     "info": 0,
@@ -55,8 +55,9 @@ enum ReportMode {
 ///   same shape. Only `diff` and `baseline` reports have it.
 /// - `fixed` lists the sorted ids that are in the base or baseline but no
 ///   longer occur. Only `diff` and `baseline` reports have it.
-/// - `summary` counts every `violation`, each `error`, `warning` and `info`,
-///   and, in `diff` and `baseline` reports, each `new` and `fixed` one.
+/// - `summary` counts the `total` violations, those of each severity
+///   (`error`, `warning` and `info`), and, in `diff` and `baseline` reports,
+///   the `new` and `fixed` ones.
 class Report {
   /// Creates a report for a full run with [violations].
   const new full(this.violations) : mode = ReportMode.full, diff = null;
@@ -66,7 +67,7 @@ class Report {
   const new compared(this.mode, this.violations, DiffResult this.diff);
 
   /// The version of the JSON document.
-  static const int schemaVersion = 1;
+  static const int schemaVersion = 2;
 
   /// How new violations were decided.
   final ReportMode mode;
@@ -77,9 +78,18 @@ class Report {
   /// The new and fixed violations, or `null` in a full run.
   final DiffResult? diff;
 
-  /// The violations that decide the exit code: [diff]'s added violations,
-  /// or every violation in a full run.
-  List<Violation> get failing => diff?.added ?? violations;
+  /// The violations this run reports: [diff]'s added violations, or every
+  /// violation in a full run. Whether they fail the run depends on their
+  /// severity. See [fails].
+  List<Violation> get reported => diff?.added ?? violations;
+
+  /// Whether the run fails: any [reported] violation is an error, or a
+  /// warning when [fatalWarnings]. Info violations never fail it.
+  bool fails({bool fatalWarnings = false}) => reported.any(
+    (v) =>
+        v.severity == Severity.error ||
+        (fatalWarnings && v.severity == Severity.warning),
+  );
 
   /// Returns the JSON document described in the class docs.
   Map<String, Object?> toJson() {
@@ -93,12 +103,9 @@ class Report {
         'fixed': diff.fixed,
       },
       'summary': {
-        'violation': violations.length,
-        'error': violations.where((v) => v.severity == Severity.error).length,
-        'warning': violations
-            .where((v) => v.severity == Severity.warning)
-            .length,
-        'info': violations.where((v) => v.severity == Severity.info).length,
+        'total': violations.length,
+        for (final severity in Severity.values.reversed)
+          severity.name: violations.where((v) => v.severity == severity).length,
         if (diff != null) ...{
           'new': diff.added.length,
           'fixed': diff.fixed.length,

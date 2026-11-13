@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "mode": "baseline",
   "violations": [
     {
@@ -28,6 +28,15 @@
       "line": 2,
       "column": 1,
       "message": "Syntax error: Expected to find '}'."
+    },
+    {
+      "id": "extension-declaration:lib/c.dart:E",
+      "rule": "extension-declaration",
+      "severity": "info",
+      "path": "lib/c.dart",
+      "line": 2,
+      "column": 11,
+      "message": "Extension `E` adds members to `C`, which this file declares. Add them to `C` instead."
     }
   ],
   "new": [
@@ -48,17 +57,26 @@
       "line": 2,
       "column": 7,
       "message": "Top-level variable `limit` is not allowed. Move it into a class."
+    },
+    {
+      "id": "extension-declaration:lib/c.dart:E",
+      "rule": "extension-declaration",
+      "severity": "info",
+      "path": "lib/c.dart",
+      "line": 2,
+      "column": 11,
+      "message": "Extension `E` adds members to `C`, which this file declares. Add them to `C` instead."
     }
   ],
   "fixed": [
     "top-level-function:lib/a.dart:gone"
   ],
   "summary": {
-    "violation": 3,
+    "total": 4,
     "error": 2,
     "warning": 1,
-    "info": 0,
-    "new": 2,
+    "info": 1,
+    "new": 3,
     "fixed": 1
   }
 }

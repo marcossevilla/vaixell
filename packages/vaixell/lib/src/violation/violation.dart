@@ -3,7 +3,8 @@ enum Severity {
   /// Reported, but never fails the run.
   info,
 
-  /// Reported, but doesn't fail the run unless warnings are fatal.
+  /// Reported, but fails the run only when the consumer treats warnings as
+  /// fatal, as `vaixell check --fatal-warnings` does through `Report.fails`.
   warning,
 
   /// Reported, and fails the run.

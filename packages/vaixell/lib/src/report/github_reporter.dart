@@ -5,7 +5,7 @@ import 'package:vaixell/src/violation/violation.dart';
 
 /// Writes a [Report] for GitHub Actions.
 ///
-/// Each failing violation (every violation in a full run, the new ones in
+/// Each reported violation (every violation in a full run, the new ones in
 /// diff and baseline runs) becomes an `::error`, `::warning` or `::notice`
 /// (for [Severity.info]) workflow command, which GitHub shows as an
 /// annotation on the file and line. GitHub shows at most [maxAnnotations] of
@@ -33,7 +33,7 @@ class const GithubReporter({
   void write(Report report, StringSink out) {
     final counts = <Severity, int>{};
     var skipped = 0;
-    for (final v in report.failing) {
+    for (final v in report.reported) {
       final count = counts.update(v.severity, (n) => n + 1, ifAbsent: () => 1);
       if (count <= maxAnnotations) {
         out.writeln(_annotation(v));
@@ -75,14 +75,14 @@ class const GithubReporter({
       ..writeln()
       ..writeln('**${_text.summary(report)}** (${report.mode.name} mode)')
       ..writeln();
-    final failing = report.failing;
-    if (failing.isNotEmpty) {
+    final reported = report.reported;
+    if (reported.isNotEmpty) {
       buffer
         ..writeln(report.diff == null ? '### Violations' : '### New violations')
         ..writeln()
         ..writeln('| Severity | Rule | File | Message |')
         ..writeln('| --- | --- | --- | --- |');
-      for (final v in failing) {
+      for (final v in reported) {
         buffer.writeln(
           '| ${v.severity.name} | `${v.rule}` | '
           '`${v.path}:${v.line}:${v.column}` | ${_cell(v.message)} |',

@@ -175,6 +175,25 @@ void main() {
         );
       });
 
+      test('shows the severity of each violation in the table', () {
+        reporter.write(
+          Report.full([
+            _violation('e'),
+            _violation('w', severity: Severity.warning),
+            _violation('i', severity: Severity.info),
+          ]),
+          out,
+        );
+        expect(
+          summaries.single,
+          allOf([
+            contains('| error | `top-level-function` |'),
+            contains('| warning | `top-level-function` |'),
+            contains('| info | `top-level-function` |'),
+          ]),
+        );
+      });
+
       test('lists every violation and says how many were not annotated', () {
         reporter.write(
           Report.full([for (var i = 0; i < 12; i++) _violation('e$i')]),

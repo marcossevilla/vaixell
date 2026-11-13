@@ -82,6 +82,10 @@ void main() {
           'vaixell:\n  rules:\n    parse-error: warning\n',
           _recommendedWith({'parse-error': Severity.warning}),
         ),
+        'parse-error set to info': (
+          'vaixell:\n  rules:\n    parse-error: info\n',
+          _recommendedWith({'parse-error': Severity.info}),
+        ),
         'a rule turned back on after an empty include': (
           'vaixell:\n  include: []\n  rules:\n    top-level-function: error\n',
           {'parse-error': Severity.error, 'top-level-function': Severity.error},
@@ -110,6 +114,10 @@ void main() {
         'parse-error in the long form': (
           'vaixell:\n  rules:\n    parse-error: {severity: warning}\n',
           _recommendedWith({'parse-error': Severity.warning}),
+        ),
+        'parse-error set to info in the long form': (
+          'vaixell:\n  rules:\n    parse-error: {severity: info}\n',
+          _recommendedWith({'parse-error': Severity.info}),
         ),
         'the analyzer include is ignored': (
           'include: package:very_good_analysis/analysis_options.yaml\n'

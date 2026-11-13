@@ -94,15 +94,15 @@ class CheckCommand._({
       ..addFlag(
         'fatal-warnings',
         negatable: false,
-        help: 'Exit with ${CheckCommand.violationsExitCode} on warnings too.',
+        help: 'Exit with $violationsExitCode on warnings too.',
       );
   }
 
   /// The name of this command.
   static const String commandName = 'check';
 
-  /// The exit code when any failing violation is an error, or a warning
-  /// with `--fatal-warnings`.
+  /// The exit code when the run fails: a reported violation is an error,
+  /// or a warning with `--fatal-warnings`.
   static const int violationsExitCode = 1;
 
   /// Whether `--format` [format] keeps stdout for the report alone, which
@@ -133,9 +133,12 @@ class CheckCommand._({
     final ref = results.option('git-diff');
     final baselinePath = results.option('baseline');
     final writeBaselinePath = results.option('write-baseline');
-    if (writeBaselinePath != null && (ref != null || baselinePath != null)) {
+    final fatalWarnings = results.flag('fatal-warnings');
+    if (writeBaselinePath != null &&
+        (ref != null || baselinePath != null || fatalWarnings)) {
       usageException(
-        '--write-baseline can not be combined with --git-diff or --baseline.',
+        '--write-baseline can not be combined with --git-diff, --baseline or '
+        '--fatal-warnings.',
       );
     }
 
@@ -156,7 +159,7 @@ class CheckCommand._({
         paths: results.rest,
         gitDiff: ref,
         baseline: baselinePath,
-        fatalWarnings: results.flag('fatal-warnings'),
+        fatalWarnings: fatalWarnings,
         reporter: reporter,
       );
     } on ConfigException catch (error) {
@@ -203,8 +206,8 @@ class CheckCommand._({
     return ExitCode.success.code;
   }
 
-  /// Checks [paths] and writes the report with [reporter]. Failing warnings
-  /// fail the run when [fatalWarnings].
+  /// Checks [paths] and writes the report with [reporter]. Reported
+  /// warnings fail the run when [fatalWarnings].
   Future<int> _runCheck({
     required List<String> paths,
     required String? gitDiff,
@@ -220,7 +223,9 @@ class CheckCommand._({
     final output = StringBuffer();
     reporter.write(report, output);
     _logger.write('$output');
-    return _exitCode(report.failing, fatalWarnings: fatalWarnings);
+    return report.fails(fatalWarnings: fatalWarnings)
+        ? violationsExitCode
+        : ExitCode.success.code;
   }
 
   /// Returns why [path] can't be checked, or `null` if it can.
@@ -234,17 +239,4 @@ class CheckCommand._({
     }
     return null;
   }
-
-  /// Returns [violationsExitCode] if any of [violations] is an error, or a
-  /// warning when [fatalWarnings], and 0 otherwise. Info never fails.
-  int _exitCode(List<Violation> violations, {required bool fatalWarnings}) =>
-      violations.any(
-        (v) => switch (v.severity) {
-          Severity.error => true,
-          Severity.warning => fatalWarnings,
-          Severity.info => false,
-        },
-      )
-      ? violationsExitCode
-      : ExitCode.success.code;
 }

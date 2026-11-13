@@ -69,4 +69,4 @@ vaixell check --baseline=vaixell_baseline.json
 ```
 
 With `--git-diff` or `--baseline`, only new violations fail the run, and
-`--fatal-warnings` applies to them only.
+`--fatal-warnings` applies only to them.

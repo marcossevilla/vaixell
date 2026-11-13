@@ -239,15 +239,17 @@ class Foo {
       expect(violations.map((v) => v.rule), ['parse-error']);
     });
 
-    test('uses the severities from the config', () async {
-      final violations = await _run(
-        {'lib/a.dart': 'void foo() {}\n'},
-        config: const Config(
-          rules: [ConfiguredRule(TopLevelFunctionRule(), Severity.warning)],
-        ),
-      );
-      expect(violations.single.severity, equals(Severity.warning));
-    });
+    for (final severity in Severity.values) {
+      test('uses the ${severity.name} severity from the config', () async {
+        final violations = await _run(
+          {'lib/a.dart': 'void foo() {}\n'},
+          config: Config(
+            rules: [ConfiguredRule(const TopLevelFunctionRule(), severity)],
+          ),
+        );
+        expect(violations.single.severity, equals(severity));
+      });
+    }
 
     test('skips files excluded by the config', () async {
       final violations = await _run(

@@ -139,7 +139,11 @@ void main() {
         );
       });
 
-      for (final other in ['--git-diff=main', '--baseline=b.json']) {
+      for (final other in [
+        '--git-diff=main',
+        '--baseline=b.json',
+        '--fatal-warnings',
+      ]) {
         test('--write-baseline with $other is a usage error', () async {
           await expectLater(
             run(['--write-baseline=b.json', other]),
@@ -268,11 +272,33 @@ void main() {
       });
 
       group('with --fatal-warnings', () {
-        test('exits 1 when a violation is a warning', () async {
-          stubCheck(const Report.full([_warning, _info]));
+        test(
+          'exits with violationsExitCode when a violation is a warning',
+          () async {
+            stubCheck(const Report.full([_warning, _info]));
+            expect(
+              await run(['--fatal-warnings']),
+              equals(CheckCommand.violationsExitCode),
+            );
+          },
+        );
+
+        test(
+          'exits with violationsExitCode when a violation is an error',
+          () async {
+            stubCheck(const Report.full([_error]));
+            expect(
+              await run(['--fatal-warnings']),
+              equals(CheckCommand.violationsExitCode),
+            );
+          },
+        );
+
+        test('exits 0 when there are no violations', () async {
+          stubCheck(const Report.full([]));
           expect(
             await run(['--fatal-warnings']),
-            equals(CheckCommand.violationsExitCode),
+            equals(ExitCode.success.code),
           );
         });
 
@@ -288,7 +314,8 @@ void main() {
           (ReportMode.diff, '--git-diff=main'),
           (ReportMode.baseline, '--baseline=b.json'),
         ]) {
-          test('exits 1 when a new violation is a warning in a '
+          test('exits with violationsExitCode when a new violation is a '
+              'warning in a '
               '${mode.name} run', () async {
             stubCheck(
               Report.compared(mode, const [
