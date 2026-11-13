@@ -188,6 +188,21 @@ class C {}
           null,
         ]);
       });
+
+      test('find an annotation by name, whatever its prefix', () {
+        final type = _single<ClassDeclaration>('''
+@a
+@json.JsonSerializable()
+@JsonSerializable(createToJson: false)
+class C {}
+''');
+        expect(
+          type.annotationNamed('JsonSerializable'),
+          same(type.annotations[1]),
+        );
+        expect(type.annotationNamed('a'), same(type.annotations.first));
+        expect(type.annotationNamed('json'), isNull);
+      });
     });
 
     group(TopLevelFunction, () {
@@ -233,6 +248,64 @@ class C {}
   });
 
   group(Member, () {
+    const source = '''
+class C {
+  C();
+  C.named();
+  void m() {}
+  int get g => 1;
+  set s(int v) {}
+  bool operator ==(Object other) => true;
+  int f = 1;
+}
+''';
+
+    test('are function members, except fields', () {
+      final members = _single<ClassDeclaration>(source).members;
+      expect(members.whereType<FunctionMember>(), hasLength(6));
+      expect(members.last, isA<Field>());
+    });
+
+    test('have a name, null only for an unnamed constructor', () {
+      final members = _single<ClassDeclaration>(source).members;
+      expect(members.map((m) => m.name), [
+        null,
+        'named',
+        'm',
+        'g',
+        's',
+        '==',
+        'f',
+      ]);
+    });
+
+    test('include primary constructors, named or not', () {
+      for (final (source, name) in [
+        ('class const C();', null),
+        ('class const C.named();', 'named'),
+      ]) {
+        final member = _single<ClassDeclaration>(source).members.single;
+        expect(member, isA<FunctionMember>(), reason: source);
+        expect(member.name, name, reason: source);
+      }
+    });
+
+    test('include enum members', () {
+      final members = _single<EnumDeclaration>('''
+enum E {
+  a;
+  const E();
+  void m() {}
+  final int f = 1;
+}
+''').members;
+      expect(members.map((m) => (m is FunctionMember, m.name)), [
+        (true, null),
+        (true, 'm'),
+        (false, 'f'),
+      ]);
+    });
+
     group(Method, () {
       const source = '''
 abstract class C {
@@ -461,6 +534,16 @@ class C {}
         false,
       ]);
       expect(arguments.last.name, 'f');
+    });
+
+    test('are found by name in an annotation', () {
+      final annotation = _single<ClassDeclaration>('''
+@A(1, a: true, b: false)
+class C {}
+''').annotations.single;
+      expect(annotation.argumentNamed('b')?.literal, false);
+      expect(annotation.argumentNamed('a'), same(annotation.arguments[1]));
+      expect(annotation.argumentNamed('c'), isNull);
     });
   });
 }
