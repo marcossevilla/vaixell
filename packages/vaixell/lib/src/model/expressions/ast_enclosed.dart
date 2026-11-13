@@ -81,6 +81,9 @@ mixin _AstExpression on _AstEnclosed implements Expression {
   }
 
   /// Whether [parent] only wraps [child] in parentheses or a cast.
+  ///
+  /// Unlike [unwrapped], `!` doesn't count, since [use] reports it as a
+  /// [NullCheckUse].
   bool _wraps(ast.AstNode? parent, ast.AstNode child) => switch (parent) {
     ast.ParenthesizedExpression() => true,
     ast.AsExpression(:final expression) => expression == child,

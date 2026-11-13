@@ -365,6 +365,74 @@ class User {
         );
       });
 
+      test('names only the flag that turns each function off', () {
+        const members = '''
+  factory User.fromJson(Map<String, dynamic> json) => User();
+  Map<String, dynamic> toJson() => {};
+''';
+        final factoryOff = _tester.checkSource(
+          rule,
+          '@JsonSerializable(createFactory: false)\nclass User {\n$members}\n',
+        );
+        expect(
+          factoryOff.first.message,
+          equals(
+            '`User.fromJson` is written by hand. Remove '
+            '`createFactory: false` from `@JsonSerializable` and return '
+            r'`_$UserFromJson(json)` instead. Use a `JsonConverter` for '
+            'fields that need custom parsing.',
+          ),
+        );
+        expect(
+          factoryOff.last.message,
+          equals(
+            '`User.toJson` is written by hand. Return '
+            r'`_$UserToJson(this)` instead. Use a `JsonConverter` for '
+            'fields that need custom parsing.',
+          ),
+        );
+        final toJsonOff = _tester.checkSource(
+          rule,
+          '@JsonSerializable(createToJson: false)\nclass User {\n$members}\n',
+        );
+        expect(
+          toJsonOff.first.message,
+          equals(
+            '`User.fromJson` is written by hand. Return '
+            r'`_$UserFromJson(json)` instead. Use a `JsonConverter` for '
+            'fields that need custom parsing.',
+          ),
+        );
+        expect(
+          toJsonOff.last.message,
+          equals(
+            '`User.toJson` is written by hand. Remove `createToJson: false` '
+            r'from `@JsonSerializable` and return `_$UserToJson(this)` '
+            'instead. Use a `JsonConverter` for fields that need custom '
+            'parsing.',
+          ),
+        );
+      });
+
+      test('treats a flag set to true as enabled', () {
+        expect(
+          _tester
+              .checkSource(rule, '''
+@JsonSerializable(createFactory: true)
+class User {
+  factory User.fromJson(Map<String, dynamic> json) => User();
+}
+''')
+              .single
+              .message,
+          equals(
+            '`User.fromJson` is written by hand. Return '
+            r'`_$UserFromJson(json)` instead. Use a `JsonConverter` for '
+            'fields that need custom parsing.',
+          ),
+        );
+      });
+
       test('explains how to delegate', () {
         final findings = _tester.checkSource(rule, '''
 @JsonSerializable()
@@ -436,6 +504,30 @@ class const User.fromJson(final Map<String, dynamic> json);
             '`@JsonSerializable()` and make it a factory constructor, '
             '`factory User.fromJson(Map<String, dynamic> j) => '
             r'_$UserFromJson(j);`.',
+          ),
+        );
+      });
+
+      test('are flagged on annotated classes with a delegating body', () {
+        expect(
+          symbols(r'''
+@JsonSerializable()
+class A {
+  A.fromJson(Map<String, dynamic> json) { return _$AFromJson(json); }
+}
+'''),
+          equals(['A.fromJson']),
+        );
+        expect(
+          messageOf(r'''
+@JsonSerializable()
+class A {
+  A.fromJson(Map<String, dynamic> json) => _$AFromJson(json);
+}
+'''),
+          startsWith(
+            "`A.fromJson` is a generative constructor, which can't "
+            'return the generated function. Make it a factory constructor,',
           ),
         );
       });
@@ -560,6 +652,21 @@ class User {
             r'`@JsonSerializable()` and delegate to `_$UserToJson`. Use a '
             '`JsonConverter` for fields that need custom parsing.',
           ),
+        );
+      });
+
+      test('are left to the compiler on annotated classes when they '
+          'delegate', () {
+        // `this` doesn't compile in a static member, so the compiler
+        // reports it instead.
+        expect(
+          symbols(r'''
+@JsonSerializable()
+class User {
+  static Map<String, dynamic> toJson() => _$UserToJson(this);
+}
+'''),
+          isEmpty,
         );
       });
     });

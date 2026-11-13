@@ -248,7 +248,7 @@ class C {}
   });
 
   group(Member, () {
-    final members = _single<ClassDeclaration>('''
+    const source = '''
 class C {
   C();
   C.named();
@@ -258,21 +258,16 @@ class C {
   bool operator ==(Object other) => true;
   int f = 1;
 }
-''').members;
+''';
 
     test('are function members, except fields', () {
-      expect(members.map((m) => m is FunctionMember), [
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        false,
-      ]);
+      final members = _single<ClassDeclaration>(source).members;
+      expect(members.whereType<FunctionMember>(), hasLength(6));
+      expect(members.last, isA<Field>());
     });
 
     test('have a name, null only for an unnamed constructor', () {
+      final members = _single<ClassDeclaration>(source).members;
       expect(members.map((m) => m.name), [
         null,
         'named',
@@ -281,6 +276,33 @@ class C {
         's',
         '==',
         'f',
+      ]);
+    });
+
+    test('include primary constructors, named or not', () {
+      for (final (source, name) in [
+        ('class const C();', null),
+        ('class const C.named();', 'named'),
+      ]) {
+        final member = _single<ClassDeclaration>(source).members.single;
+        expect(member, isA<FunctionMember>(), reason: source);
+        expect(member.name, name, reason: source);
+      }
+    });
+
+    test('include enum members', () {
+      final members = _single<EnumDeclaration>('''
+enum E {
+  a;
+  const E();
+  void m() {}
+  final int f = 1;
+}
+''').members;
+      expect(members.map((m) => (m is FunctionMember, m.name)), [
+        (true, null),
+        (true, 'm'),
+        (false, 'f'),
       ]);
     });
 

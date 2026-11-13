@@ -36,10 +36,8 @@ final class const GeneratedJsonRule() extends Rule with ChecksMembers {
             '`${member.symbol}` is written by hand. Annotate `$name` with '
             '`@JsonEnum()` and its values with `@JsonValue` instead.',
       ),
-      (final ClassDeclaration type, final FunctionMember member) => _ClassJson(
-        type,
-        member,
-      ).finding,
+      (final ClassDeclaration declaration, final FunctionMember function) =>
+        _ClassJson(declaration, function).finding,
       _ => null,
     };
   }
@@ -83,10 +81,11 @@ final class _ClassJson(
 
   /// What the body should pass to [generated]: `this` for `toJson`, and
   /// the first parameter, or `json`, for `fromJson`.
-  String get input => switch (member) {
-    _ when !isFromJson => 'this',
-    Constructor(:final parameters) => parameters.firstOrNull?.name ?? 'json',
-    _ => 'json',
+  String get input => switch ((isFromJson, member)) {
+    (false, _) => 'this',
+    (true, Constructor(:final parameters)) =>
+      parameters.firstOrNull?.name ?? 'json',
+    (true, _) => 'json',
   };
 
   /// The `@JsonSerializable` flag that turns [generated] off.
@@ -117,33 +116,39 @@ final class _ClassJson(
       'factory ${type.name}.fromJson(Map<String, dynamic> $input) => '
       '$generated($input);';
 
-  /// Whether [member] is a static `fromJson` method, which json_serializable
-  /// can't use whatever its body.
-  bool get isStaticFromJson => isFromJson && member is Method;
+  /// The finding for [member], or `null` when the class is annotated and
+  /// [member] is a factory or method that returns [generated].
+  Finding? get finding => switch (notFactory ?? handWritten) {
+    null => null,
+    final message => Finding.at(member, message: message),
+  };
 
-  /// Whether the class is annotated and [member] returns [generated].
-  bool get isCompliant => annotation != null && delegates && !isStaticFromJson;
-
-  /// The finding for [member], or `null` when [isCompliant].
-  Finding? get finding =>
-      isCompliant ? null : Finding.at(member, message: message);
-
-  /// Why [member] is reported. Only read when it isn't [isCompliant].
-  String get message => switch (member) {
-    _ when isStaticFromJson =>
+  /// Why [member] can't be generated whatever its body, as a static
+  /// `fromJson` method or a generative `fromJson` constructor, or `null`
+  /// when it can.
+  String? get notFactory => switch (member) {
+    Method(isStatic: true) when isFromJson =>
       '`$symbol` is a method. Make it a factory constructor, `$factory`.',
-    Constructor(isFactory: false) =>
+    Constructor(isFactory: false) when isFromJson =>
       "`$symbol` is a generative constructor, which can't return the "
-          'generated function. $_makeIt a factory constructor, `$factory`.',
-    _ when annotation == null && delegates =>
+          'generated function. $_factorySteps a factory constructor, '
+          '`$factory`.',
+    _ => null,
+  };
+
+  /// Why [member] isn't generated, or `null` when the class is annotated
+  /// and [member] returns [generated].
+  String? get handWritten => switch (annotation) {
+    null when delegates =>
       "`$symbol` delegates to `$generated`, but `${type.name}` isn't "
           'annotated with `@JsonSerializable()`. Annotate it directly, '
           "since vaixell doesn't recognize aliases such as "
           '`@jsonSerializable`. Set `generated-json: off` if you use '
           'another generator, such as freezed.',
-    _ when annotation == null =>
+    null =>
       '`$symbol` is written by hand. Annotate `${type.name}` with '
           '`@JsonSerializable()` and delegate to `$generated`. $_converter',
+    _ when delegates => null,
     _ when isTurnedOff =>
       '`$symbol` is written by hand. Remove `$flag: false` from '
           '`@JsonSerializable` and return `$generated($input)` instead. '
@@ -155,7 +160,7 @@ final class _ClassJson(
 
   /// The steps that turn a generative `fromJson` into a factory, ending in
   /// "make it".
-  String get _makeIt => switch (annotation) {
+  String get _factorySteps => switch (annotation) {
     null => 'Annotate `${type.name}` with `@JsonSerializable()` and make it',
     _ when isTurnedOff =>
       'Remove `$flag: false` from `@JsonSerializable` and make it',

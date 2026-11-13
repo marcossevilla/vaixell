@@ -224,23 +224,36 @@ void g() { void h() {} }
         );
       });
 
+      final isB = isA<Reference>().having((r) => r.name, 'name', 'b');
+
       test('are unwrapped through parentheses, casts and null checks', () {
-        final outer = _first<Parenthesized>('f() => ((a! as Map)!);');
-        expect(outer.unwrapped, isA<Reference>());
+        final outer = _first<Parenthesized>('f() => ((a.b! as Map)!);');
+        expect(outer.unwrapped, isB);
+      });
+
+      test('are unwrapped only once', () {
+        final outer = _first<Parenthesized>('f() => ((a.b! as Map)!);');
         expect(outer.unwrapped.unwrapped, same(outer.unwrapped));
+      });
+
+      test('keep casts and null checks when only unparenthesized', () {
+        final outer = _first<Parenthesized>('f() => ((a.b! as Map)!);');
         expect(outer.unparenthesized, isA<NullCheck>());
+      });
+
+      test('are their own unwrapped when nothing wraps them', () {
         final call = _first<MethodCall>('f() => g(a);');
         expect(call.unwrapped, same(call));
       });
 
       test('are unwrapped through a cast alone', () {
-        final cast = _first<Cast>('f() => a as Map;');
-        expect(cast.unwrapped, isA<Reference>());
+        final cast = _first<Cast>('f() => a.b as Map;');
+        expect(cast.unwrapped, isB);
       });
 
       test('are unwrapped through a null check alone', () {
-        final check = _first<NullCheck>('f() => a!;');
-        expect(check.unwrapped, isA<Reference>());
+        final check = _first<NullCheck>('f() => a.b!;');
+        expect(check.unwrapped, isB);
       });
     });
 
