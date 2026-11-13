@@ -42,6 +42,10 @@ _Avoid_: profile, ruleset
 A file of violation ids that are known and accepted, so only new violations are reported.
 _Avoid_: allowlist, ignore list, snapshot
 
+**Ignore comment** (`Ignores`):
+A `// ignore:` comment that turns rules off on one line, or a `// ignore_for_file:` comment that turns them off in the whole file.
+_Avoid_: suppression, exemption, pragma
+
 ## Findings
 
 **Finding** (`Finding`):

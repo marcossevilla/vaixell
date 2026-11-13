@@ -40,6 +40,15 @@ final class const _RepeatRule(@override final String id) extends Rule {
   ];
 }
 
+/// Fails if it ever checks a file.
+final class const _ThrowingRule() extends Rule {
+  @override
+  String get id => 'throws';
+
+  @override
+  List<Finding> check(DartFile file) => throw StateError('checked');
+}
+
 /// Reports the resolved path of every import.
 final class const _ImportRule() extends Rule with ChecksImports {
   @override
@@ -351,6 +360,160 @@ class Foo {
         'packages/app/lib/src/b.dart',
         'null',
       ]);
+    });
+
+    group('ignore comments', () {
+      test('turn off the rule on the next line', () async {
+        final violations = await _run({
+          'lib/a.dart': '''
+class A {
+  // ignore: static-method
+  static void a() {}
+  static void b() {}
+}
+''',
+        });
+        expect(violations.map((v) => v.id), ['static-method:lib/a.dart:A.b']);
+      });
+
+      test('turn off the rule at the end of the line', () async {
+        final violations = await _run({
+          'lib/a.dart': '''
+class A {
+  static void a() {} // ignore: static-method
+  static void b() {}
+}
+''',
+        });
+        expect(violations.map((v) => v.id), ['static-method:lib/a.dart:A.b']);
+      });
+
+      test('turn off only the rules they name', () async {
+        final violations = await _run({
+          'lib/a.dart': '''
+// ignore: avoid_print, static-method
+void foo() {}
+''',
+        });
+        expect(violations.map((v) => v.id), [
+          'top-level-function:lib/a.dart:foo',
+        ]);
+      });
+
+      test('leave the ids of the others when code is added', () async {
+        const source = 'void foo() {}\nvoid foo() {}\n';
+        final before = await _run({'lib/a.dart': source});
+        final after = await _run({
+          'lib/a.dart': 'void foo() {} // ignore: top-level-function\n$source',
+        });
+        expect(before.map((v) => v.id), [
+          'top-level-function:lib/a.dart:foo',
+          'top-level-function:lib/a.dart:foo#2',
+        ]);
+        expect(after.map((v) => v.id), before.map((v) => v.id));
+      });
+
+      test('turn off every finding of the rule on the line', () async {
+        final violations = await _run({
+          'lib/a.dart':
+              'void foo() {} void bar() {} // ignore: top-level-function\n',
+        });
+        expect(violations, isEmpty);
+      });
+
+      test('skip text after the ids', () async {
+        final violations = await _run({
+          'lib/a.dart': '''
+class A {
+  // ignore: static-method // a framework requires it
+  static void a() {}
+}
+''',
+        });
+        expect(violations, isEmpty);
+      });
+
+      test('do not apply above an annotation or a doc comment', () async {
+        final violations = await _run({
+          'lib/a.dart': '''
+class A {
+  // ignore: static-method
+  @Deprecated('old')
+  static void a() {}
+
+  // ignore: static-method
+  /// Does b.
+  static void b() {}
+}
+''',
+        });
+        expect(violations.map((v) => v.id), [
+          'static-method:lib/a.dart:A.a',
+          'static-method:lib/a.dart:A.b',
+        ]);
+      });
+
+      test('do not run a rule turned off in the whole file', () async {
+        final violations = await _run(
+          {'lib/a.dart': '// ignore_for_file: throws\nvoid f() {}\n'},
+          config: const Config(
+            rules: [ConfiguredRule(_ThrowingRule(), Severity.error)],
+          ),
+        );
+        expect(violations, isEmpty);
+      });
+
+      test('number ids as if ignored findings were not there', () async {
+        final violations = await _run({
+          'lib/a.dart': '''
+void foo() {} // ignore: top-level-function
+void foo() {}
+''',
+        });
+        expect(violations.map((v) => v.id), [
+          'top-level-function:lib/a.dart:foo',
+        ]);
+      });
+
+      test('turn off a rule in the whole file with ignore_for_file', () async {
+        final violations = await _run({
+          'lib/a.dart': '''
+class A {
+  static void a() {}
+}
+void foo() {}
+// ignore_for_file: static-method
+class B {
+  static void b() {}
+}
+''',
+          'lib/b.dart': 'class C {\n  static void c() {}\n}\n',
+        });
+        expect(violations.map((v) => v.id), [
+          'top-level-function:lib/a.dart:foo',
+          'static-method:lib/b.dart:C.c',
+        ]);
+      });
+
+      test('cannot turn off parse-error in the whole file', () async {
+        final violations = await _run({
+          'lib/a.dart': '''
+// ignore_for_file: parse-error
+class {
+''',
+        });
+        expect(violations.map((v) => v.rule), ['parse-error']);
+      });
+
+      test('cannot turn off parse-error', () async {
+        final violations = await _run({
+          'lib/a.dart': '''
+// ignore: parse-error
+class {
+''',
+        });
+        expect(violations.map((v) => v.rule), ['parse-error']);
+      });
     });
   });
 }

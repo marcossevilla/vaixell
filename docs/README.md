@@ -65,3 +65,43 @@ hidden, so only new ones are reported:
 vaixell check --write-baseline=vaixell_baseline.json
 vaixell check --baseline=vaixell_baseline.json
 ```
+
+## Ignore comments
+
+To keep one violation that's justified, such as a static method a framework
+requires, put an ignore comment on the line above the line vaixell reports,
+or at the end of that line:
+
+```dart
+class Routes {
+  // ignore: static-method
+  static Route<void> route() => MaterialPageRoute(builder: (_) => const Home());
+
+  static Route<void> other() => route(); // ignore: static-method
+}
+```
+
+To ignore a rule in a whole file, put an `ignore_for_file` comment anywhere
+in it:
+
+```dart
+// ignore_for_file: static-method, top-level-function
+```
+
+- Both comments take rule ids separated by commas. Ids vaixell doesn't
+  know, such as analyzer codes, are skipped, so one comment can serve both
+  tools. List analyzer codes first: the analyzer stops reading a comment at
+  the first id with a `-`, so in `// ignore: static-method, avoid_print` it
+  doesn't see `avoid_print`.
+- Text after the ids, such as `// ignore: static-method // a framework
+  requires it`, is skipped, so you can say why.
+- An `ignore` comment applies only to the line right below it, so stacked
+  comments don't combine: the upper one applies to the comment under it.
+  Put every id, vaixell's and the analyzer's, in one comment.
+- The line vaixell reports is the one with the name of what it points at,
+  so a comment above an annotation or a doc comment doesn't apply.
+- Doc comments (`///`), block comments and strings aren't ignore comments.
+- `parse-error` can't be ignored.
+
+Use a baseline for violations to fix later, and an ignore comment for the
+ones that should stay.
