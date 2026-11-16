@@ -151,7 +151,7 @@ workspace:
 
         final report = await check(gitDiff: 'main');
         expect(
-          ids(report.failing),
+          ids(report.reported),
           equals([
             'top-level-function:packages/b/lib/b.dart:added',
             'top-level-function:packages/c/lib/c.dart:c',
@@ -197,7 +197,7 @@ workspace:
         final report = await check(baseline: 'baseline.json');
         expect(report.mode, equals(ReportMode.baseline));
         expect(report.violations, hasLength(2));
-        expect(report.failing, isEmpty);
+        expect(report.reported, isEmpty);
         expect(report.diff!.fixed, isEmpty);
       });
 
@@ -207,7 +207,7 @@ workspace:
         );
         await writeLib({'a.dart': 'void foo() {}\nvoid baz() {}\n'});
         final report = await check(baseline: 'baseline.json');
-        expect(ids(report.failing), ['top-level-function:lib/a.dart:baz']);
+        expect(ids(report.reported), ['top-level-function:lib/a.dart:baz']);
         expect(report.diff!.fixed, ['top-level-function:lib/a.dart:bar']);
       });
 
@@ -248,7 +248,7 @@ workspace:
 
         final report = await check(gitDiff: 'main');
         expect(report.mode, equals(ReportMode.diff));
-        expect(ids(report.failing), ['top-level-function:lib/a.dart:added']);
+        expect(ids(report.reported), ['top-level-function:lib/a.dart:added']);
         expect(report.diff!.fixed, ['top-level-function:lib/a.dart:old']);
       });
 
@@ -259,7 +259,7 @@ workspace:
         await git(d.sandbox, ['checkout', '-q', 'feature']);
 
         final report = await check(gitDiff: 'main');
-        expect(report.failing, isEmpty);
+        expect(report.reported, isEmpty);
         expect(report.diff!.fixed, isEmpty);
       });
 
@@ -267,7 +267,7 @@ workspace:
         await writeLib({'b.dart': 'void untracked() {}\n'});
         final report = await check(gitDiff: 'main');
         expect(
-          ids(report.failing),
+          ids(report.reported),
           equals(['top-level-function:lib/b.dart:untracked']),
         );
       });
@@ -294,7 +294,7 @@ workspace:
         ]).create();
 
         final report = await check(gitDiff: 'HEAD', root: d.path('pkg'));
-        expect(ids(report.failing), ['top-level-function:lib/a.dart:added']);
+        expect(ids(report.reported), ['top-level-function:lib/a.dart:added']);
         expect(report.diff!.fixed, ['top-level-function:lib/a.dart:old']);
       });
 
@@ -313,7 +313,7 @@ workspace:
 
         final report = await check(gitDiff: 'main', baseline: 'baseline.json');
         expect(report.mode, equals(ReportMode.diff));
-        expect(ids(report.failing), ['top-level-function:lib/b.dart:added']);
+        expect(ids(report.reported), ['top-level-function:lib/b.dart:added']);
         expect(report.diff!.fixed, ['top-level-function:lib/a.dart:old']);
       });
 

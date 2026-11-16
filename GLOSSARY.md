@@ -31,7 +31,7 @@ A Dart package in the repository, with its own `vaixell:` config, checked on its
 _Avoid_: project, module
 
 **Severity** (`Severity`):
-Whether a rule's violations fail the run (`error`) or are only reported (`warning`).
+How a rule's violations affect the run: `error` fails it, `warning` fails it only with `--fatal-warnings`, and `info` never does.
 _Avoid_: level, priority
 
 **Preset**:

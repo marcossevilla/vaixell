@@ -5,11 +5,12 @@ import 'package:vaixell/src/violation/violation.dart';
 
 /// Writes a [Report] for GitHub Actions.
 ///
-/// Each failing violation (every violation in a full run, the new ones in
-/// diff and baseline runs) becomes an `::error` or `::warning` workflow
-/// command, which GitHub shows as an annotation on the file and line. GitHub
-/// shows at most [maxAnnotations] of each severity per step, so violations
-/// past that are printed as plain lines instead. A summary line follows.
+/// Each reported violation (every violation in a full run, the new ones in
+/// diff and baseline runs) becomes an `::error`, `::warning` or `::notice`
+/// (for [Severity.info]) workflow command, which GitHub shows as an
+/// annotation on the file and line. GitHub shows at most [maxAnnotations] of
+/// each per step, so violations past that are printed as plain lines
+/// instead. A summary line follows.
 ///
 /// When [writeSummary] is set, it gets a Markdown summary with the counts
 /// and tables of new and fixed violations, usually to append to
@@ -32,7 +33,7 @@ class const GithubReporter({
   void write(Report report, StringSink out) {
     final counts = <Severity, int>{};
     var skipped = 0;
-    for (final v in report.failing) {
+    for (final v in report.reported) {
       final count = counts.update(v.severity, (n) => n + 1, ifAbsent: () => 1);
       if (count <= maxAnnotations) {
         out.writeln(_annotation(v));
@@ -46,10 +47,17 @@ class const GithubReporter({
   }
 
   String _annotation(Violation v) =>
-      '::${v.severity.name} '
+      '::${_command(v.severity)} '
       'file=${_property(v.path)},line=${v.line},col=${v.column},'
       'title=${_property('vaixell ${v.rule}')}'
       '::${_data('${v.message} [${v.id}]')}';
+
+  /// The workflow command that annotates a violation of [severity].
+  String _command(Severity severity) => switch (severity) {
+    Severity.error => 'error',
+    Severity.warning => 'warning',
+    Severity.info => 'notice',
+  };
 
   /// Escapes the message of a workflow command.
   String _data(String value) => value
@@ -67,14 +75,14 @@ class const GithubReporter({
       ..writeln()
       ..writeln('**${_text.summary(report)}** (${report.mode.name} mode)')
       ..writeln();
-    final failing = report.failing;
-    if (failing.isNotEmpty) {
+    final reported = report.reported;
+    if (reported.isNotEmpty) {
       buffer
         ..writeln(report.diff == null ? '### Violations' : '### New violations')
         ..writeln()
         ..writeln('| Severity | Rule | File | Message |')
         ..writeln('| --- | --- | --- | --- |');
-      for (final v in failing) {
+      for (final v in reported) {
         buffer.writeln(
           '| ${v.severity.name} | `${v.rule}` | '
           '`${v.path}:${v.line}:${v.column}` | ${_cell(v.message)} |',
@@ -96,9 +104,9 @@ class const GithubReporter({
       buffer
         ..writeln(
           '> $skipped violation${skipped == 1 ? ' was' : 's were'} not '
-          'annotated because GitHub shows at most $maxAnnotations errors '
-          'and $maxAnnotations warnings per step. All of them are listed '
-          'above.',
+          'annotated because GitHub shows at most $maxAnnotations errors, '
+          '$maxAnnotations warnings and $maxAnnotations notices per step. '
+          'All of them are listed above.',
         )
         ..writeln();
     }

@@ -28,6 +28,21 @@ void main() {
       );
     });
 
+    for (final severity in Severity.values) {
+      test('toJson has the ${severity.name} severity by name', () {
+        final json = Violation(
+          id: violation.id,
+          rule: violation.rule,
+          severity: severity,
+          path: violation.path,
+          line: violation.line,
+          column: violation.column,
+          message: violation.message,
+        ).toJson();
+        expect(json['severity'], equals(severity.name));
+      });
+    }
+
     test('toString shows the id and the location', () {
       expect(
         violation.toString(),

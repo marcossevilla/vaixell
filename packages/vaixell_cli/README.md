@@ -42,6 +42,9 @@ $ vaixell check --git-diff=main
 $ vaixell check --write-baseline=vaixell_baseline.json
 $ vaixell check --baseline=vaixell_baseline.json
 
+# Fail on warnings too, not only errors (info never fails)
+$ vaixell check --fatal-warnings
+
 # Machine-readable output: JSON, or GitHub Actions annotations
 $ vaixell check --format=json
 $ vaixell check --format=github

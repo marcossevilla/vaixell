@@ -31,6 +31,10 @@ void main() {
             'top-level-function:lib/a.dart:bar',
             severity: Severity.warning,
           ),
+          _violation(
+            'top-level-function:lib/a.dart:baz',
+            severity: Severity.info,
+          ),
         ]),
         out,
       );
@@ -40,7 +44,9 @@ void main() {
           'lib/a.dart:3:6: error: Message. [top-level-function:lib/a.dart:foo]\n'
           'lib/a.dart:3:6: warning: Message. '
           '[top-level-function:lib/a.dart:bar]\n'
-          '2 violations found.\n',
+          'lib/a.dart:3:6: info: Message. '
+          '[top-level-function:lib/a.dart:baz]\n'
+          '3 violations found.\n',
         ),
       );
     });
