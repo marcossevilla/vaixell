@@ -92,10 +92,7 @@ class const Engine() {
             rule.id,
             severity,
             finding,
-            docs: switch (rule) {
-              final BuiltInRule rule => rule.docs,
-              _ => null,
-            },
+            docs: rule is BuiltInRule ? rule.docs : null,
           ),
   ];
 

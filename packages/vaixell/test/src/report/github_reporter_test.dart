@@ -168,7 +168,7 @@ void main() {
         );
       });
 
-      test('links the rule to its docs when it has them', () {
+      test('links the rule to its docs in the summary', () {
         reporter.write(
           Report.full([
             _violation(
@@ -185,6 +185,18 @@ void main() {
             '[`top-level-function`](https://example.com/top-level-function.md)'
             ' | `lib/a.dart:3:6` | Message. |\n',
           ),
+        );
+      });
+
+      test('does not link the rule to its docs in annotations', () {
+        reporter.write(
+          Report.full([
+            _violation(
+              'top-level-function:lib/a.dart:foo',
+              docs: Uri.parse('https://example.com/top-level-function.md'),
+            ),
+          ]),
+          out,
         );
         expect(
           lines().first,

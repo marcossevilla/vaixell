@@ -74,7 +74,7 @@ abstract base class const Rule() implements RuleEntry {
 
 `Rule` loses `checksFilesWithErrors` ([#39](https://github.com/marcossevilla/vaixell/issues/39)). A rule never sees a file that doesn't parse.
 
-Only rules that ship with vaixell link to docs ([#30](https://github.com/marcossevilla/vaixell/issues/30)): their violations carry the URL of `docs/rules/<id>.md` as `Violation.docs`, which JSON output emits as `docs` and the GitHub step summary links. Custom rules have no docs, so their violations leave `docs` out, and there's no way to set one.
+Only rules that ship with vaixell link to docs ([#30](https://github.com/marcossevilla/vaixell/issues/30)): their violations carry the URL of `docs/rules/<id>.md` as `Violation.docs`, which JSON output emits as `docs` and the GitHub step summary links. Custom rules have no docs, so their violations leave `docs` out: the mixin that sets it, `BuiltInRule`, isn't part of the public API, and rules outside vaixell aren't meant to mix it in. The URL points at `main` rather than a release tag, so every version links to the latest docs of its rules.
 
 ### `Finding` ([#41](https://github.com/marcossevilla/vaixell/issues/41), [#37](https://github.com/marcossevilla/vaixell/issues/37))
 
