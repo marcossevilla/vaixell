@@ -18,7 +18,7 @@ class const TextReporter() implements Reporter {
 
   @override
   void write(Report report, StringSink out) {
-    for (final violation in report.failing) {
+    for (final violation in report.reported) {
       out.writeln(describe(violation));
     }
     for (final id in report.diff?.fixed ?? const <String>[]) {
