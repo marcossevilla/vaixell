@@ -16,6 +16,10 @@ final class _AstAnnotation(final _AstDartFile file, final ast.Annotation node)
 
   @override
   List<Argument> get arguments => file.arguments(node.arguments);
+
+  @override
+  Argument? argumentNamed(String name) =>
+      arguments.where((argument) => argument.name == name).firstOrNull;
 }
 
 final class _AstArgument(final _AstDartFile file, final ast.Argument node)

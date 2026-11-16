@@ -228,22 +228,23 @@ abstract interface class Import implements Reportable {
 ### Declarations and members ([#35](https://github.com/marcossevilla/vaixell/issues/35), [#36](https://github.com/marcossevilla/vaixell/issues/36))
 
 - **Sealed `Declaration`:** `ClassDeclaration`, `MixinDeclaration`, `EnumDeclaration`, `ExtensionDeclaration`, `ExtensionTypeDeclaration`, `TopLevelFunction` and `TopLevelVariable` (one per declared name, with `isConst`).
-- **Sealed `TypeDeclaration`** groups the first five: `name` (`null` only for an unnamed extension), `annotations`, `members` in source order (a primary constructor, declared in the header, first), and `methods`, `constructors` and `fields`.
+- **Sealed `TypeDeclaration`** groups the first five: `name` (`null` only for an unnamed extension), `annotations`, `annotationNamed(name)` (the first annotation with that name, whatever its prefix), `members` in source order (a primary constructor, declared in the header, first), and `methods`, `constructors` and `fields`.
 - **`ExtensionDeclaration`:** `extendedType`, the `TypeAnnotation` after `on`.
 - **`TopLevelFunction`:** `name` and `kind` (`FunctionKind`: function, getter, setter or operator).
-- **Sealed `Member`:**
-  - `Method`: `name`, `kind`, `isStatic`, `isAbstract` (no body), `isExternal`, `parameters`, `returnExpression`.
-  - `Constructor`: `name` (`null` when unnamed), `isFactory`, `isExternal`, `parameters`, `returnExpression`. A primary constructor is one too, and code in its header or its `this : …;` body is in it, so findings there get `Type.new` or `Type.name` symbols instead of `Type`.
-  - `Field`: one per declared name, with `name` and `isStatic`.
+- **Sealed `Member`**, each with a `name` (`null` only for an unnamed constructor):
+  - Sealed `FunctionMember` groups methods and constructors: `isExternal`, `parameters`, `returnExpression`.
+  - `Method`: `kind`, `isStatic`, `isAbstract` (no body).
+  - `Constructor`: `isFactory`. A primary constructor is one too, and code in its header or its `this : …;` body is in it, so findings there get `Type.new` or `Type.name` symbols instead of `Type`.
+  - `Field`: one per declared name, with `isStatic`.
   - `returnExpression` is `e` for `=> e;` or `{ return e; }`, otherwise `null`.
 - **`Parameter`:** `name`, `isPositional`, `isNamed`, `isFunction` (as in `T Function(Object?) fromJsonT`).
-- **`Annotation`:** `name`, `prefix`, `arguments`.
+- **`Annotation`:** `name`, `prefix`, `arguments`, and `argumentNamed(name)` for a named argument.
 - **`Argument`** (of an annotation or a call): `name` (`null` when positional), `value` (an `Expression`), and `literal` with `isLiteral` for `bool`, number, `String` and `null` literals.
 
 ### Code inside declarations ([#36](https://github.com/marcossevilla/vaixell/issues/36))
 
 - **Sealed `Enclosed`**, the parent of expressions and type annotations: `declaration` and `member` it's written in. `declaration` is `null` in a library directive's annotation, a top-level variable declaration's annotation and typedefs. `member` is `null` when it's in the declaration itself.
-- **Sealed `Expression`**, each with `use`, `unparenthesized`, `calledName` (the name of what it calls or reads, as `fetch` in `api.fetch()`) and `isPositionalArgumentOf(name)` (looking through parentheses and casts, as `json` in `User.fromJson(json)`):
+- **Sealed `Expression`**, each with `use`, `unparenthesized`, `unwrapped` (also looking through `as` casts and `!`, as `json` in `(json! as Map)`), `calledName` (the name of what it calls or reads, as `fetch` in `api.fetch()`) and `isPositionalArgumentOf(name)` (looking through parentheses and casts, as `json` in `User.fromJson(json)`):
   - `Await` (`operand`).
   - Sealed `Call` (`arguments`): `MethodCall` (`target`, `operator`, `name`), `InstanceCreation` (`name`, the last name before the arguments) and `FunctionCall` (`callee`). Without types, `User(…)` and `User.fromJson(…)` are method calls.
   - `Reference` (`target`, `operator`, `name`): `name`, `target.name`, `target?.name` or `..name`.
@@ -344,7 +345,7 @@ The map is done when every built-in rule and #32's `forbidden-import` fit this s
 | `static-method`         | `Rule`                              | error   | `ChecksMembers`                                                           | `Method` `isStatic`, `kind`                                                                                | `Type.member`                       |
 | `throwaway-instance`    | `Rule`                              | warning | `ChecksExpressions`                                                       | `MethodCall`, `Reference`, `InstanceCreation` `arguments`, `unparenthesized`                               | `<where>@name`                      |
 | `raw-json`              | `Rule`                              | error   | `ChecksExpressions`, `ChecksTypeAnnotations`, `SkipsDirectories {models}` | `MethodCall`, `Reference`, `ArgumentUse`, `CollectionLiteral`, `Cast`, `TypeAnnotation`, `Enclosed.member` | `<where>@decode`, `@encode`, `@map` |
-| `generated-json`        | `Rule`                              | warning | `ChecksMembers`                                                           | `Constructor`, `Method`, `parameters`, `returnExpression`, `Annotation` literals                           | `Type.fromJson`, `Type.toJson`      |
+| `generated-json`        | `Rule`                              | warning | `ChecksMembers`                                                           | `FunctionMember`, `annotationNamed`, `argumentNamed`, `returnExpression`, `unwrapped`                      | `Type.fromJson`, `Type.toJson`      |
 | `await-receiver`        | `Rule`                              | warning | `ChecksExpressions`                                                       | `Await`, `ReceiverUse`, `NullCheckUse`, `MethodCall`, `Reference`, `FunctionCall`                          | `<where>@calledName`                |
 | `forbidden-import`      | `RuleFactory`, `recommended: false` | error   | `ChecksImports`                                                           | `Import` `uri`, `path`; `DartFile.packagePath`                                                             | the import's URI                    |
 
