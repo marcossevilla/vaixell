@@ -6,10 +6,21 @@ part of '../model.dart';
 /// [OtherExpression]s, whose parts are still in [DartFile.expressions].
 sealed class Expression implements Enclosed {
   /// How the value is used, looking through parentheses and `as` casts.
+  ///
+  /// Unlike [unwrapped], this stops at `!`, which is a use of its own,
+  /// [NullCheckUse].
   Use get use;
 
   /// This expression without any parentheses around it.
   Expression get unparenthesized;
+
+  /// This expression without any parentheses, `as` casts or `!` around it,
+  /// as `json` in `(json! as Map<String, dynamic>)`.
+  ///
+  /// It looks inward, from a wrapper to the value it wraps. [use] and
+  /// [isPositionalArgumentOf] look outward and stop at `!`, since a null
+  /// check is a use of its own.
+  Expression get unwrapped;
 
   /// The name of the method, function, getter or variable this calls or
   /// reads, looking through parentheses, as `fetch` in `api.fetch()` or
@@ -18,7 +29,8 @@ sealed class Expression implements Enclosed {
 
   /// Whether this, looking through parentheses and `as` casts, is a
   /// positional argument of a [MethodCall] or [InstanceCreation] named
-  /// [name], as `json` in `User.fromJson(json)`.
+  /// [name], as `json` in `User.fromJson(json)`. It goes through [use], so
+  /// `json` in `User.fromJson(json!)` isn't one, though `json!` is.
   bool isPositionalArgumentOf(String name);
 }
 

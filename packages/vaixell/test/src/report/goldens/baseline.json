@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "mode": "baseline",
   "violations": [
     {
@@ -31,6 +31,16 @@
       "column": 1,
       "message": "Syntax error: Expected to find '}'.",
       "docs": "https://github.com/marcossevilla/vaixell/blob/main/docs/rules/parse-error.md"
+    },
+    {
+      "id": "extension-declaration:lib/c.dart:E",
+      "rule": "extension-declaration",
+      "severity": "info",
+      "path": "lib/c.dart",
+      "line": 2,
+      "column": 11,
+      "message": "Extension `E` adds members to `C`, which this file declares. Add them to `C` instead.",
+      "docs": "https://github.com/marcossevilla/vaixell/blob/main/docs/rules/extension-declaration.md"
     }
   ],
   "new": [
@@ -53,16 +63,27 @@
       "column": 7,
       "message": "Top-level variable `limit` is not allowed. Move it into a class.",
       "docs": "https://github.com/marcossevilla/vaixell/blob/main/docs/rules/top-level-variable.md"
+    },
+    {
+      "id": "extension-declaration:lib/c.dart:E",
+      "rule": "extension-declaration",
+      "severity": "info",
+      "path": "lib/c.dart",
+      "line": 2,
+      "column": 11,
+      "message": "Extension `E` adds members to `C`, which this file declares. Add them to `C` instead.",
+      "docs": "https://github.com/marcossevilla/vaixell/blob/main/docs/rules/extension-declaration.md"
     }
   ],
   "fixed": [
     "top-level-function:lib/a.dart:gone"
   ],
   "summary": {
-    "violations": 3,
-    "errors": 2,
-    "warnings": 1,
-    "new": 2,
+    "total": 4,
+    "error": 2,
+    "warning": 1,
+    "info": 1,
+    "new": 3,
     "fixed": 1
   }
 }

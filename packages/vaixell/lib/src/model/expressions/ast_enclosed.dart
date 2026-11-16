@@ -31,6 +31,13 @@ mixin _AstExpression on _AstEnclosed implements Expression {
   Expression get unparenthesized => file.expression(node.unParenthesized);
 
   @override
+  Expression get unwrapped => switch (this) {
+    Parenthesized(:final expression) => expression.unwrapped,
+    Cast(:final operand) || NullCheck(:final operand) => operand.unwrapped,
+    _ => this,
+  };
+
+  @override
   String? get calledName => switch (unparenthesized) {
     MethodCall(:final name) || Reference(:final name) => name,
     FunctionCall(:final callee) => callee.calledName,
@@ -74,6 +81,9 @@ mixin _AstExpression on _AstEnclosed implements Expression {
   }
 
   /// Whether [parent] only wraps [child] in parentheses or a cast.
+  ///
+  /// Unlike [unwrapped], `!` doesn't count, since [use] reports it as a
+  /// [NullCheckUse].
   bool _wraps(ast.AstNode? parent, ast.AstNode child) => switch (parent) {
     ast.ParenthesizedExpression() => true,
     ast.AsExpression(:final expression) => expression == child,
