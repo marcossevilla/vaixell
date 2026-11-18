@@ -2,6 +2,7 @@ import 'package:glob/glob.dart';
 import 'package:test/test.dart';
 import 'package:vaixell/src/engine/engine.dart';
 import 'package:vaixell/src/engine/package.dart';
+import 'package:vaixell/src/rules/built_in_rule.dart';
 import 'package:vaixell/src/rules/top_level_function.dart';
 import 'package:vaixell/vaixell.dart';
 
@@ -186,6 +187,7 @@ class Foo {
         expect(violation.severity, Severity.error);
         expect(violation.message, startsWith('Syntax error: '));
         expect(violation.message, isNot(contains('more)')));
+        expect(violation.docs, const RuleDocs('parse-error').url);
       });
 
       test('mentions how many more errors there are', () async {
@@ -329,6 +331,12 @@ class Foo {
       expect(violations.single.id, 'file:packages/a/lib/a.dart');
       expect(violations.single.severity, Severity.warning);
       expect(violations.single.message, 'File lib/a.dart.');
+      expect(violations.single.docs, isNull);
+    });
+
+    test('links violations of built-in rules to their docs', () async {
+      final violations = await _run({'lib/a.dart': 'void foo() {}\n'});
+      expect(violations.single.docs, const RuleDocs('top-level-function').url);
     });
 
     test('does not check files a rule skips', () async {

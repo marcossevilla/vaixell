@@ -1,8 +1,11 @@
 import 'package:vaixell/src/model/model.dart';
+import 'package:vaixell/src/rules/built_in_rule.dart';
 import 'package:vaixell/src/rules/rule.dart';
 
 /// Reports top-level variables, including `final`, `late` and `const` ones.
-final class const TopLevelVariableRule() extends Rule with ChecksDeclarations {
+final class const TopLevelVariableRule()
+    extends Rule
+    with BuiltInRule, ChecksDeclarations {
   /// Creates the rule.
   this;
 

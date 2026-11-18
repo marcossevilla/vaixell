@@ -1,4 +1,8 @@
+import 'dart:io';
+import 'dart:isolate';
+
 import 'package:test/test.dart';
+import 'package:vaixell/src/rules/built_in_rule.dart';
 import 'package:vaixell/vaixell.dart';
 
 void main() {
@@ -35,6 +39,26 @@ void main() {
 
     test('are all recommended', () {
       expect(Recommended.rules.map((r) => r.recommended), everyElement(isTrue));
+    });
+
+    test('each rule and parse-error link to a docs page that exists', () {
+      // `package:vaixell/` resolves to packages/vaixell/lib/, so the repo's
+      // docs are three levels up, whatever directory the tests run from.
+      final docs = Isolate.resolvePackageUriSync(Uri.parse('package:vaixell/'))!
+          .resolve('../../../docs/rules/');
+      for (final rule in Recommended.rules) {
+        expect(rule, isA<BuiltInRule>(), reason: rule.id);
+      }
+      for (final id in [
+        Config.parseErrorId,
+        ...Recommended.rules.map((r) => r.id),
+      ]) {
+        expect(
+          File.fromUri(docs.resolve('$id.md')).existsSync(),
+          isTrue,
+          reason: id,
+        );
+      }
     });
   });
 }

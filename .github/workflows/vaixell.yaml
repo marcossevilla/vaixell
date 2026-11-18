@@ -8,6 +8,7 @@ on:
   pull_request:
     paths:
       - ".github/workflows/vaixell.yaml"
+      - "docs/rules/**"
       - "packages/vaixell/**"
       - "pubspec.yaml"
   push:
@@ -15,6 +16,7 @@ on:
       - main
     paths:
       - ".github/workflows/vaixell.yaml"
+      - "docs/rules/**"
       - "packages/vaixell/**"
       - "pubspec.yaml"
 
@@ -24,6 +26,9 @@ permissions:
 jobs:
   build:
     name: build (${{ matrix.sdk }})
+    permissions:
+      contents: read
+      pull-requests: write # Required to comment the cognitive complexity report
     strategy:
       fail-fast: false
       matrix:

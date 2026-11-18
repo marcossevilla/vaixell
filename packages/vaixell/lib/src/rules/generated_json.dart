@@ -1,4 +1,5 @@
 import 'package:vaixell/src/model/model.dart';
+import 'package:vaixell/src/rules/built_in_rule.dart';
 import 'package:vaixell/src/rules/rule.dart';
 import 'package:vaixell/src/violation/violation.dart';
 
@@ -16,7 +17,9 @@ import 'package:vaixell/src/violation/violation.dart';
 /// that convert another value, such as HydratedBloc overrides and
 /// `JsonConverter` implementations. Mixins, extensions and extension types
 /// aren't checked, since they can't be annotated with `@JsonSerializable`.
-final class const GeneratedJsonRule() extends Rule with ChecksMembers {
+final class const GeneratedJsonRule()
+    extends Rule
+    with BuiltInRule, ChecksMembers {
   /// Creates the rule.
   this;
 

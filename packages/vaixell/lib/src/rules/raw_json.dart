@@ -1,4 +1,5 @@
 import 'package:vaixell/src/model/model.dart';
+import 'package:vaixell/src/rules/built_in_rule.dart';
 import 'package:vaixell/src/rules/rule.dart';
 
 /// Reports raw JSON handling outside model classes.
@@ -21,7 +22,11 @@ import 'package:vaixell/src/rules/rule.dart';
 /// when code moves or when a finding of another kind is removed.
 final class const RawJsonRule()
     extends Rule
-    with ChecksExpressions, ChecksTypeAnnotations, SkipsDirectories {
+    with
+        BuiltInRule,
+        ChecksExpressions,
+        ChecksTypeAnnotations,
+        SkipsDirectories {
   /// Creates the rule.
   this;
 

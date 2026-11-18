@@ -1,11 +1,12 @@
 import 'package:vaixell/src/model/model.dart';
+import 'package:vaixell/src/rules/built_in_rule.dart';
 import 'package:vaixell/src/rules/rule.dart';
 
 /// Reports extensions on a type that the same file declares, whose members
 /// belong on the type itself.
 ///
 /// Extensions on other types and extension types are allowed.
-final class const ExtensionDeclarationRule() extends Rule {
+final class const ExtensionDeclarationRule() extends Rule with BuiltInRule {
   /// Creates the rule.
   this;
 

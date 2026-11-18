@@ -9,7 +9,8 @@
       "path": "lib/a.dart",
       "line": 1,
       "column": 6,
-      "message": "Top-level function `foo` is not allowed. Move it into a class."
+      "message": "Top-level function `foo` is not allowed. Move it into a class.",
+      "docs": "https://github.com/marcossevilla/vaixell/blob/main/docs/rules/top-level-function.md"
     },
     {
       "id": "top-level-variable:lib/a.dart:limit",
@@ -18,7 +19,8 @@
       "path": "lib/a.dart",
       "line": 2,
       "column": 7,
-      "message": "Top-level variable `limit` is not allowed. Move it into a class."
+      "message": "Top-level variable `limit` is not allowed. Move it into a class.",
+      "docs": "https://github.com/marcossevilla/vaixell/blob/main/docs/rules/top-level-variable.md"
     },
     {
       "id": "parse-error:lib/b.dart",
@@ -27,7 +29,8 @@
       "path": "lib/b.dart",
       "line": 2,
       "column": 1,
-      "message": "Syntax error: Expected to find '}'."
+      "message": "Syntax error: Expected to find '}'.",
+      "docs": "https://github.com/marcossevilla/vaixell/blob/main/docs/rules/parse-error.md"
     },
     {
       "id": "extension-declaration:lib/c.dart:E",
@@ -36,7 +39,8 @@
       "path": "lib/c.dart",
       "line": 2,
       "column": 11,
-      "message": "Extension `E` adds members to `C`, which this file declares. Add them to `C` instead."
+      "message": "Extension `E` adds members to `C`, which this file declares. Add them to `C` instead.",
+      "docs": "https://github.com/marcossevilla/vaixell/blob/main/docs/rules/extension-declaration.md"
     }
   ],
   "summary": {

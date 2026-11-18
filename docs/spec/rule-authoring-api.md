@@ -74,6 +74,8 @@ abstract base class const Rule() implements RuleEntry {
 
 `Rule` loses `checksFilesWithErrors` ([#39](https://github.com/marcossevilla/vaixell/issues/39)). A rule never sees a file that doesn't parse.
 
+Only rules that ship with vaixell link to docs ([#30](https://github.com/marcossevilla/vaixell/issues/30)): their violations carry the URL of `docs/rules/<id>.md` as `Violation.docs`, which JSON output emits as `docs` and the GitHub step summary links. Custom rules have no docs, so their violations leave `docs` out: the mixin that sets it, `BuiltInRule`, isn't part of the public API, and rules outside vaixell aren't meant to mix it in. The URL points at `main` rather than a release tag, so every version links to the latest docs of its rules.
+
 ### `Finding` ([#41](https://github.com/marcossevilla/vaixell/issues/41), [#37](https://github.com/marcossevilla/vaixell/issues/37))
 
 Rules build findings by hand, as today. `Finding.at` takes the offset and symbol from a model element, so no rule spells a symbol by hand.
@@ -407,4 +409,4 @@ Writing this spec down turned up four details the tickets don't settle. Each has
 - Moving the built-in rules into separate packages, or exporting each built-in rule class.
 - Implementing this spec and rewriting the built-in rules.
 - Custom test matchers, a `vaixell_test` package, and fixtures shaped like a full config.
-- #29 inline ignores, #30 rule doc links, #31 `--fatal-warnings` and `info` severity, and #32's `allow:` form.
+- #29 inline ignores, #31 `--fatal-warnings` and `info` severity, and #32's `allow:` form.

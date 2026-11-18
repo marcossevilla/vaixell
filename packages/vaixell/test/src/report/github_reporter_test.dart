@@ -7,6 +7,7 @@ Violation _violation(
   String path = 'lib/a.dart',
   String message = 'Message.',
   int line = 3,
+  Uri? docs,
 }) => Violation(
   id: id,
   rule: 'top-level-function',
@@ -15,6 +16,7 @@ Violation _violation(
   line: line,
   column: 6,
   message: message,
+  docs: docs,
 );
 
 void main() {
@@ -191,6 +193,45 @@ void main() {
             contains('| warning | `top-level-function` |'),
             contains('| info | `top-level-function` |'),
           ]),
+        );
+      });
+
+      test('links the rule to its docs in the summary', () {
+        reporter.write(
+          Report.full([
+            _violation(
+              'top-level-function:lib/a.dart:foo',
+              docs: Uri.parse('https://example.com/top-level-function.md'),
+            ),
+          ]),
+          out,
+        );
+        expect(
+          summaries.single,
+          contains(
+            '| error | '
+            '[`top-level-function`](https://example.com/top-level-function.md)'
+            ' | `lib/a.dart:3:6` | Message. |\n',
+          ),
+        );
+      });
+
+      test('does not link the rule to its docs in annotations', () {
+        reporter.write(
+          Report.full([
+            _violation(
+              'top-level-function:lib/a.dart:foo',
+              docs: Uri.parse('https://example.com/top-level-function.md'),
+            ),
+          ]),
+          out,
+        );
+        expect(
+          lines().first,
+          equals(
+            '::error file=lib/a.dart,line=3,col=6,title=vaixell '
+            'top-level-function::Message. [top-level-function:lib/a.dart:foo]',
+          ),
         );
       });
 

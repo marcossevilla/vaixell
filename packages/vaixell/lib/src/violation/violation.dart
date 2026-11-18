@@ -36,13 +36,17 @@ class const Violation({
 
   /// A human-readable description of the violation.
   required final String message,
+
+  /// The page that documents [rule], or `null` when the rule doesn't ship
+  /// with vaixell.
+  final Uri? docs,
 }) {
   /// Creates a violation.
   this;
 
   /// Returns the violation as a JSON object with the keys `id`, `rule`,
   /// `severity` (`error`, `warning` or `info`), `path`, `line`, `column` and
-  /// `message`.
+  /// `message`, and `docs` when [docs] is set.
   Map<String, Object?> toJson() => {
     'id': id,
     'rule': rule,
@@ -51,6 +55,7 @@ class const Violation({
     'line': line,
     'column': column,
     'message': message,
+    if (docs case final docs?) 'docs': '$docs',
   };
 
   @override

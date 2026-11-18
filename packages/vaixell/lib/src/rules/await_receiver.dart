@@ -1,4 +1,5 @@
 import 'package:vaixell/src/model/model.dart';
+import 'package:vaixell/src/rules/built_in_rule.dart';
 import 'package:vaixell/src/rules/rule.dart';
 import 'package:vaixell/src/violation/violation.dart';
 
@@ -15,7 +16,9 @@ import 'package:vaixell/src/violation/violation.dart';
 /// Ids use the enclosing declaration and the name of the awaited call or
 /// getter, such as `ApiClient.getUser@_fetch`, so adding or removing a
 /// finding that awaits something else doesn't change them.
-final class const AwaitReceiverRule() extends Rule with ChecksExpressions {
+final class const AwaitReceiverRule()
+    extends Rule
+    with BuiltInRule, ChecksExpressions {
   /// Creates the rule.
   this;
 
