@@ -94,14 +94,12 @@ class const Engine() {
         if (!ignores.turnsOffFile(rule.id) && rule.shouldCheck(file))
           for (final finding in rule.check(file))
             if (!ignores.turnsOff(rule.id, line: file.lineAt(finding.offset)))
-              _Found(
-                rule.id,
-                severity,
-                finding,
-                docs: rule is BuiltInRule ? rule.docs : null,
-              ),
+              _Found(rule.id, severity, finding, docs: _docsOf(rule)),
     ];
   }
+
+  /// The page that documents [rule], if it's one of vaixell's.
+  Uri? _docsOf(Rule rule) => rule is BuiltInRule ? rule.docs : null;
 
   /// The only finding of a file that doesn't parse, at its first error.
   _Found _parseError(Package package, List<SyntaxError> errors) {
